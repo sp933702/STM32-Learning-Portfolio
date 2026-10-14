@@ -10,11 +10,16 @@
       "content": "不看筆記完成 10 題：set/clear/toggle/檢查 bit、bit-field 先清再寫、volatile 三種情境、const 指標兩種寫法、static 三種用法、struct sizeof 與 padding、大小端判斷、函式指標陣列做命令表",
       "output": "c_quiz/ 資料夾，每題一個 .c 與執行結果",
       "criteria": "10 題都能編譯執行並口頭解釋；答錯的題目記在筆記欄",
-      "status": "未開始",
+      "status": "進行中",
       "finished_at": null,
       "orig": "Pi Day1–4",
       "period": "10-15～10-21",
-      "sessions": [],
+      "sessions": [
+        {
+          "start": "2026-10-14 20:09",
+          "end": null
+        }
+      ],
       "entries": []
     },
     {
