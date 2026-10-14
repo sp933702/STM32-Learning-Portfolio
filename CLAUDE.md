@@ -44,7 +44,7 @@
 - 各課題程式碼在 `projects/<課題代碼>/`。
 
 ## 這個 repo 的工具
-- 學習進度 App：`tracker/app.py`（雙擊根目錄的 `STM32Tracker.exe`，以 pythonw 背景執行；所有分頁關閉後自動結束）。學習者用它開始／結束課題、記錄問題與筆記、上傳程式碼；結束課題時會自動 commit、打 tag、push。
+- 學習進度 App：`tracker/app.py`（雙擊根目錄的 `STM32Tracker.exe`，以 pythonw 背景執行；以 Edge App 模式開成獨立視窗；關閉視窗後自動結束）。學習者用它開始／結束課題、記錄問題與筆記、上傳程式碼；結束課題時會自動 commit、打 tag、push。
 - 學習者開始課題時會貼上 App 產生的「開始提示詞」，卡關時貼上「求助提示詞」，請依提示詞裡的步驟引導。
 - 請不要手動改寫 `learning/README.md`、`learning/QUESTIONS.md`、`learning/notes/`，它們由 App 自動產生。
 - 協助寫 commit 訊息時，在開頭加上課題代碼（例如 `SPRINT-W02-S04: ...`），App 會據此把 commit 連到課題。

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>STM32 學習進度</title>
+<link rel="icon" href="/favicon.ico">
 <style>
 :root{
   --bg:#f5f6f8; --panel:#fff; --ink:#1d2330; --muted:#677084; --line:#e2e5eb;
@@ -169,7 +170,7 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
 
 <div id="toast"></div>
 <div id="closed"><div><div class="title">App 已關閉</div>
-  <p class="muted">可以關閉這個分頁了。要繼續學習，請重新開啟 STM32Tracker.exe。</p></div></div>
+  <p class="muted">可以關閉這個視窗了。要繼續學習，請重新開啟 STM32Tracker.exe。</p></div></div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -456,7 +457,13 @@ $("#quitBtn").onclick = async () => {
   if (busy){ toast("正在同步，請稍候再關閉"); return; }
   try { await api("/api/quit", {}); } catch {}
   $("#closed").classList.add("on");
+  setTimeout(() => window.close(), 300);   // App 視窗直接關閉
 };
+// 外部連結（GitHub）交給預設瀏覽器開，保留你的登入狀態
+document.addEventListener("click", ev => {
+  const a = ev.target.closest('a[target="_blank"]'); if (!a) return;
+  ev.preventDefault(); api("/api/open-url", {url:a.href}).catch(() => window.open(a.href));
+});
 refresh().catch(e => toast("⚠ 無法連線到 App：" + e.message, 8000));
 </script>
 </body>

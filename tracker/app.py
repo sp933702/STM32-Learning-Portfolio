@@ -9,7 +9,8 @@
 
 執行：雙擊 repo 根目錄的 STM32Tracker.exe（以 pythonw 在背景執行，不會出現終端機視窗）
       或 python tracker/app.py
-關閉瀏覽器分頁後，App 會在幾秒內自動結束；也可以按頁面右上角的「關閉 App」。
+介面用 Microsoft Edge 的 App 模式開成獨立視窗（沒有網址列／分頁）；找不到 Edge 時改用 Chrome，再不行才用預設瀏覽器。
+關閉視窗後，App 會在幾秒內自動結束；也可以按右上角的「關閉 App」。
 """
 import json
 import os
@@ -128,9 +129,7 @@ def commit_learning(message, tag=None):
     msgs = []
     if not git_info().get("is_repo"):
         return ["（此資料夾不是 Git repo，只存在本機。）"]
-    git("add", "learning")
-    if os.path.isdir(PROJECTS):
-        git("add", "projects")
+    stage_all()
     ok, out = git("diff", "--cached", "--quiet")
     if ok:
         msgs.append("沒有新的變更需要 commit。")
@@ -165,10 +164,18 @@ def pull():
     return ok, ("已從 GitHub 取得最新進度。" if ok else "pull 失敗：" + out)
 
 
-def commit_learning_quiet(message):
+def stage_all():
+    """筆記、程式碼，以及 App 本身（讓另一台電腦同步到新版 App）。"""
     git("add", "learning")
     if os.path.isdir(PROJECTS):
         git("add", "projects")
+    for p in ("tracker", "README.md", "CLAUDE.md", ".gitignore", "STM32Tracker.exe"):
+        if os.path.exists(os.path.join(ROOT, p)):
+            git("add", "-A", "--", p)
+
+
+def commit_learning_quiet(message):
+    stage_all()
     ok, _ = git("diff", "--cached", "--quiet")
     if not ok:
         git("commit", "-F", "-", input_text=message)
@@ -579,6 +586,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
+        if u.path == "/favicon.ico":
+            with open(os.path.join(HERE, "app.ico"), "rb") as f:
+                return self.send(200, f.read(), "image/x-icon")
         if u.path in ("/", "/index.html"):
             with open(os.path.join(HERE, "index.html"), "rb") as f:
                 return self.send(200, f.read(), "text/html; charset=utf-8")
@@ -634,6 +644,12 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/bye":            # 分頁關閉（navigator.sendBeacon）
             self.rfile.read(int(self.headers.get("Content-Length") or 0))
             CLIENTS.pop(parse_qs(u.query).get("c", [""])[0], None)
+            return self.send(200, {"ok": True})
+        if u.path == "/api/open-url":       # 外部連結（GitHub）用預設瀏覽器開，不在 App 視窗裡開
+            n = int(self.headers.get("Content-Length") or 0)
+            link = (json.loads(self.rfile.read(n) or b"{}").get("url") or "")
+            if re.match(r"^https://", link):
+                webbrowser.open(link)
             return self.send(200, {"ok": True})
         if u.path == "/api/quit":           # 頁面上的「關閉 App」
             WATCH["quit"] = True
@@ -707,6 +723,60 @@ def alert(msg):
             pass
 
 
+WINDOW_SIZE = (1200, 900)
+
+
+def find_app_browser():
+    """找 Edge（Windows 內建）或 Chrome，用來開 App 模式視窗。"""
+    if os.environ.get("STM32_BROWSER"):
+        return os.environ["STM32_BROWSER"]
+    if not IS_WIN:
+        return None
+    roots = [os.environ.get(k) for k in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA")]
+    rels = [r"Microsoft\Edge\Application\msedge.exe", r"Google\Chrome\Application\chrome.exe"]
+    for rel in rels:                       # Edge 優先
+        for root in roots:
+            if root and os.path.isfile(os.path.join(root, rel)):
+                return os.path.join(root, rel)
+    return None
+
+
+def watch_window(proc):
+    """保險：視窗程序結束（例如被強制關閉、沒送出關閉通知）時，也讓 App 結束。"""
+    t0 = time.time()
+    proc.wait()
+    if time.time() - t0 < 5:      # 立刻結束代表交給了已開著的視窗，不算關閉
+        return
+    time.sleep(6)                 # 若還有其他視窗，它們會在這段時間內回報
+    cutoff = time.time() - 6.5
+    for k, seen in list(CLIENTS.items()):
+        if seen < cutoff:
+            CLIENTS.pop(k, None)
+    WATCH["had_client"] = True
+
+
+def open_window(url, watch=False):
+    """以獨立視窗開啟 App；失敗時退回預設瀏覽器。"""
+    exe = find_app_browser()
+    if exe:
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+        profile = os.path.join(base, "STM32Tracker", "window")   # 專用設定檔：不影響你平常的瀏覽器
+        first = not os.path.isdir(profile)
+        args = [exe, f"--app={url}", f"--user-data-dir={profile}", "--no-first-run",
+                "--no-default-browser-check", "--disable-sync", "--disable-features=Translate"]
+        if first:                          # 第一次給預設大小，之後沿用你調整過的視窗大小與位置
+            args.append(f"--window-size={WINDOW_SIZE[0]},{WINDOW_SIZE[1]}")
+        try:
+            proc = subprocess.Popen(args, creationflags=NO_WINDOW, stdin=subprocess.DEVNULL,  # noqa: S603
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if watch:
+                threading.Thread(target=watch_window, args=(proc,), daemon=True).start()
+            return
+        except OSError as e:
+            log(f"無法開啟 App 視窗（{exe}）：{e}")
+    webbrowser.open(url)
+
+
 def running_instance():
     """如果 App 已經在執行，回傳它的網址。"""
     try:
@@ -774,8 +844,8 @@ def main():
         alert(f"找不到 learning/progress.json\n\n請確認 STM32Tracker.exe 放在 repo 根目錄。\n目前位置：{ROOT}")
         sys.exit(1)
     url = running_instance()
-    if url:                                 # 已經開著：只打開瀏覽器
-        webbrowser.open(url)
+    if url:                                 # 已經開著：只再開一個視窗
+        open_window(url)
         return
     try:
         if os.path.getsize(LOG_FILE) > 200_000:
@@ -790,12 +860,12 @@ def main():
     with open(PORT_FILE, "w", encoding="utf-8") as f:
         f.write(str(port))
     log(f"App 啟動：{url}")
-    print(f"STM32 學習進度 App 已啟動：{url}（關閉瀏覽器分頁即結束）")
+    print(f"STM32 學習進度 App 已啟動：{url}（關閉視窗即結束）")
     STATE["syncing"] = True
     threading.Thread(target=startup_sync, daemon=True).start()
     threading.Thread(target=watchdog, args=(srv,), daemon=True).start()
     if "--no-browser" not in sys.argv:
-        threading.Timer(0.3, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.2, lambda: open_window(url, watch=True)).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
