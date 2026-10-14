@@ -39,7 +39,6 @@ main{padding:16px 0 60px}
 .active{border:2px solid var(--accent)}
 .code{font-family:var(--mono);font-size:13px;color:var(--muted)}
 .title{font-size:17px;font-weight:700}
-.timer{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .sp{flex:1}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -71,12 +70,16 @@ textarea{min-height:90px;resize:vertical}
 .choice{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .choice label{display:flex;gap:8px;align-items:center;cursor:pointer}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;display:none;max-width:90vw;white-space:pre-wrap;z-index:30}
+#closed{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:40;text-align:center;padding:16px}
+#closed.on{display:flex}
 .empty{color:var(--muted);text-align:center;padding:30px}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:10px;margin-top:6px}
 .drop.over{border-color:var(--accent);background:var(--chip)}
 .files{font-family:var(--mono);font-size:13px;max-height:260px;overflow:auto;margin-top:6px}
 .files div{display:flex;gap:8px;align-items:center;padding:2px 0}
 .files a{cursor:pointer;color:var(--accent)}
+textarea.prompt{min-height:340px;font:13px/1.55 var(--mono)}
+.modal .card.wide{width:min(820px,100%);max-height:92vh;overflow:auto}
 pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 var(--mono);white-space:pre;tab-size:4}
 </style>
 </head>
@@ -88,6 +91,7 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
     <span class="prog" id="progText"></span>
     <div class="git" id="gitInfo"></div>
     <button id="syncBtn" title="從 GitHub 取得最新進度並上傳本機變更">⟳ 同步</button>
+    <button id="quitBtn" title="結束背景程式（直接關閉分頁也會自動結束）">關閉 App</button>
   </div>
   <nav>
     <button data-tab="tasks" class="on">任務</button>
@@ -126,10 +130,11 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
   <div class="code" id="finishCode"></div>
   <div class="choice">
     <label><input type="radio" name="fin" value="done" checked> 已完成這個課題（commit 並加上 tag）</label>
-    <label><input type="radio" name="fin" value="進行中"> 還沒完成，下次繼續</label>
-    <label><input type="radio" name="fin" value="卡關"> 卡關，需要協助</label>
+    <label><input type="radio" name="fin" value="進行中"> 尚未完成，下次繼續（commit＋push，不打 tag）</label>
+    <label><input type="radio" name="fin" value="卡關"> 卡關，需要協助（產生求助提示詞）</label>
   </div>
-  <textarea id="finishSummary" placeholder="本次總結（選填）：學到什麼、還剩什麼沒做"></textarea>
+  <div class="muted" id="finishHint"></div>
+  <textarea id="finishSummary"></textarea>
   <div class="row" style="margin-top:12px"><span class="sp"></span>
     <button id="finishCancel">取消</button>
     <button class="primary" id="finishOk">結束並同步到 GitHub</button>
@@ -141,7 +146,30 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
   <pre class="code-view" id="codeBody"></pre>
 </div></div>
 
+<div class="modal" id="promptModal"><div class="card wide">
+  <div class="title" id="promptTitle"></div>
+  <div class="muted" id="promptHint" style="margin:4px 0 8px"></div>
+  <textarea class="prompt" id="promptText" readonly></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="promptClose">關閉</button>
+    <button class="primary" id="promptCopy">複製提示詞</button>
+  </div>
+</div></div>
+
+<div class="modal" id="stuckModal"><div class="card">
+  <div class="title">卡關求助</div>
+  <div class="code" id="stuckCode"></div>
+  <div class="muted" style="margin:6px 0">描述卡在哪裡：想做什麼、實際發生什麼、已經試過什麼、錯誤訊息。會記成一則「問題」，課題繼續進行中。</div>
+  <textarea id="stuckText" placeholder="例：設定 PLL×9 後程式卡在 while(!(RCC->CFGR & RCC_CFGR_SWS_PLL))，debugger 看到 CFGR 的 SWS 一直是 00…"></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="stuckCancel">取消</button>
+    <button class="primary" id="stuckOk">產生求助提示詞</button>
+  </div>
+</div></div>
+
 <div id="toast"></div>
+<div id="closed"><div><div class="title">App 已關閉</div>
+  <p class="muted">可以關閉這個分頁了。要繼續學習，請重新開啟 STM32Tracker.exe。</p></div></div>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -157,17 +185,20 @@ async function api(path, body){
 function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
 async function act(path, body, quiet){
   if (busy) return; busy = true;
-  try { const j = await api(path, body); if (!quiet) toast((j.messages||[]).join("\n")); await refresh(); }
+  try { const j = await api(path, body); if (!quiet) toast((j.messages||[]).join("\n")); await refresh();
+        if (j.prompt) showPrompt(j.prompt, j.prompt_kind); }
   catch(e){ toast("⚠ " + e.message, 6000); }
   finally { busy = false; }
 }
 async function refresh(){
   const draft = $("#entryText")?.value;
-  S = await api("/api/state");
+  const st = await api("/api/state");
+  if (st.syncing){ toast("正在從 GitHub 同步最新進度…", 60000); await new Promise(r => setTimeout(r, 800)); return refresh(); }
+  S = st;
+  if (S.sync_msg) toast(S.sync_msg);
   render();
   if (draft && $("#entryText")) $("#entryText").value = draft;
 }
-const fmtMin = m => m >= 60 ? `${Math.floor(m/60)} 小時 ${m%60} 分` : `${m} 分`;
 const activeTask = () => S.tasks.find(t => t.sessions?.length && !t.sessions.at(-1).end);
 
 function render(){
@@ -194,12 +225,11 @@ function delEntry(id, i){ if (confirm("確定刪除這則紀錄？")) act("/api/
 function renderActive(){
   const t = activeTask(), box = $("#activeBox");
   if (!t){ box.innerHTML = ""; return; }
-  const start = t.sessions.at(-1).start;
   box.innerHTML = `<div class="card active">
     <div class="row"><div><div class="code">${esc(t.id)}　${esc(t.week)}　${esc(t.topic)}</div>
       <div class="title">${esc(t.title)}</div></div><span class="sp"></span>
-      <div style="text-align:right"><div class="timer" id="timer" data-start="${esc(start)}"></div>
-      <div class="muted">累計 ${fmtMin(t.minutes)}</div></div></div>
+      <div class="row"><button onclick="showPromptFor('${t.id}','start')">📋 開始提示詞</button>
+      <button onclick="openStuck('${t.id}')">🆘 求助提示詞</button></div></div>
     <details style="margin:8px 0"><summary class="muted">任務內容與完成標準</summary>
       <div class="detail"><h4>內容</h4><p>${esc(t.content)}</p><h4>完成標準</h4><p>${esc(t.criteria)}</p>
       ${t.orig ? `<h4>對應原任務（HAL 版）</h4><p>${esc(t.orig)}</p>` : ""}</div></details>
@@ -218,14 +248,8 @@ function renderActive(){
     $("#entryText").value = ""; act("/api/entry", {id:t.id, type:entryType, text:v}, true); };
   $("#saveEntry").onclick = save;
   $("#entryText").onkeydown = ev => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) save(); };
-  tick(); loadFiles(t.id, "a");
+  loadFiles(t.id, "a");
 }
-function tick(){
-  const el = $("#timer"); if (!el) return;
-  const s = new Date(el.dataset.start.replace(" ", "T")), d = Math.max(0, Math.floor((Date.now()-s)/1000));
-  el.textContent = [Math.floor(d/3600), Math.floor(d/60)%60, d%60].map(n=>String(n).padStart(2,"0")).join(":");
-}
-setInterval(tick, 1000);
 
 function renderTasks(){
   const list = S.tasks.filter(t => t.plan === plan), act_ = activeTask();
@@ -236,9 +260,8 @@ function renderTasks(){
     html += `<div class="task"><div class="head" onclick="toggle('${t.id}')">
       <span class="code" style="width:132px">${esc(t.id)}</span>
       <span class="t">${esc(t.title)}${t.entries.length?` <span class="muted">· ${t.entries.length} 則紀錄</span>`:""}</span>
-      ${t.minutes?`<span class="muted">${fmtMin(t.minutes)}</span>`:""}
       <span class="pill ${esc(t.status)}">${esc(t.status)}</span>
-      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"重新開啟":"開始"}</button>`}
+      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"重新開啟":(t.sessions?.length?"繼續":"開始")}</button>`}
     </div>${isOpen ? detailHtml(t) : ""}</div>`;
   }
   $("#taskList").innerHTML = html || `<div class="empty">沒有任務</div>`;
@@ -362,13 +385,53 @@ function renderReview(){
 }
 
 let finishId = null;
-function openFinish(id){ finishId = id; $("#finishCode").textContent = id; $("#finishSummary").value = ""; $("#finishModal").classList.add("on"); }
+const FIN_TEXT = {
+  done: ["本次總結（選填）：學到什麼、完成標準怎麼驗收的。", "會寫進課題的「總結」。"],
+  "進行中": ["本次進度（建議填）：做到哪、下次從哪裡接續。", "會記成一則【本次進度】筆記，下次的開始提示詞會帶上它。"],
+  "卡關": ["卡在哪裡（必填）：想做什麼、實際發生什麼、試過什麼、錯誤訊息。", "會記成一則未解決的「問題」，並產生求助提示詞。"]};
+function finChoice(){ const v = document.querySelector("input[name=fin]:checked").value;
+  $("#finishSummary").placeholder = FIN_TEXT[v][0]; $("#finishHint").textContent = FIN_TEXT[v][1]; return v; }
+document.querySelectorAll("input[name=fin]").forEach(r => r.onchange = finChoice);
+function openFinish(id){ finishId = id; $("#finishCode").textContent = id; $("#finishSummary").value = ""; finChoice(); $("#finishModal").classList.add("on"); }
 $("#finishCancel").onclick = () => $("#finishModal").classList.remove("on");
 $("#finishOk").onclick = async () => {
-  const v = document.querySelector("input[name=fin]:checked").value;
+  const v = finChoice();
+  if (v === "卡關" && !$("#finishSummary").value.trim()){ toast("請描述卡在哪裡"); $("#finishSummary").focus(); return; }
   $("#finishModal").classList.remove("on"); toast("正在 commit 並同步到 GitHub…", 20000);
   await act("/api/finish", {id:finishId, done:v==="done", status:v==="done"?null:v, summary:$("#finishSummary").value});
 };
+// ---------- 提示詞
+const PROMPT_TEXT = {
+  start: ["本課題的開始提示詞", "複製後貼到 Claude（建議在「STM32學習」專案裡開新對話），Claude 會依完成標準一步一步帶你。之後可在進行中的卡片按「📋 開始提示詞」再次取得。"],
+  stuck: ["求助提示詞", "複製後貼到 Claude。已附上課題資訊、你的筆記與程式碼；如果有錯誤訊息截圖或波形，也一起貼上。"]};
+function showPrompt(text, kind){
+  const [title, hint] = PROMPT_TEXT[kind] || PROMPT_TEXT.start;
+  $("#promptTitle").textContent = title; $("#promptHint").textContent = hint;
+  $("#promptText").value = text; $("#promptModal").classList.add("on"); $("#promptText").scrollTop = 0;
+}
+async function showPromptFor(id, kind, stuck){
+  try { const q = `id=${encodeURIComponent(id)}&kind=${kind}` + (stuck ? `&stuck=${encodeURIComponent(stuck)}` : "");
+    const {prompt} = await api("/api/prompt?" + q); showPrompt(prompt, kind); }
+  catch(e){ toast("⚠ " + e.message); }
+}
+$("#promptClose").onclick = () => $("#promptModal").classList.remove("on");
+$("#promptCopy").onclick = async () => {
+  const ta = $("#promptText");
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch { ta.select(); document.execCommand("copy"); }
+  toast("已複製，貼到 Claude 即可");
+};
+let stuckId = null;
+function openStuck(id){ stuckId = id; $("#stuckCode").textContent = id; $("#stuckText").value = $("#entryText")?.value || ""; $("#stuckModal").classList.add("on"); $("#stuckText").focus(); }
+$("#stuckCancel").onclick = () => $("#stuckModal").classList.remove("on");
+$("#stuckOk").onclick = async () => {
+  const v = $("#stuckText").value.trim(); if (!v){ toast("請描述卡在哪裡"); return; }
+  $("#stuckModal").classList.remove("on");
+  if ($("#entryText") && $("#entryText").value.trim() === v) $("#entryText").value = "";
+  await act("/api/entry", {id:stuckId, type:"問題", text:"【卡關】" + v}, true);
+  showPromptFor(stuckId, "stuck", v);
+};
+
 $("#syncBtn").onclick = () => { toast("同步中…", 20000); act("/api/sync", {}); };
 document.querySelector("nav").onclick = ev => { const b = ev.target.closest("button"); if (!b) return;
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
@@ -378,6 +441,22 @@ $("#planSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) r
 $("#typeSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; typeFilter = b.dataset.type;
   document.querySelectorAll("#typeSeg button").forEach(x => x.classList.toggle("on", x === b)); renderReview(); };
 $("#q").oninput = renderReview;
+// ---------- 背景程式存活回報：所有分頁關閉後 App 會自動結束
+const CID = Math.random().toString(36).slice(2);
+let pingFail = 0;
+async function ping(){
+  try { await fetch("/api/ping?c=" + CID, {cache:"no-store"}); pingFail = 0; }
+  catch { if (++pingFail >= 2) $("#closed").classList.add("on"); }
+}
+ping(); setInterval(ping, 5000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
+window.addEventListener("pagehide", () => navigator.sendBeacon("/api/bye?c=" + CID));
+window.addEventListener("pageshow", ev => { if (ev.persisted) ping(); });
+$("#quitBtn").onclick = async () => {
+  if (busy){ toast("正在同步，請稍候再關閉"); return; }
+  try { await api("/api/quit", {}); } catch {}
+  $("#closed").classList.add("on");
+};
 refresh().catch(e => toast("⚠ 無法連線到 App：" + e.message, 8000));
 </script>
 </body>

@@ -7,7 +7,9 @@
   （推到 GitHub 後，手機或任何裝置打開 repo 就能複習）
 - 結束課題時自動 git commit；完成時加上 tag；有 remote 時自動 push
 
-執行：python tracker/app.py  （或雙擊 啟動.bat）
+執行：雙擊 repo 根目錄的 STM32Tracker.exe（以 pythonw 在背景執行，不會出現終端機視窗）
+      或 python tracker/app.py
+關閉瀏覽器分頁後，App 會在幾秒內自動結束；也可以按頁面右上角的「關閉 App」。
 """
 import json
 import os
@@ -16,6 +18,9 @@ import socket
 import subprocess
 import sys
 import threading
+import time
+import traceback
+import urllib.request
 import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,6 +36,17 @@ SKIP_DIRS = {"Debug", "Release", ".metadata", "__pycache__", ".git"}
 SKIP_EXT = {".o", ".d", ".su", ".elf", ".hex", ".bin", ".map", ".list", ".cyclo"}
 MAX_UPLOAD = 20 * 1024 * 1024
 LOCK = threading.Lock()
+PORT_FILE = os.path.join(HERE, ".app_port")       # 記錄執行中的連接埠，避免重複開啟
+LOG_FILE = os.path.join(HERE, "app.log")
+APP_ID = "stm32-tracker"
+IS_WIN = sys.platform.startswith("win")
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
+CLIENT_TIMEOUT = 150      # 秒：分頁太久沒回報就視為已關閉（背景分頁計時器可能被瀏覽器降到每分鐘一次）
+BYE_GRACE = 4             # 秒：分頁關閉後等這麼久，沒有新分頁就結束（重新整理不會誤關）
+FIRST_CLIENT_WAIT = 180   # 秒：啟動後一直沒有瀏覽器連進來就結束
+STATE = {"syncing": False, "sync_msg": ""}
+CLIENTS = {}              # 分頁 id → 最後一次回報時間
+WATCH = {"had_client": False, "empty_since": None, "started": time.time(), "quit": False}
 ENTRY_TYPES = ("問題", "筆記", "解法")
 STATUSES = ("未開始", "進行中", "已完成", "卡關", "暫緩")
 
@@ -47,8 +63,11 @@ def git(*args, input_text=None, timeout=60):
             ["git", "-c", "core.quotepath=false", *args],
             cwd=ROOT,
             input=input_text.encode("utf-8") if input_text is not None else None,
+            stdin=None if input_text is not None else subprocess.DEVNULL,
             capture_output=True,
             timeout=timeout,
+            creationflags=NO_WINDOW,                       # 不要跳出黑色視窗
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},  # 沒有終端機，不能等待輸入
         )
     except FileNotFoundError:
         return False, "找不到 git，請先安裝 Git for Windows。"
@@ -176,22 +195,6 @@ def find(db, tid):
     raise KeyError(f"找不到任務 {tid}")
 
 
-def minutes(t):
-    total = 0
-    for s in t.get("sessions", []):
-        try:
-            a = datetime.strptime(s["start"], "%Y-%m-%d %H:%M")
-            b = datetime.strptime(s["end"], "%Y-%m-%d %H:%M") if s.get("end") else datetime.now()
-            total += max(0, int((b - a).total_seconds() // 60))
-        except (KeyError, ValueError):
-            pass
-    return total
-
-
-def fmt_min(m):
-    return f"{m // 60} 小時 {m % 60} 分" if m >= 60 else f"{m} 分"
-
-
 def export_markdown(db):
     os.makedirs(NOTES, exist_ok=True)
     tasks = db["tasks"]
@@ -207,7 +210,7 @@ def export_markdown(db):
         if t.get("orig"):
             lines.append(f"- 對應原任務（HAL 版）：{t['orig']}")
         if t.get("sessions"):
-            lines.append(f"- 投入時間：{fmt_min(minutes(t))}（{len(t['sessions'])} 次）")
+            lines.append(f"- 進行次數：{len(t['sessions'])} 次（最近一次：{t['sessions'][-1]['start'][:10]}）")
         if t.get("finished_at"):
             lines.append(f"- 完成日期：{t['finished_at']}")
         if os.path.isdir(os.path.join(PROJECTS, t["id"])):
@@ -235,11 +238,10 @@ def export_markdown(db):
              f"最後更新：{now()}", "",
              "- [全部問題整理（複習用）](QUESTIONS.md)", "",
              "## 2 個月衝刺（暫存器版）", "",
-             "| 代碼 | 任務 | 狀態 | 投入時間 | 筆記 |", "|---|---|---|---|---|"]
+             "| 代碼 | 任務 | 狀態 | 筆記 |", "|---|---|---|---|"]
     for t in sprint:
         link = f"[{len(t['entries'])} 則](notes/{t['id']}.md)" if (t.get("entries") or t.get("sessions")) else ""
-        lines.append(f"| {t['id']} | {t['title']} | {t['status']} | "
-                     f"{fmt_min(minutes(t)) if t.get('sessions') else ''} | {link} |")
+        lines.append(f"| {t['id']} | {t['title']} | {t['status']} | {link} |")
     lines += ["", "## 原計畫（HAL 版）", "", "| 代碼 | 任務 | 狀態 | 筆記 |", "|---|---|---|---|"]
     for t in tasks:
         if t.get("plan") != "HAL":
@@ -340,10 +342,98 @@ def open_folder(tid):
     if sys.platform.startswith("win"):
         os.startfile(d)  # noqa: S606
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", d])
+        subprocess.Popen(["open", d])  # noqa: S603,S607
     else:
-        subprocess.Popen(["xdg-open", d])
+        subprocess.Popen(["xdg-open", d])  # noqa: S603,S607
     return d
+
+
+# ---------------------------------------------------------------- prompts
+CODE_EXT = {".c", ".h", ".py"}
+CODE_SKIP = ("Drivers/", "Middlewares/", "CMSIS/")
+CODE_BUDGET = 15000          # 求助提示詞最多附上的程式碼字數
+
+
+def _task_block(t):
+    lines = [f"- 代碼：{t['id']}（{t.get('week') or ''}／{t.get('topic') or ''}，預定 {t.get('period') or '未定'}）",
+             f"- 課題：{t['title']}", "", "### 課題內容", t.get("content") or "（無）"]
+    if t.get("output"):
+        lines += ["", "### 產出物", t["output"]]
+    lines += ["", "### 完成標準", t.get("criteria") or "（無）"]
+    if t.get("orig"):
+        lines += ["", f"### 對應的舊 HAL 版任務：{t['orig']}"]
+    return lines
+
+
+def _history_block(t, limit=6, skip=""):
+    lines = []
+    entries = [e for e in t.get("entries", []) if not (skip and e["text"] == skip)]
+    open_q = [e for e in entries if e["type"] == "問題" and not e.get("resolved")]
+    if open_q:
+        lines += ["", "### 尚未解決的問題"] + [f"- （{e['time']}）{e['text']}" for e in open_q]
+    others = [e for e in entries if not (e["type"] == "問題" and not e.get("resolved"))]
+    if others:
+        lines += ["", f"### 最近的筆記（最新 {min(limit, len(others))} 則）"]
+        lines += [f"- [{e['type']}]（{e['time']}）{e['text']}" for e in others[-limit:]]
+    return lines
+
+
+def _code_files(tid):
+    return [f for f in list_files(tid)
+            if os.path.splitext(f["path"])[1].lower() in CODE_EXT and not any(s in f["path"] for s in CODE_SKIP)]
+
+
+def build_prompt(db, tid, kind="start", stuck_text=""):
+    t = find(db, tid)
+    files = list_files(tid)
+    n = len(t.get("sessions") or [])
+    rel = f"projects/{tid}/"
+    web = (git_info().get("web") or "")
+    if kind == "start":
+        first = n <= 1 and not t.get("entries")
+        lines = [f"我要{'開始' if first else '繼續'} STM32 學習課題 {tid}「{t['title']}」。"
+                 + ("" if first else f"這是第 {n} 次進行，請從上次的進度接續，不用從頭講。"),
+                 "我的背景、硬體與 2 個月衝刺計畫在專案說明（CLAUDE.md／STM32學習背景與進度）裡。", "",
+                 "## 本課題"] + _task_block(t) + _history_block(t)
+        if files:
+            lines += ["", f"### 目前的程式碼（{rel}，共 {len(files)} 個檔案）"]
+            lines += [f"- {f['path']}" for f in _code_files(tid)[:30]] or ["- （沒有 .c/.h/.py 檔）"]
+        lines += ["", "## 請這樣帶我",
+                  "1. 先用 3–5 句說明這個課題要練什麼、為什麼 IC 設計公司的韌體工程師需要會，以及最後怎麼驗收（對照完成標準）。",
+                  "2. 把課題拆成 3–6 個小步驟，列出清單後**一次只帶一步**，等我回報結果再進下一步。",
+                  "3. 涉及暫存器的步驟：先問我要查 RM0008 哪一章、哪個暫存器、哪幾個 bit，讓我自己查完再寫程式；完成後和舊 HAL 版比較差異。",
+                  "4. 不要一次給完整答案。我卡住時先給方向提示，第二次還卡住再給關鍵程式片段並解釋。",
+                  "5. 遇到值得記的觀念或錯誤，提醒我在 App 記成「問題／筆記／解法」。",
+                  "6. 最後依完成標準逐條驗收我（包含口頭解釋），全部通過才算完成。",
+                  "7. 請用繁體中文。", "",
+                  "準備好了就從第 1 點開始。"]
+    else:
+        lines = [f"我在 STM32 學習課題 {tid}「{t['title']}」卡關了，需要協助。", "",
+                 "## 卡在哪裡", stuck_text.strip() or "（請先問我卡在哪裡）", "",
+                 "## 課題資訊"] + _task_block(t) + _history_block(t, limit=8, skip="【卡關】" + stuck_text.strip())
+        code = _code_files(tid)
+        if code:
+            lines += ["", f"## 目前的程式碼（{rel}）"]
+            used = 0
+            for f in code:
+                text = read_text(tid, f["path"]) or ""
+                if used + len(text) > CODE_BUDGET:
+                    lines.append(f"- {f['path']}（太長未附上）")
+                    continue
+                used += len(text)
+                lang = "python" if f["path"].endswith(".py") else "c"
+                lines += ["", f"`{f['path']}`", f"```{lang}", text.rstrip(), "```"]
+        else:
+            lines += ["", "## 程式碼", "（App 裡還沒有這個課題的程式碼，我會另外貼上相關片段。）"]
+        if web:
+            lines += ["", f"GitHub：{web}/tree/HEAD/{rel}"]
+        lines += ["", "## 請這樣幫我",
+                  "1. 先問我 1–3 個釐清問題（例如：完整錯誤訊息、debugger 看到的暫存器值、LED／波形實際表現），不要急著給答案。",
+                  "2. 列出最可能的 2–3 個原因，每個原因給一個我能自己驗證的檢查方法（看哪個暫存器、量哪支腳、加哪行測試）。",
+                  "3. 等我回報結果再縮小範圍；確定原因後才給修正方向，必要時附上關鍵片段並解釋為什麼。",
+                  "4. 解決後幫我整理一段「原因＋解法」，讓我記到 App 的「解法」，面試時也能講。",
+                  "5. 請用繁體中文。"]
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------- actions
@@ -360,7 +450,7 @@ def act_start(db, body):
     t["finished_at"] = None
     save(db)
     msgs.append(f"開始 {t['id']}。")
-    return msgs
+    return {"messages": msgs, "prompt": build_prompt(db, t["id"], "start"), "prompt_kind": "start"}
 
 
 def act_entry(db, body):
@@ -397,21 +487,35 @@ def act_finish(db, body):
     t = find(db, body["id"])
     done = bool(body.get("done"))
     summary = (body.get("summary") or "").strip()
+    status = "已完成" if done else (body.get("status") if body.get("status") in STATUSES else "進行中")
+    if status == "卡關" and not summary:
+        raise ValueError("選擇「卡關」時，請描述卡在哪裡（這段會變成求助提示詞）。")
     if t["sessions"] and not t["sessions"][-1].get("end"):
         t["sessions"][-1]["end"] = now()
-    if summary:
-        t["summary"] = summary
+    n = len(t["sessions"])
     if done:
         t["status"] = "已完成"
         t["finished_at"] = datetime.now().strftime("%Y-%m-%d")
+        if summary:
+            t["summary"] = summary
+        head = f"{t['id']}: 完成 {t['title']}"
+    elif status == "卡關":
+        t["status"] = "卡關"
+        t["entries"].append({"time": now(), "type": "問題", "text": "【卡關】" + summary, "resolved": False})
+        head = f"{t['id']}: 卡關 {t['title']}"
     else:
-        t["status"] = body.get("status") if body.get("status") in STATUSES else "進行中"
+        t["status"] = status
+        if summary:   # 每次的進度都保留，不會互相覆蓋
+            t["entries"].append({"time": now(), "type": "筆記", "text": "【本次進度】" + summary, "resolved": None})
+        head = f"{t['id']}: 進度 {t['title']}（第 {n} 次）"
     save(db)
-    word = "完成" if done else "進度"
-    msg = f"{t['id']}：{word} {t['title']}\n\n狀態：{t['status']}　本課題累計 {fmt_min(minutes(t))}"
+    msg = f"{head}\n\n狀態：{t['status']}"
     if summary:
         msg += f"\n\n{summary}"
-    return commit_learning(msg, tag=t["id"] if done else None)
+    msgs = commit_learning(msg, tag=t["id"] if done else None)
+    if status == "卡關":
+        return {"messages": msgs, "prompt": build_prompt(db, t["id"], "stuck", summary), "prompt_kind": "stuck"}
+    return msgs
 
 
 def act_status(db, body):
@@ -479,11 +583,28 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(HERE, "index.html"), "rb") as f:
                 return self.send(200, f.read(), "text/html; charset=utf-8")
         if u.path == "/api/state":
+            if STATE["syncing"]:
+                return self.send(200, {"syncing": True})
             with LOCK:
                 db = load()
-            for t in db["tasks"]:
-                t["minutes"] = minutes(t)
-            return self.send(200, {"tasks": db["tasks"], "git": git_info(), "now": now()})
+            return self.send(200, {"tasks": db["tasks"], "git": git_info(), "now": now(),
+                                   "sync_msg": STATE.pop("sync_msg", "") or ""})
+        if u.path == "/api/ping":
+            cid = parse_qs(u.query).get("c", [""])[0]
+            if cid:
+                CLIENTS[cid] = time.time()
+                WATCH["had_client"] = True
+            return self.send(200, {"app": APP_ID})
+        if u.path == "/api/prompt":
+            q = parse_qs(u.query)
+            try:
+                with LOCK:
+                    db = load()
+                kind = q.get("kind", ["start"])[0]
+                text = build_prompt(db, q.get("id", [""])[0], kind, q.get("stuck", [""])[0])
+            except (KeyError, ValueError) as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(200, {"prompt": text})
         if u.path == "/api/files":
             tid = parse_qs(u.query).get("id", [""])[0]
             try:
@@ -510,6 +631,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(403, {"error": "forbidden"})
         if u.path == "/api/upload":
             return self.upload(parse_qs(u.query))
+        if u.path == "/api/bye":            # 分頁關閉（navigator.sendBeacon）
+            self.rfile.read(int(self.headers.get("Content-Length") or 0))
+            CLIENTS.pop(parse_qs(u.query).get("c", [""])[0], None)
+            return self.send(200, {"ok": True})
+        if u.path == "/api/quit":           # 頁面上的「關閉 App」
+            WATCH["quit"] = True
+            return self.send(200, {"ok": True})
         fn = ACTIONS.get(u.path)
         if not fn:
             return self.send(404, {"error": "not found"})
@@ -518,8 +646,9 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(n) or b"{}")
             with LOCK:
                 db = load()
-                msgs = fn(db, body)
-            self.send(200, {"ok": True, "messages": msgs})
+                res = fn(db, body)
+            out = res if isinstance(res, dict) else {"messages": res}
+            self.send(200, {"ok": True, **out})
         except (KeyError, ValueError, IndexError) as e:
             self.send(400, {"ok": False, "error": str(e)})
         except Exception as e:  # noqa: BLE001
@@ -558,31 +687,132 @@ def free_port(start=8765):
     raise RuntimeError("找不到可用的連接埠")
 
 
-def main():
-    if not os.path.exists(DATA):
-        print("找不到 learning/progress.json")
-        sys.exit(1)
-    with LOCK:
-        db = load()
-        export_markdown(db)
+def log(msg):
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}\n")
+    except OSError:
+        pass
+
+
+def alert(msg):
+    """沒有終端機視窗時，用 Windows 對話框顯示錯誤。"""
+    log(msg)
+    print(msg)
+    if IS_WIN:
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, msg, "STM32 學習進度", 0x10)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def running_instance():
+    """如果 App 已經在執行，回傳它的網址。"""
+    try:
+        with open(PORT_FILE, encoding="utf-8") as f:
+            port = int(f.read().strip())
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/ping", timeout=1.5) as r:  # noqa: S310
+            if json.loads(r.read()).get("app") == APP_ID:
+                return f"http://127.0.0.1:{port}/"
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def startup_sync():
     gi = git_info()
     if gi.get("is_repo") and gi.get("remote"):
-        print("正在從 GitHub 取得最新進度…")
-        print(pull()[1])
+        with LOCK:
+            ok, msg = pull()
+            try:
+                export_markdown(load())
+            except Exception:  # noqa: BLE001
+                pass
+        STATE["sync_msg"] = msg if ok else "⚠ " + msg
+        log(msg)
     elif not gi.get("is_repo"):
-        print("提醒：這個資料夾還不是 Git repo，筆記只會存在本機。")
+        STATE["sync_msg"] = "提醒：這個資料夾還不是 Git repo，筆記只會存在本機。"
+    STATE["syncing"] = False
+
+
+def watchdog(srv):
+    """所有分頁都關閉後自動結束程式（不會留下背景程式）。"""
+    last = time.time()
+    while True:
+        time.sleep(1)
+        t = time.time()
+        if t - last > 10:                 # 電腦剛從睡眠醒來：給分頁時間重新回報
+            for k in list(CLIENTS):
+                CLIENTS[k] = t
+            WATCH["empty_since"] = None
+        last = t
+        if LOCK.locked() or STATE["syncing"]:   # 正在 commit／push，等它做完
+            continue
+        if WATCH["quit"]:
+            break
+        for k, seen in list(CLIENTS.items()):
+            if t - seen > CLIENT_TIMEOUT:
+                CLIENTS.pop(k, None)
+        if not WATCH["had_client"]:
+            if t - WATCH["started"] > FIRST_CLIENT_WAIT:
+                log("沒有瀏覽器連線，自動結束。")
+                break
+            continue
+        if CLIENTS:
+            WATCH["empty_since"] = None
+        elif WATCH["empty_since"] is None:
+            WATCH["empty_since"] = t
+        elif t - WATCH["empty_since"] > BYE_GRACE:
+            break
+    log("App 結束。")
+    srv.shutdown()
+
+
+def main():
+    if not os.path.exists(DATA):
+        alert(f"找不到 learning/progress.json\n\n請確認 STM32Tracker.exe 放在 repo 根目錄。\n目前位置：{ROOT}")
+        sys.exit(1)
+    url = running_instance()
+    if url:                                 # 已經開著：只打開瀏覽器
+        webbrowser.open(url)
+        return
+    try:
+        if os.path.getsize(LOG_FILE) > 200_000:
+            os.remove(LOG_FILE)
+    except OSError:
+        pass
+    with LOCK:
+        export_markdown(load())
     port = free_port()
     url = f"http://127.0.0.1:{port}/"
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"STM32 學習進度 App 已啟動：{url}")
-    print("關閉這個視窗即可結束程式。")
+    with open(PORT_FILE, "w", encoding="utf-8") as f:
+        f.write(str(port))
+    log(f"App 啟動：{url}")
+    print(f"STM32 學習進度 App 已啟動：{url}（關閉瀏覽器分頁即結束）")
+    STATE["syncing"] = True
+    threading.Thread(target=startup_sync, daemon=True).start()
+    threading.Thread(target=watchdog, args=(srv,), daemon=True).start()
     if "--no-browser" not in sys.argv:
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.3, lambda: webbrowser.open(url)).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        srv.server_close()
+        try:
+            os.remove(PORT_FILE)
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:  # noqa: BLE001
+        alert("App 發生錯誤，無法啟動：\n\n" + traceback.format_exc()[-1500:])
+        sys.exit(1)
