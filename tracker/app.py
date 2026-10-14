@@ -460,6 +460,23 @@ def act_start(db, body):
     return {"messages": msgs, "prompt": build_prompt(db, t["id"], "start"), "prompt_kind": "start"}
 
 
+def act_restart(db, body):
+    """誤按開始或想從頭來過：清掉這個課題的進行紀錄、筆記與總結，當成第一次重新開始。
+    projects/<代碼>/ 裡的程式碼不會刪除。"""
+    t = find(db, body["id"])
+    t["sessions"] = []
+    t["entries"] = []
+    t["summary"] = None
+    t["finished_at"] = None
+    t["status"] = "未開始"
+    if not body.get("start", True):
+        save(db)
+        return ["已重設為「未開始」。"]
+    res = act_start(db, {"id": t["id"]})
+    res["messages"].insert(0, f"已清除 {t['id']} 的紀錄，重新開始。")
+    return res
+
+
 def act_entry(db, body):
     t = find(db, body["id"])
     typ = body.get("type", "筆記")
@@ -559,6 +576,7 @@ def act_sync(db, body):
 
 ACTIONS = {
     "/api/start": act_start,
+    "/api/restart": act_restart,
     "/api/entry": act_entry,
     "/api/entry/update": act_entry_update,
     "/api/entry/delete": act_entry_delete,
