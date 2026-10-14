@@ -1,0 +1,10 @@
+Debug/
+Release/
+.metadata/
+*.o
+*.elf
+*.hex
+*.bin
+*.map
+__pycache__/
+learning/progress.json.tmp

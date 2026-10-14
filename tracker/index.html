@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STM32 學習進度</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --ink:#1d2330; --muted:#677084; --line:#e2e5eb;
+  --accent:#1f6feb; --accent-ink:#fff; --ok:#1a7f37; --warn:#b26a00; --bad:#c62828; --pause:#6e7781;
+  --chip:#eef1f5; --q:#fff4e5; --n:#eef4ff; --s:#e9f7ee; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1218; --panel:#171b23; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2a303c;
+  --accent:#4c8dff; --chip:#232936; --q:#3a2c14; --n:#1b2740; --s:#16301f;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:14px;padding:12px 0;flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:700}
+.bar{flex:1;min-width:160px;height:8px;background:var(--chip);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.prog{font-size:13px;color:var(--muted);white-space:nowrap}
+.git{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.git a{color:var(--accent)}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+button.small{padding:2px 8px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}
+nav{display:flex;gap:4px}
+nav button{border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;background:none;color:var(--muted)}
+nav button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:700}
+main{padding:16px 0 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.active{border:2px solid var(--accent)}
+.code{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.title{font-size:17px;font-weight:700}
+.timer{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:5px 12px}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+textarea,input[type=search]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{min-height:90px;resize:vertical}
+.entry{border-radius:8px;padding:8px 12px;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+.entry.問題{background:var(--q)} .entry.筆記{background:var(--n)} .entry.解法{background:var(--s)}
+.entry .meta{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);white-space:normal;margin-bottom:2px}
+.pill{display:inline-block;font-size:12px;padding:1px 9px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.已完成{background:var(--ok);color:#fff}.pill.進行中{background:var(--accent);color:#fff}
+.pill.卡關{background:var(--bad);color:#fff}.pill.暫緩{background:var(--pause);color:#fff}
+.week{margin:18px 0 6px;font-weight:700;color:var(--muted);font-size:14px}
+.task{border-bottom:1px solid var(--line);padding:10px 4px}
+.task:last-child{border-bottom:none}
+.task .head{display:flex;gap:10px;align-items:center;cursor:pointer}
+.task .head .t{flex:1}
+.detail{margin:10px 0 4px 4px;font-size:14px}
+.detail h4{margin:12px 0 2px;font-size:13px;color:var(--muted)}
+.detail p{margin:0;white-space:pre-wrap}
+.commits a{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.muted{color:var(--muted);font-size:13px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input{flex:1;min-width:200px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.on{display:flex}
+.modal .card{width:min(560px,100%);margin:0}
+.choice{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.choice label{display:flex;gap:8px;align-items:center;cursor:pointer}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;display:none;max-width:90vw;white-space:pre-wrap;z-index:30}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:10px;margin-top:6px}
+.drop.over{border-color:var(--accent);background:var(--chip)}
+.files{font-family:var(--mono);font-size:13px;max-height:260px;overflow:auto;margin-top:6px}
+.files div{display:flex;gap:8px;align-items:center;padding:2px 0}
+.files a{cursor:pointer;color:var(--accent)}
+pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 var(--mono);white-space:pre;tab-size:4}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <h1>STM32 學習進度</h1>
+    <div class="bar"><i id="barFill" style="width:0"></i></div>
+    <span class="prog" id="progText"></span>
+    <div class="git" id="gitInfo"></div>
+    <button id="syncBtn" title="從 GitHub 取得最新進度並上傳本機變更">⟳ 同步</button>
+  </div>
+  <nav>
+    <button data-tab="tasks" class="on">任務</button>
+    <button data-tab="review">複習</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section id="activeBox"></section>
+  <section id="tab-tasks">
+    <div class="filters">
+      <div class="seg" id="planSeg">
+        <button data-plan="SPRINT" class="on">2 個月衝刺</button>
+        <button data-plan="HAL">原計畫（HAL）</button>
+      </div>
+    </div>
+    <div class="card" id="taskList"></div>
+  </section>
+  <section id="tab-review" hidden>
+    <div class="filters">
+      <input type="search" id="q" placeholder="搜尋問題與筆記…">
+      <div class="seg" id="typeSeg">
+        <button data-type="" class="on">全部</button>
+        <button data-type="open">未解決問題</button>
+        <button data-type="問題">問題</button>
+        <button data-type="筆記">筆記</button>
+        <button data-type="解法">解法</button>
+      </div>
+    </div>
+    <div id="reviewList"></div>
+  </section>
+</main>
+
+<div class="modal" id="finishModal"><div class="card">
+  <div class="title">結束本次課題</div>
+  <div class="code" id="finishCode"></div>
+  <div class="choice">
+    <label><input type="radio" name="fin" value="done" checked> 已完成這個課題（commit 並加上 tag）</label>
+    <label><input type="radio" name="fin" value="進行中"> 還沒完成，下次繼續</label>
+    <label><input type="radio" name="fin" value="卡關"> 卡關，需要協助</label>
+  </div>
+  <textarea id="finishSummary" placeholder="本次總結（選填）：學到什麼、還剩什麼沒做"></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="finishCancel">取消</button>
+    <button class="primary" id="finishOk">結束並同步到 GitHub</button>
+  </div>
+</div></div>
+
+<div class="modal" id="codeModal"><div class="card" style="width:min(980px,100%)">
+  <div class="row"><div class="code" id="codeName"></div><span class="sp"></span><button id="codeClose">關閉</button></div>
+  <pre class="code-view" id="codeBody"></pre>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let S = {tasks:[], git:{}}, plan = "SPRINT", typeFilter = "", entryType = "問題", open = new Set(), busy = false;
+
+async function api(path, body){
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.error || "發生錯誤");
+  return j;
+}
+function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
+async function act(path, body, quiet){
+  if (busy) return; busy = true;
+  try { const j = await api(path, body); if (!quiet) toast((j.messages||[]).join("\n")); await refresh(); }
+  catch(e){ toast("⚠ " + e.message, 6000); }
+  finally { busy = false; }
+}
+async function refresh(){
+  const draft = $("#entryText")?.value;
+  S = await api("/api/state");
+  render();
+  if (draft && $("#entryText")) $("#entryText").value = draft;
+}
+const fmtMin = m => m >= 60 ? `${Math.floor(m/60)} 小時 ${m%60} 分` : `${m} 分`;
+const activeTask = () => S.tasks.find(t => t.sessions?.length && !t.sessions.at(-1).end);
+
+function render(){
+  const sp = S.tasks.filter(t => t.plan === "SPRINT"), done = sp.filter(t => t.status === "已完成").length;
+  $("#barFill").style.width = (done*100/Math.max(1,sp.length)) + "%";
+  $("#progText").textContent = `衝刺 ${done} / ${sp.length}`;
+  const g = S.git;
+  $("#gitInfo").innerHTML = !g.is_repo ? "⚠ 尚未建立 Git repo（只存本機）"
+    : `<span>⎇ ${esc(g.branch)}</span>` + (g.web ? `<a href="${esc(g.web)}" target="_blank">GitHub</a>` : "<span>（未設定 remote）</span>")
+      + (g.dirty ? `<span title="有尚未 commit 的變更">●</span>` : "");
+  $("#syncBtn").disabled = !g.remote;
+  renderActive(); renderTasks(); renderReview();
+}
+
+function entryHtml(t, e, i, withTask){
+  const resolved = e.type === "問題" ? `<label class="muted"><input type="checkbox" ${e.resolved?"checked":""} onchange="act('/api/entry/update',{id:'${t.id}',index:${i},resolved:this.checked},true)"> 已解決</label>` : "";
+  return `<div class="entry ${e.type}"><div class="meta"><b>${e.type}</b><span>${esc(e.time)}</span>
+    ${withTask ? `<span class="code">${esc(t.id)}</span><span>${esc(t.title)}</span>` : ""}
+    <span class="sp"></span>${resolved}
+    <button class="small" onclick="delEntry('${t.id}',${i})">刪除</button></div>${esc(e.text)}</div>`;
+}
+function delEntry(id, i){ if (confirm("確定刪除這則紀錄？")) act("/api/entry/delete", {id, index:i}, true); }
+
+function renderActive(){
+  const t = activeTask(), box = $("#activeBox");
+  if (!t){ box.innerHTML = ""; return; }
+  const start = t.sessions.at(-1).start;
+  box.innerHTML = `<div class="card active">
+    <div class="row"><div><div class="code">${esc(t.id)}　${esc(t.week)}　${esc(t.topic)}</div>
+      <div class="title">${esc(t.title)}</div></div><span class="sp"></span>
+      <div style="text-align:right"><div class="timer" id="timer" data-start="${esc(start)}"></div>
+      <div class="muted">累計 ${fmtMin(t.minutes)}</div></div></div>
+    <details style="margin:8px 0"><summary class="muted">任務內容與完成標準</summary>
+      <div class="detail"><h4>內容</h4><p>${esc(t.content)}</p><h4>完成標準</h4><p>${esc(t.criteria)}</p>
+      ${t.orig ? `<h4>對應原任務（HAL 版）</h4><p>${esc(t.orig)}</p>` : ""}</div></details>
+    <div class="row" style="margin-bottom:6px"><div class="seg" id="entrySeg">
+      ${["問題","筆記","解法"].map(x=>`<button data-et="${x}" class="${x===entryType?"on":""}">${x}</button>`).join("")}</div>
+      <span class="muted">Ctrl + Enter 儲存</span></div>
+    <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…"></textarea>
+    <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
+      <button class="danger" onclick="openFinish('${t.id}')">結束本次課題</button></div>
+    ${codeHtml(t, "a")}
+    <div>${t.entries.map((e,i)=>({e,i})).reverse().map(({e,i})=>entryHtml(t,e,i)).join("")}</div>
+  </div>`;
+  $("#entrySeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; entryType = b.dataset.et;
+    document.querySelectorAll("#entrySeg button").forEach(x => x.classList.toggle("on", x === b)); };
+  const save = () => { const v = $("#entryText").value.trim(); if (!v) return;
+    $("#entryText").value = ""; act("/api/entry", {id:t.id, type:entryType, text:v}, true); };
+  $("#saveEntry").onclick = save;
+  $("#entryText").onkeydown = ev => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) save(); };
+  tick(); loadFiles(t.id, "a");
+}
+function tick(){
+  const el = $("#timer"); if (!el) return;
+  const s = new Date(el.dataset.start.replace(" ", "T")), d = Math.max(0, Math.floor((Date.now()-s)/1000));
+  el.textContent = [Math.floor(d/3600), Math.floor(d/60)%60, d%60].map(n=>String(n).padStart(2,"0")).join(":");
+}
+setInterval(tick, 1000);
+
+function renderTasks(){
+  const list = S.tasks.filter(t => t.plan === plan), act_ = activeTask();
+  let html = "", lastWeek = null;
+  for (const t of list){
+    if (t.week !== lastWeek){ lastWeek = t.week; html += `<div class="week">${esc(t.week)}${t.period?`　${esc(t.period)}`:""}</div>`; }
+    const isActive = act_ && act_.id === t.id, isOpen = open.has(t.id);
+    html += `<div class="task"><div class="head" onclick="toggle('${t.id}')">
+      <span class="code" style="width:132px">${esc(t.id)}</span>
+      <span class="t">${esc(t.title)}${t.entries.length?` <span class="muted">· ${t.entries.length} 則紀錄</span>`:""}</span>
+      ${t.minutes?`<span class="muted">${fmtMin(t.minutes)}</span>`:""}
+      <span class="pill ${esc(t.status)}">${esc(t.status)}</span>
+      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"重新開啟":"開始"}</button>`}
+    </div>${isOpen ? detailHtml(t) : ""}</div>`;
+  }
+  $("#taskList").innerHTML = html || `<div class="empty">沒有任務</div>`;
+  for (const id of open){ loadCommits(id); loadFiles(id, "d"); }
+}
+function detailHtml(t){
+  return `<div class="detail">
+    <h4>內容</h4><p>${esc(t.content)}</p>
+    ${t.output?`<h4>產出物</h4><p>${esc(t.output)}</p>`:""}
+    <h4>完成標準</h4><p>${esc(t.criteria)}</p>
+    ${t.orig?`<h4>對應原任務（HAL 版）</h4><p>${esc(t.orig)}</p>`:""}
+    ${t.summary?`<h4>總結</h4><p>${esc(t.summary)}</p>`:""}
+    <h4>狀態</h4><select onchange="act('/api/status',{id:'${t.id}',status:this.value})">
+      ${["未開始","進行中","已完成","卡關","暫緩"].map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select>
+    <h4>相關 commit（訊息中含 ${esc(t.id)}）</h4><div class="commits" id="c-${t.id}"><span class="muted">讀取中…</span></div>
+    ${codeHtml(t, "d")}
+    ${t.entries.length?`<h4>問題與筆記</h4>${t.entries.map((e,i)=>entryHtml(t,e,i)).join("")}`:""}
+  </div>`;
+}
+async function loadCommits(id){
+  const el = document.getElementById("c-"+id); if (!el) return;
+  try {
+    const {commits} = await api("/api/commits?id="+encodeURIComponent(id));
+    el.innerHTML = commits.length ? commits.map(c => {
+      const h = S.git.web ? `<a href="${esc(S.git.web)}/commit/${c.hash}" target="_blank">${c.short}</a>` : `<span class="code">${c.short}</span>`;
+      return `<div>${h} <span class="muted">${esc(c.date)}</span> ${esc(c.msg)}</div>`; }).join("")
+      : `<span class="muted">還沒有。寫程式 commit 時在訊息裡加上 ${esc(id)}，就會出現在這裡。</span>`;
+  } catch { el.innerHTML = `<span class="muted">無法讀取</span>`; }
+}
+// ---------- 程式碼
+function codeHtml(t, k){
+  const key = k + "-" + t.id;
+  return `<h4 class="muted" style="margin:14px 0 4px">程式碼（projects/${esc(t.id)}/）</h4>
+  <div class="drop" data-id="${t.id}" data-key="${key}" ondragover="dragOver(event)" ondragleave="this.classList.remove('over')" ondrop="dropFiles(event)">
+    <div class="row">
+      <span><button class="small" onclick="this.nextElementSibling.click()">上傳檔案</button><input type="file" multiple hidden onchange="pick(this,'${t.id}','${key}')"></span>
+      <span><button class="small" onclick="this.nextElementSibling.click()">上傳整個資料夾</button><input type="file" webkitdirectory hidden onchange="pick(this,'${t.id}','${key}')"></span>
+      <button class="small" onclick="act('/api/open-folder',{id:'${t.id}'})">開啟資料夾</button>
+      <span class="muted">或把檔案拖曳到這裡（Debug/、.o、.elf 等編譯產物會自動略過）</span>
+    </div>
+    <div class="files" id="f-${key}"></div>
+  </div>`;
+}
+async function loadFiles(id, k){
+  const el = document.getElementById(`f-${k}-${id}`); if (!el) return;
+  try {
+    const {files, dir} = await api("/api/files?id=" + encodeURIComponent(id));
+    const gh = S.git.web ? `${S.git.web}/tree/${encodeURIComponent(S.git.branch)}/${dir}` : null;
+    el.innerHTML = files.length
+      ? (gh ? `<div class="muted">共 ${files.length} 個檔案　<a href="${esc(gh)}" target="_blank">在 GitHub 查看</a>（push 後）</div>` : `<div class="muted">共 ${files.length} 個檔案</div>`)
+        + files.map(f => `<div><a onclick="viewFile('${id}','${esc(f.path).replace(/'/g,"&#39;")}')">${esc(f.path)}</a>
+          <span class="muted">${f.size < 1024 ? f.size + " B" : (f.size/1024).toFixed(1) + " KB"}</span><span class="sp"></span>
+          <button class="small" onclick="delFile('${id}','${esc(f.path).replace(/'/g,"&#39;")}')">刪除</button></div>`).join("")
+      : `<div class="muted">尚無程式碼。完成課題時，這個資料夾會和筆記一起 commit。</div>`;
+  } catch { el.innerHTML = `<span class="muted">無法讀取檔案列表</span>`; }
+}
+const SKIP_DIR = new Set(["Debug","Release",".metadata","__pycache__",".git"]);
+const SKIP_EXT = /\.(o|d|su|elf|hex|bin|map|list|cyclo)$/i;
+async function uploadList(id, key, items){
+  items = items.filter(({path}) => { const p = path.split("/"); return !p.slice(0,-1).some(x => SKIP_DIR.has(x)) && !SKIP_EXT.test(p.at(-1)); });
+  if (!items.length){ toast("沒有可上傳的檔案"); return; }
+  let ok = 0, fail = [];
+  for (let i = 0; i < items.length; i++){
+    toast(`上傳中 ${i+1} / ${items.length}：${items[i].path}`, 60000);
+    try {
+      const r = await fetch(`/api/upload?id=${encodeURIComponent(id)}&path=${encodeURIComponent(items[i].path)}`, {method:"POST", body:items[i].file});
+      const j = await r.json(); if (!r.ok || !j.ok) throw new Error(j.error); ok++;
+    } catch(e){ fail.push(items[i].path + "：" + e.message); }
+  }
+  toast(`已上傳 ${ok} 個檔案` + (fail.length ? `\n失敗 ${fail.length} 個：\n` + fail.slice(0,5).join("\n") : ""), 6000);
+  await refresh();
+}
+function pick(input, id, key){
+  const items = [...input.files].map(f => ({file:f, path:(f.webkitRelativePath || f.name)}));
+  input.value = ""; uploadList(id, key, items);
+}
+function dragOver(ev){ ev.preventDefault(); ev.currentTarget.classList.add("over"); }
+async function dropFiles(ev){
+  ev.preventDefault(); const box = ev.currentTarget; box.classList.remove("over");
+  const entries = [...ev.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  const out = [];
+  async function walk(entry, prefix){
+    if (entry.isFile){ const f = await new Promise((res, rej) => entry.file(res, rej)); out.push({file:f, path:prefix + f.name}); }
+    else if (entry.isDirectory){
+      if (SKIP_DIR.has(entry.name)) return;
+      const reader = entry.createReader(); let batch;
+      do { batch = await new Promise((res, rej) => reader.readEntries(res, rej)); for (const e of batch) await walk(e, prefix + entry.name + "/"); } while (batch.length);
+    }
+  }
+  for (const e of entries) await walk(e, "");
+  uploadList(box.dataset.id, box.dataset.key, out);
+}
+async function viewFile(id, path){
+  try {
+    const {text} = await api(`/api/file?id=${encodeURIComponent(id)}&path=${encodeURIComponent(path)}`);
+    $("#codeName").textContent = `${id} / ${path}`;
+    $("#codeBody").textContent = text === null ? "（二進位檔，無法預覽）" : text;
+    $("#codeModal").classList.add("on");
+  } catch(e){ toast("⚠ " + e.message); }
+}
+function delFile(id, path){ if (confirm(`刪除 ${path}？`)) act("/api/file/delete", {id, path}, true); }
+$("#codeClose").onclick = () => $("#codeModal").classList.remove("on");
+
+function toggle(id){ open.has(id) ? open.delete(id) : open.add(id); renderTasks(); }
+function startTask(id){
+  const cur = activeTask();
+  if (cur && !confirm(`${cur.id} 正在進行中，要暫停它並開始 ${id} 嗎？`)) return;
+  act("/api/start", {id}); window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function renderReview(){
+  const q = $("#q").value.trim().toLowerCase(); let rows = [];
+  for (const t of S.tasks) t.entries.forEach((e,i) => rows.push({t,e,i}));
+  rows = rows.filter(({t,e}) => {
+    if (typeFilter === "open" && !(e.type === "問題" && !e.resolved)) return false;
+    if (typeFilter && typeFilter !== "open" && e.type !== typeFilter) return false;
+    return !q || (e.text + t.id + t.title).toLowerCase().includes(q);
+  }).sort((a,b) => b.e.time.localeCompare(a.e.time));
+  $("#reviewList").innerHTML = rows.length ? `<div class="muted" style="margin-bottom:6px">共 ${rows.length} 則</div>` + rows.map(({t,e,i})=>entryHtml(t,e,i,true)).join("")
+    : `<div class="card empty">沒有符合的紀錄</div>`;
+}
+
+let finishId = null;
+function openFinish(id){ finishId = id; $("#finishCode").textContent = id; $("#finishSummary").value = ""; $("#finishModal").classList.add("on"); }
+$("#finishCancel").onclick = () => $("#finishModal").classList.remove("on");
+$("#finishOk").onclick = async () => {
+  const v = document.querySelector("input[name=fin]:checked").value;
+  $("#finishModal").classList.remove("on"); toast("正在 commit 並同步到 GitHub…", 20000);
+  await act("/api/finish", {id:finishId, done:v==="done", status:v==="done"?null:v, summary:$("#finishSummary").value});
+};
+$("#syncBtn").onclick = () => { toast("同步中…", 20000); act("/api/sync", {}); };
+document.querySelector("nav").onclick = ev => { const b = ev.target.closest("button"); if (!b) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  $("#tab-tasks").hidden = b.dataset.tab !== "tasks"; $("#tab-review").hidden = b.dataset.tab !== "review"; };
+$("#planSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; plan = b.dataset.plan;
+  document.querySelectorAll("#planSeg button").forEach(x => x.classList.toggle("on", x === b)); renderTasks(); };
+$("#typeSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; typeFilter = b.dataset.type;
+  document.querySelectorAll("#typeSeg button").forEach(x => x.classList.toggle("on", x === b)); renderReview(); };
+$("#q").oninput = renderReview;
+refresh().catch(e => toast("⚠ 無法連線到 App：" + e.message, 8000));
+</script>
+</body>
+</html>
