@@ -48,7 +48,17 @@ main{padding:16px 0 60px}
 .seg button.on{background:var(--accent);color:var(--accent-ink)}
 textarea,input[type=search]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 textarea{min-height:90px;resize:vertical}
-.entry{border-radius:8px;padding:8px 12px;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+.entry{border-radius:8px;padding:8px 12px;margin:8px 0;word-break:break-word}
+.md{line-height:1.6}
+.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md p{margin:4px 0}.md ul,.md ol{margin:4px 0;padding-left:22px}.md li{margin:2px 0}
+.md h3,.md h4,.md h5{margin:8px 0 4px;font-size:15px}
+.md code{font-family:var(--mono);font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:4px}
+.md pre{margin:6px 0;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12.5px/1.45 var(--mono);white-space:pre}
+.md pre code{background:none;padding:0}
+.md blockquote{margin:6px 0;padding:2px 10px;border-left:3px solid var(--line);color:var(--muted)}
+.md table{border-collapse:collapse;margin:6px 0;font-size:13.5px}.md th,.md td{border:1px solid var(--line);padding:3px 8px;text-align:left}
+.md hr{border:none;border-top:1px solid var(--line);margin:8px 0}
 .entry.問題{background:var(--q)} .entry.筆記{background:var(--n)} .entry.解法{background:var(--s)}
 .entry .meta{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);white-space:normal;margin-bottom:2px}
 .pill{display:inline-block;font-size:12px;padding:1px 9px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
@@ -188,6 +198,72 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// 簡易 Markdown：支援 **粗體**、`程式碼`、```程式碼區塊```、- / * / • 清單、1. 編號清單、### 標題、> 引言、| 表格 |、---
+// 先跳脫 HTML 再轉換，所以內容不會被當成 HTML 執行。
+function mdInline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+}
+function md(text){
+  const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+  let html = "", i = 0;
+  const isUl = l => /^\s*([-*•])\s+/.test(l), isOl = l => /^\s*\d+[.)、]\s+/.test(l);
+  const isRow = l => /^\s*\|.*\|\s*$/.test(l);
+  while (i < lines.length){
+    const l = lines[i];
+    if (/^\s*```/.test(l)){                       // 程式碼區塊
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+      i++; html += `<pre><code>${esc(buf.join("\n"))}</code></pre>`; continue;
+    }
+    if (!l.trim()){ i++; continue; }
+    let m;
+    if ((m = l.match(/^\s*(#{1,6})\s+(.*)$/))){
+      const n = Math.min(5, Math.max(3, m[1].length + 2));
+      html += `<h${n}>${mdInline(m[2])}</h${n}>`; i++; continue;
+    }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)){ html += "<hr>"; i++; continue; }
+    if (/^\s*>/.test(l)){
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+      html += `<blockquote>${md(buf.join("\n"))}</blockquote>`; continue;
+    }
+    if (isRow(l)){                                // 表格
+      const rows = [];
+      while (i < lines.length && isRow(lines[i])) rows.push(lines[i++]);
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const sep = rows.length > 1 && /^[\s|:-]+$/.test(rows[1]);
+      let t = "<table>";
+      rows.forEach((r, k) => { if (sep && k === 1) return;
+        const tag = sep && k === 0 ? "th" : "td";
+        t += "<tr>" + cells(r).map(c => `<${tag}>${mdInline(c)}</${tag}>`).join("") + "</tr>"; });
+      html += t + "</table>"; continue;
+    }
+    if (isUl(l) || isOl(l)){                      // 清單（以縮排做巢狀）
+      const ordered = isOl(l), items = [];
+      while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i])){
+        const cur = lines[i];
+        if ((ordered ? isOl(cur) : isUl(cur)) && cur.search(/\S/) <= l.search(/\S/)){
+          items.push([cur.replace(ordered ? /^\s*\d+[.)、]\s+/ : /^\s*[-*•]\s+/, "")]);
+        } else if (items.length && cur.search(/\S/) > l.search(/\S/)){
+          items[items.length - 1].push(cur);
+        } else break;
+        i++;
+      }
+      const tag = ordered ? "ol" : "ul";
+      html += `<${tag}>` + items.map(([first, ...rest]) => {
+        const sub = rest.length ? md(rest.map(r => r.replace(/^\s{1,4}/, "")).join("\n")) : "";
+        return `<li>${mdInline(first)}${sub}</li>`; }).join("") + `</${tag}>`;
+      continue;
+    }
+    const buf = [];                               // 一般段落：保留換行
+    while (i < lines.length && lines[i].trim() && !isUl(lines[i]) && !isOl(lines[i]) && !isRow(lines[i])
+           && !/^\s*(```|#{1,6}\s|>)/.test(lines[i])) buf.push(lines[i++]);
+    html += `<p>${buf.map(mdInline).join("<br>")}</p>`;
+  }
+  return html;
+}
 let S = {tasks:[], git:{}}, plan = "SPRINT", typeFilter = "", entryType = "問題", open = new Set(), busy = false;
 
 async function api(path, body){
@@ -232,7 +308,7 @@ function entryHtml(t, e, i, withTask){
   return `<div class="entry ${e.type}"><div class="meta"><b>${e.type}</b><span>${esc(e.time)}</span>
     ${withTask ? `<span class="code">${esc(t.id)}</span><span>${esc(t.title)}</span>` : ""}
     <span class="sp"></span>${resolved}
-    <button class="small" onclick="delEntry('${t.id}',${i})">刪除</button></div>${esc(e.text)}</div>`;
+    <button class="small" onclick="delEntry('${t.id}',${i})">刪除</button></div><div class="md">${md(e.text)}</div></div>`;
 }
 function delEntry(id, i){ if (confirm("確定刪除這則紀錄？")) act("/api/entry/delete", {id, index:i}, true); }
 
@@ -250,7 +326,7 @@ function renderActive(){
     <div class="row" style="margin-bottom:6px"><div class="seg" id="entrySeg">
       ${["問題","筆記","解法"].map(x=>`<button data-et="${x}" class="${x===entryType?"on":""}">${x}</button>`).join("")}</div>
       <span class="muted">Ctrl + Enter 儲存</span></div>
-    <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…"></textarea>
+    <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…（支援 Markdown：- 清單、1. 編號、**粗體**、`程式碼`、```程式碼區塊```、| 表格 |）"></textarea>
     <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
       <button class="danger" onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
       <button onclick="act('/api/leave',{id:'${t.id}'})" title="結束這次但不 commit、不改變課題狀態；誤按開始時用這個">暫時離開</button>

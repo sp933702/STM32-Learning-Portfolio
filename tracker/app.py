@@ -264,7 +264,7 @@ def export_markdown(db):
     open_q = [(t, e) for t, e in qs if e["type"] == "問題" and not e.get("resolved")]
     lines += [f"## ❓ 未解決（{len(open_q)}）", ""]
     for t, e in open_q:
-        lines += [f"- **{t['id']}** {t['title']}（{e['time']}）", f"  {indent(e['text'])}"]
+        lines += [f"- **{t['id']}** {t['title']}（{e['time']}）", "", f"  {indent(e['text'])}", ""]
     lines += ["", "## ✅ 已解決的問題與解法", ""]
     for t in tasks:
         items = [e for e in t.get("entries", []) if (e["type"] == "解法") or (e["type"] == "問題" and e.get("resolved"))]
@@ -272,7 +272,7 @@ def export_markdown(db):
             continue
         lines += [f"### [{t['id']}](notes/{t['id']}.md) {t['title']}", ""]
         for e in items:
-            lines += [f"- **{e['type']}**（{e['time']}）：{indent(e['text'])}"]
+            lines += [f"- **{e['type']}**（{e['time']}）：", "", f"  {indent(e['text'])}", ""]
         lines.append("")
     with open(os.path.join(LEARN, "QUESTIONS.md"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
