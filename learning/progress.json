@@ -35,7 +35,7 @@
           "time": "2026-10-15 09:54",
           "type": "問題",
           "text": "預測題判斷錯了 long long，理由寫成「匯流排寬度」",
-          "resolved": false
+          "resolved": true
         },
         {
           "time": "2026-10-15 09:54",
@@ -67,12 +67,26 @@
       "content": "讀 RM0008 RCC 章節；只用 CMSIS 標頭檔 stm32f1xx.h，手動啟用 HSE、設 Flash latency 2WS、PLL×9 → SYSCLK 72 MHz、APB1 ÷2",
       "output": "clock_init()、筆記：時脈樹圖",
       "criteria": "用 debugger 確認 RCC->CFGR 的 SWS 已切到 PLL；能解釋為何先調 Flash latency、APB1 為何最高 36 MHz",
-      "status": "未開始",
+      "status": "進行中",
       "finished_at": null,
       "orig": "W03-S01",
       "period": "10-15～10-21",
-      "sessions": [],
-      "entries": []
+      "sessions": [
+        {
+          "start": "2026-10-15 10:42",
+          "end": "2026-10-15 13:15",
+          "prev_status": "未開始",
+          "prev_finished": null
+        }
+      ],
+      "entries": [
+        {
+          "time": "2026-10-15 10:51",
+          "type": "問題",
+          "text": "【卡關】RM0008是甚麼? 我要如何取得?",
+          "resolved": false
+        }
+      ]
     },
     {
       "id": "SPRINT-W01-S03",
