@@ -58,6 +58,7 @@ textarea{min-height:90px;resize:vertical}
 .md pre code{background:none;padding:0}
 .md blockquote{margin:6px 0;padding:2px 10px;border-left:3px solid var(--line);color:var(--muted)}
 .md table{border-collapse:collapse;margin:6px 0;font-size:13.5px}.md th,.md td{border:1px solid var(--line);padding:3px 8px;text-align:left}
+.entry.preview{background:var(--chip);border:1px dashed var(--line)}
 .md hr{border:none;border-top:1px solid var(--line);margin:8px 0}
 .entry.問題{background:var(--q)} .entry.筆記{background:var(--n)} .entry.解法{background:var(--s)}
 .entry .meta{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);white-space:normal;margin-bottom:2px}
@@ -252,7 +253,8 @@ function md(text){
         i++;
       }
       const tag = ordered ? "ol" : "ul";
-      html += `<${tag}>` + items.map(([first, ...rest]) => {
+      const start = ordered ? parseInt(l.trim(), 10) : 1;
+      html += `<${tag}${start > 1 ? ` start="${start}"` : ""}>` + items.map(([first, ...rest]) => {
         const sub = rest.length ? md(rest.map(r => r.replace(/^\s{1,4}/, "")).join("\n")) : "";
         return `<li>${mdInline(first)}${sub}</li>`; }).join("") + `</${tag}>`;
       continue;
@@ -287,7 +289,7 @@ async function refresh(){
   S = st;
   if (S.sync_msg) toast(S.sync_msg);
   render();
-  if (draft && $("#entryText")) $("#entryText").value = draft;
+  if (draft && $("#entryText")) { $("#entryText").value = draft; $("#entryText").oninput?.(); }
 }
 const activeTask = () => S.tasks.find(t => t.sessions?.length && !t.sessions.at(-1).end);
 
@@ -326,7 +328,8 @@ function renderActive(){
     <div class="row" style="margin-bottom:6px"><div class="seg" id="entrySeg">
       ${["問題","筆記","解法"].map(x=>`<button data-et="${x}" class="${x===entryType?"on":""}">${x}</button>`).join("")}</div>
       <span class="muted">Ctrl + Enter 儲存</span></div>
-    <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…（支援 Markdown：- 清單、1. 編號、**粗體**、\`程式碼\`、\`\`\`程式碼區塊\`\`\`、| 表格 |）"></textarea>
+    <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…（支援 Markdown：- 清單、1. 編號、**粗體**、表格）"></textarea>
+    <div id="entryPreview" class="entry preview" style="display:none"><div class="meta"><b>預覽</b></div><div class="md"></div></div>
     <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
       <button class="danger" onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
       <button onclick="act('/api/leave',{id:'${t.id}'})" title="結束這次但不 commit、不改變課題狀態；誤按開始時用這個">暫時離開</button>
@@ -339,7 +342,22 @@ function renderActive(){
   const save = () => { const v = $("#entryText").value.trim(); if (!v) return;
     $("#entryText").value = ""; act("/api/entry", {id:t.id, type:entryType, text:v}, true); };
   $("#saveEntry").onclick = save;
-  $("#entryText").onkeydown = ev => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) save(); };
+  const ta = $("#entryText"), pv = $("#entryPreview");
+  const preview = () => { const v = ta.value;
+    pv.style.display = v.trim() ? "block" : "none"; pv.querySelector(".md").innerHTML = md(v); };
+  ta.oninput = preview; preview();
+  ta.onkeydown = ev => {
+    if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); save(); return; }
+    if (ev.key === "Tab") {                       // Tab 縮排 / Shift+Tab 取消縮排（做巢狀清單用）
+      ev.preventDefault();
+      const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+      const ls = v.lastIndexOf("\n", a - 1) + 1;
+      if (!ev.shiftKey) { ta.setRangeText("  ", ls, ls, "preserve"); ta.setSelectionRange(a + 2, b + 2); }
+      else { const n = v.slice(ls, ls + 2) === "  " ? 2 : v[ls] === " " ? 1 : 0;
+        if (n) { ta.setRangeText("", ls, ls + n, "preserve"); ta.setSelectionRange(Math.max(ls, a - n), Math.max(ls, b - n)); } }
+      preview();
+    }
+  };
   loadFiles(t.id, "a");
 }
 
