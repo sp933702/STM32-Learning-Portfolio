@@ -9,11 +9,11 @@
 :root{
   --bg:#f5f6f8; --panel:#fff; --ink:#1d2330; --muted:#677084; --line:#e2e5eb;
   --accent:#1f6feb; --accent-ink:#fff; --ok:#1a7f37; --warn:#b26a00; --bad:#c62828; --pause:#6e7781;
-  --chip:#eef1f5; --q:#fff4e5; --n:#eef4ff; --s:#e9f7ee; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --chip:#eef1f5; --view:#7c4dcc; --q:#fff4e5; --n:#eef4ff; --s:#e9f7ee; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root{
   --bg:#0f1218; --panel:#171b23; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2a303c;
-  --accent:#4c8dff; --chip:#232936; --q:#3a2c14; --n:#1b2740; --s:#16301f;
+  --accent:#4c8dff; --chip:#232936; --view:#9a6bff; --q:#3a2c14; --n:#1b2740; --s:#16301f;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
@@ -30,6 +30,7 @@ button{font:inherit;border:1px solid var(--line);background:var(--panel);color:v
 button:hover{border-color:var(--accent)}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+button.view{background:var(--view);border-color:var(--view);color:#fff}
 button.small{padding:2px 8px;font-size:13px}
 button:disabled{opacity:.5;cursor:default}
 nav{display:flex;gap:4px}
@@ -251,8 +252,9 @@ function renderActive(){
       <span class="muted">Ctrl + Enter 儲存</span></div>
     <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…"></textarea>
     <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
-      <button onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
-      <button class="danger" onclick="openFinish('${t.id}')">結束本次課題</button></div>
+      <button class="danger" onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
+      <button onclick="act('/api/leave',{id:'${t.id}'})" title="結束這次但不 commit、不改變課題狀態；誤按開始時用這個">暫時離開</button>
+      <button class="primary" onclick="openFinish('${t.id}')">結束本次課題</button></div>
     ${codeHtml(t, "a")}
     <div>${t.entries.map((e,i)=>({e,i})).reverse().map(({e,i})=>entryHtml(t,e,i)).join("")}</div>
   </div>`;
@@ -275,8 +277,10 @@ function renderTasks(){
       <span class="code" style="width:132px">${esc(t.id)}</span>
       <span class="t">${esc(t.title)}${t.entries.length?` <span class="muted">· ${t.entries.length} 則紀錄</span>`:""}</span>
       <span class="pill ${esc(t.status)}">${esc(t.status)}</span>
-      ${(t.sessions?.length || t.entries.length) ? `<button class="small" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）" onclick="event.stopPropagation();restartTask('${t.id}')">清除重來</button>` : ""}
-      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"開啟":(t.sessions?.length?"繼續":"開始")}</button>`}
+      ${(t.sessions?.length || t.entries.length) ? `<button class="small danger" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）" onclick="event.stopPropagation();restartTask('${t.id}')">清除重來</button>` : ""}
+      ${isActive ? `<span class="muted">進行中…</span>`
+        : t.status === "已完成" ? `<button class="small view" title="只看問題、筆記與解法，不會開始課題、也不會 commit" onclick="event.stopPropagation();toggle('${t.id}')">${isOpen ? "收合" : "查看"}</button>`
+        : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.sessions?.length?"繼續":"開始"}</button>`}
     </div>${isOpen ? detailHtml(t) : ""}</div>`;
   }
   $("#taskList").innerHTML = html || `<div class="empty">沒有任務</div>`;
@@ -289,6 +293,7 @@ function detailHtml(t){
     <h4>完成標準</h4><p>${esc(t.criteria)}</p>
     ${t.orig?`<h4>對應原任務（HAL 版）</h4><p>${esc(t.orig)}</p>`:""}
     ${t.summary?`<h4>總結</h4><p>${esc(t.summary)}</p>`:""}
+    ${t.status === "已完成" && !(activeTask() && activeTask().id === t.id) ? `<div style="margin:8px 0"><button class="small" onclick="startTask('${t.id}')">重新開啟這個課題（繼續做）</button></div>` : ""}
     <h4>狀態</h4><select onchange="act('/api/status',{id:'${t.id}',status:this.value})">
       ${["未開始","進行中","已完成","卡關","暫緩"].map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select>
     <h4>相關 commit（訊息中含 ${esc(t.id)}）</h4><div class="commits" id="c-${t.id}"><span class="muted">讀取中…</span></div>

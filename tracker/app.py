@@ -452,12 +452,34 @@ def act_start(db, body):
         cur["sessions"][-1]["end"] = now()
         msgs.append(f"已暫停 {cur['id']}。")
     if not (t["sessions"] and not t["sessions"][-1].get("end")):
-        t["sessions"].append({"start": now(), "end": None})
+        # 記下開始前的狀態，「暫時離開」時可以還原
+        t["sessions"].append({"start": now(), "end": None,
+                              "prev_status": t["status"], "prev_finished": t.get("finished_at")})
     t["status"] = "進行中"
     t["finished_at"] = None
     save(db)
     msgs.append(f"開始 {t['id']}。")
     return {"messages": msgs, "prompt": build_prompt(db, t["id"], "start"), "prompt_kind": "start"}
+
+
+def act_leave(db, body):
+    """暫時離開：結束這次但不 commit、不改變課題狀態。
+    這次沒有新增任何紀錄（例如誤按開始）時，連這次的進行紀錄都不留，狀態還原成開始前。"""
+    t = find(db, body["id"])
+    s = t["sessions"][-1] if t["sessions"] and not t["sessions"][-1].get("end") else None
+    if not s:
+        return ["這個課題目前沒有在進行。"]
+    added = [e for e in t.get("entries", []) if e["time"] >= s["start"]]
+    if added:
+        s["end"] = now()
+        msg = f"已暫時離開 {t['id']}（這次新增的 {len(added)} 則紀錄已存在本機，下次同步時一起上傳）。"
+    else:
+        t["sessions"].pop()
+        t["status"] = s.get("prev_status") or ("進行中" if t["sessions"] else "未開始")
+        t["finished_at"] = s.get("prev_finished")
+        msg = f"已離開 {t['id']}，沒有任何變更。"
+    save(db)
+    return [msg]
 
 
 def act_restart(db, body):
@@ -577,6 +599,7 @@ def act_sync(db, body):
 ACTIONS = {
     "/api/start": act_start,
     "/api/restart": act_restart,
+    "/api/leave": act_leave,
     "/api/entry": act_entry,
     "/api/entry/update": act_entry_update,
     "/api/entry/delete": act_entry_delete,
