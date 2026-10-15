@@ -813,6 +813,8 @@ def startup_sync():
     if gi.get("is_repo") and gi.get("remote"):
         with LOCK:
             ok, msg = pull()
+            if ok:                        # 本機還沒推上去的 commit 也一起推，另一台電腦才拿得到
+                msg += "\n" + push()
             try:
                 export_markdown(load())
             except Exception:  # noqa: BLE001
