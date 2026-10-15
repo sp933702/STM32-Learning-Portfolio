@@ -10,3 +10,5 @@ __pycache__/
 learning/progress.json.tmp
 tracker/.app_port
 tracker/app.log
+*.out
+projects/**/*.exe

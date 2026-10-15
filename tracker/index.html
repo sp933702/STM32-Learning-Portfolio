@@ -143,7 +143,7 @@ pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg)
 </div></div>
 
 <div class="modal" id="restartModal"><div class="card">
-  <div class="title">重新開始課題？</div>
+  <div class="title">清除重來？</div>
   <div class="code" id="restartCode"></div>
   <div id="restartBody" style="margin:10px 0;font-size:14px"></div>
   <label class="row" style="margin:12px 0;cursor:pointer;gap:8px">
@@ -251,7 +251,7 @@ function renderActive(){
       <span class="muted">Ctrl + Enter 儲存</span></div>
     <textarea id="entryText" placeholder="記下遇到的問題、觀察或解法…"></textarea>
     <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
-      <button onclick="restartTask('${t.id}')" title="清除這個課題的紀錄，當成第一次重新開始">重新開始</button>
+      <button onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
       <button class="danger" onclick="openFinish('${t.id}')">結束本次課題</button></div>
     ${codeHtml(t, "a")}
     <div>${t.entries.map((e,i)=>({e,i})).reverse().map(({e,i})=>entryHtml(t,e,i)).join("")}</div>
@@ -275,8 +275,8 @@ function renderTasks(){
       <span class="code" style="width:132px">${esc(t.id)}</span>
       <span class="t">${esc(t.title)}${t.entries.length?` <span class="muted">· ${t.entries.length} 則紀錄</span>`:""}</span>
       <span class="pill ${esc(t.status)}">${esc(t.status)}</span>
-      ${(t.sessions?.length || t.entries.length) ? `<button class="small" title="清除這個課題的紀錄，當成第一次重新開始" onclick="event.stopPropagation();restartTask('${t.id}')">重新開始</button>` : ""}
-      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"重新開啟":(t.sessions?.length?"繼續":"開始")}</button>`}
+      ${(t.sessions?.length || t.entries.length) ? `<button class="small" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）" onclick="event.stopPropagation();restartTask('${t.id}')">清除重來</button>` : ""}
+      ${isActive ? `<span class="muted">進行中…</span>` : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.status==="已完成"?"開啟":(t.sessions?.length?"繼續":"開始")}</button>`}
     </div>${isOpen ? detailHtml(t) : ""}</div>`;
   }
   $("#taskList").innerHTML = html || `<div class="empty">沒有任務</div>`;
@@ -315,7 +315,7 @@ function codeHtml(t, k){
       <span><button class="small" onclick="this.nextElementSibling.click()">上傳檔案</button><input type="file" multiple hidden onchange="pick(this,'${t.id}','${key}')"></span>
       <span><button class="small" onclick="this.nextElementSibling.click()">上傳整個資料夾</button><input type="file" webkitdirectory hidden onchange="pick(this,'${t.id}','${key}')"></span>
       <button class="small" onclick="act('/api/open-folder',{id:'${t.id}'})">開啟資料夾</button>
-      <span class="muted">或把檔案拖曳到這裡（Debug/、.o、.elf 等編譯產物會自動略過）</span>
+      <span class="muted">或把檔案拖曳到這裡（Debug/、.o、.elf、.out、.exe 等編譯產物會自動略過）</span>
     </div>
     <div class="files" id="f-${key}"></div>
   </div>`;
@@ -334,7 +334,7 @@ async function loadFiles(id, k){
   } catch { el.innerHTML = `<span class="muted">無法讀取檔案列表</span>`; }
 }
 const SKIP_DIR = new Set(["Debug","Release",".metadata","__pycache__",".git"]);
-const SKIP_EXT = /\.(o|d|su|elf|hex|bin|map|list|cyclo)$/i;
+const SKIP_EXT = /\.(o|d|su|elf|hex|bin|map|list|cyclo|out|exe|obj)$/i;
 async function uploadList(id, key, items){
   items = items.filter(({path}) => { const p = path.split("/"); return !p.slice(0,-1).some(x => SKIP_DIR.has(x)) && !SKIP_EXT.test(p.at(-1)); });
   if (!items.length){ toast("沒有可上傳的檔案"); return; }
