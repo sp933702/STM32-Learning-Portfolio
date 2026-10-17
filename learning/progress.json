@@ -95,6 +95,12 @@
           "end": "2026-10-17 18:32",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-10-17 22:42",
+          "end": "2026-10-18 00:25",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -319,6 +325,30 @@
           "type": "筆記",
           "text": "【筆記】驗證的原則：先獨立算出預期值\n**錯的程式通過了錯的驗證**\n\n- 第一版程式：設定被跳過，實際值 48（0x30）\n- 預期值也算成 `110000`（漏了 LATENCY 的 `010`）→ 兩者「相同」，誤以為成功\n- 原則：\n  - 寫程式前，先**根據手冊獨立算出**預期的暫存器值（每個欄位逐一列出）\n  - 再用 debugger 比對實際值\n  - 不能看到實際值之後才去對答案\n- 實務上「錯的程式 + 錯的驗證」最危險，因為不會有任何錯誤訊息",
           "resolved": null
+        },
+        {
+          "time": "2026-10-17 22:42",
+          "type": "筆記",
+          "text": "【筆記】RCC_CFGR 欄位與 72 MHz 設定值\n**RCC_CFGR（時脈設定暫存器）：72 MHz 要設定的欄位**\n\n| 欄位 | bit | 設定值 | 意義 |\n|---|---|---|---|\n| PLLSRC | 16 | `1` | PLL 輸入選 HSE |\n| PLLXTPRE | 17 | `0` | HSE 進 PLL 前 ÷1 |\n| PLLMUL | 21:18 | `0111` | ×9 |\n| HPRE | 7:4 | `0000` | AHB ÷1 |\n| PPRE1 | 10:8 | `100` | APB1 ÷2 |\n| PPRE2 | 13:11 | `000` | APB2 ÷1 |\n\n- PLLMUL 的**設定值不等於倍數**：×9 是 `0111`（7），要查對照表\n- 手冊中的 `x` = don't care：例如 HPRE `0xxx`，只要 bit 7 = 0 就是不分頻\n- 寫程式時 `x` 一律寫 0：跟復位值一致、debugger 好比對、不留意義不明的 bit",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 22:42",
+          "type": "筆記",
+          "text": "【筆記】PLL 的開關與設定限制\n**PLL 開關（RCC_CR）與設定順序**\n\n| bit | 名稱 | 屬性 | 意義 |\n|---|---|---|---|\n| 24 | PLLON | rw | 1 = 開啟 PLL |\n| 25 | PLLRDY | r | 1 = PLL 已鎖定（硬體設定） |\n\n- 命名規律同 HSEON / HSERDY：ON = 開關、RDY = 就緒旗標\n- 限制：PLLSRC、PLLXTPRE、PLLMUL 必須在 **PLLON = 0** 時設定，開啟後不能修改\n  - 手冊沒有 PLLOFF 這個 bit，「關閉」就是 PLLON = 0\n  - 開機時 PLL 預設是關閉的\n- 正確順序：設定 PLL 參數 → PLLON = 1 → 等 PLLRDY = 1\n- 另一個限制：PLL 正在當 SYSCLK 時不能關掉；要改設定必須先把 SYSCLK 切回 HSI/HSE",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 22:43",
+          "type": "解法",
+          "text": "【解法】APB1 為什麼最高只能 36 MHz（驗收第 3 條）\n**APB1 為什麼最高 36 MHz？**\n\n- 依據：Datasheet 方塊圖標示 APB1 最高 **36 MHz**、APB2 最高 **72 MHz**\n- 原因：晶片設計的取捨\n  - **功耗**：動態功耗大致與頻率成正比\n  - **時序收斂（Timing closure）**：訊號必須在一個週期內從一個正反器傳到下一個\n    - 72 MHz 週期 13.9 ns，36 MHz 週期 27.8 ns\n    - 要跑更快需要更快／更大的電晶體 → 面積、功耗、設計與驗證成本都上升\n- ST 的分配：\n  - APB2（72 MHz）：需要速度的周邊（GPIO、TIM1、ADC、SPI1、USART1）\n  - APB1（36 MHz）：36 MHz 就夠用的周邊（USART2/3、I²C、TIM2～4、USB、CAN）\n- 結論：APB1 電路只依 36 MHz 設計與驗證，超過不在 ST 保證範圍內，屬**硬體規格**\n- 補償機制：APB 分頻 ≠ 1 時，計時器時脈 **×2** → APB1 上的 TIM2～4 仍可拿到 72 MHz",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 22:44",
+          "type": "問題",
+          "text": "【問題】把其他型號才有的周邊列成 C8 的\n**列出的 TIM5～8、USART4～5、ADC3、GPIOF～G，F103C8 其實沒有**\n\n- 原因：看的是 RM0008 的通用時脈圖，涵蓋整個 F10x 系列（含大容量型號）\n- F103C8（中容量）實際的周邊：\n\n| 匯流排 | 周邊 |\n|---|---|\n| APB2（72 MHz） | GPIOA～D、AFIO、ADC1～2、TIM1、SPI1、USART1 |\n| APB1（36 MHz） | TIM2～4、USART2～3、SPI2、I²C1～2、USB、CAN、WWDG、PWR、BKP |\n\n- 原則：\n  - **RM0008** 查周邊怎麼運作、暫存器定義（整個系列共用）\n  - **Datasheet** 查這顆晶片**實際有哪些**周邊、腳位、頻率上限\n- 面試時說錯自己晶片的周邊，很容易被追問",
+          "resolved": false
         }
       ]
     },
