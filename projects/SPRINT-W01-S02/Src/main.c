@@ -30,15 +30,25 @@ uint32_t clock_init(void)
 {
 	uint32_t count = 0U;
 
+	// 啟動 HSE
 	RCC -> CR |= RCC_CR_HSEON_Msk;
 
-//	while(((RCC -> CR >> RCC_CR_HSERDY_Pos) & 1U) != 1U)
+	//等待 HSE 準備，出 while 代表 HSE 準備好了
+	// while(((RCC -> CR >> RCC_CR_HSERDY_Pos) & 1U) != 1U) ， 此寫法不夠直觀
 	while((RCC -> CR & RCC_CR_HSERDY_Msk) == 0U)
 	{
 		count ++;
 		if (count >= TIME_OUT)
 			return 0;
 	}
+
+	// HSE 準備好後開啟 PRFTBE，並設定等待週期
+	// 開啟PRFTBE
+	FLASH -> ACR |= FLASH_ACR_PRFTBE_Msk;
+	// 先清空 LATENCY 的設定值，再進行複值，清除和設定合併成一行（讀取 → 修改 → 寫回），這個寫法叫 read-modify-write
+	FLASH -> ACR = (FLASH -> ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;
+
+
 
 	return 1;
 }

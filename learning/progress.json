@@ -89,6 +89,12 @@
           "end": "2026-10-16 01:31",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-10-17 16:49",
+          "end": "2026-10-17 18:32",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -264,6 +270,54 @@
           "time": "2026-10-16 01:31",
           "type": "筆記",
           "text": "【本次進度】接下來要做Flash latency",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 17:33",
+          "type": "筆記",
+          "text": "【筆記】FLASH_ACR 暫存器\n**FLASH_ACR（Flash Access Control Register）**\n\n- 查詢文件：Flash 程式設計手冊（PM0075），第三章暫存器說明\n- 復位值：`0x0000 0030`\n\n| bit | 名稱 | 屬性 | 意義 |\n|---|---|---|---|\n| 2:0 | LATENCY | rw | Flash 等待週期數（多 bit 欄位） |\n| 4 | PRFTBE | rw | Prefetch 開關（Enable） |\n| 5 | PRFTBS | r | Prefetch 狀態（Status，硬體設定） |\n\n- 命名規律：結尾 **E** = Enable（寫）、結尾 **S** = Status（讀），同 HSEON / HSERDY\n- 復位值 `0x30` = `0011 0000` → bit 4、5 = 1 → **開機預設 Prefetch 已開啟**\n- 仍建議明確設定 PRFTBE：程式自帶說明，且進入程式時不一定是復位值（例如從 Bootloader 跳入）",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 17:35",
+          "type": "筆記",
+          "text": "【筆記】Flash 等待週期對照表\n**SYSCLK 與 Flash 等待週期（WS = Wait State）**\n\n| SYSCLK | LATENCY |\n|---|---|\n| 0 < SYSCLK ≤ 24 MHz | 0 WS |\n| 24 < SYSCLK ≤ 48 MHz | 1 WS |\n| 48 < SYSCLK ≤ 72 MHz | 2 WS |\n\n- 本課題 SYSCLK = 72 MHz → **2 WS**\n- 換算：等待週期數 = 總共需要的週期數 − 1\n- 所以 SYSCLK = 72 MHz 需要等待的 Flash 週期數 = 3",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 17:36",
+          "type": "解法",
+          "text": "【解法】為什麼要先調 Flash latency 再升頻（驗收第 2 條）\n**為什麼要先調 Flash latency，再提高 SYSCLK？**\n\n- Flash 讀取需要一段**固定時間**，不會因 CPU 變快而變快\n  - 0 WS 最高 24 MHz → Flash 約需 41.7 ns\n  - 72 MHz 一個週期 13.9 ns → 41.7 ÷ 13.9 ≈ **3 個週期** → 需額外等 **2 WS**\n- latency 不夠時：CPU 在 Flash 還沒準備好就取指令 → 拿到錯誤指令／資料 → 程式亂跑或 **HardFault**\n- 如果先升頻再設 latency：\n  - 中間空檔 CPU 以 72 MHz、0 WS 執行\n  - 連「設定 latency 的那條指令」都可能讀錯 → 還沒執行到就當機\n- 先設 latency：此時仍是 8 MHz，多等幾個週期只是稍慢，不會出錯\n- 正確順序：\n  - **升頻：先加 latency → 再升頻**\n  - **降頻：先降頻 → 再減 latency**\n- 原則：**任何時刻 latency 都要夠用**",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 18:30",
+          "type": "問題",
+          "text": "【問題】依目前值判斷要不要設定，結果設定被跳過\n**`if ((FLASH->ACR & 0x30U) != 0x30U)` 裡的設定完全沒有執行**\n\n- 復位值 `0x30` 代入：`(0x30 & 0x30) = 0x30` → `0x30 != 0x30` → **不成立**，區塊被跳過\n- 誤會：把「Prefetch 已開啟」當成「Flash 已設定好」\n  - 復位值 `0x30` = `0011 0000` → bit 2:0 = `000` → LATENCY 是 **0 WS**，不是 2 WS\n- 後果：LATENCY 維持 0 WS，之後升到 72 MHz 就會讀錯指令 → 程式亂跑或 HardFault\n- 解法：**不要依目前值決定要不要設定，直接設定**（重複寫入同一個值沒有副作用）\n- 注意：括號內運算的值（48）≠ 整個條件的結果（0，不成立）",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-17 18:30",
+          "type": "問題",
+          "text": "【問題】! 和 ~ 搞混，清除欄位時清掉整個暫存器\n**`FLASH->ACR &= (!FLASH_ACR_LATENCY_Msk);` 把整個暫存器清成 0**\n\n| 運算子 | 名稱 | `0x7` 的結果 |\n|---|---|---|\n| `!` | 邏輯 NOT | `0`（結果只有 0 或 1） |\n| `~` | 位元 NOT | `0xFFFFFFF8`（每個 bit 反轉） |\n\n- `&= !Msk` = `&= 0` → **32 個 bit 全部清成 0**，連 PRFTBE 也被關掉\n- 正確清除欄位：`&= ~Msk` → 只清掉遮罩那幾個 bit，其他保持原樣\n- `~0x7UL` 是 32 bit：`0xFFFFFFF8`（不是 `0xFFF8`），少了高位的 1 會誤清 bit 16～31",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-17 18:31",
+          "type": "筆記",
+          "text": "【筆記】ST 多 bit 欄位巨集的陷阱\n**`FLASH_ACR_LATENCY_2` 不是「2 WS」**\n\n| 巨集 | 值 | 意義 |\n|---|---|---|\n| `FLASH_ACR_LATENCY_Msk` | `0x7` | 整個欄位 bit 2:0 |\n| `FLASH_ACR_LATENCY_0` | `0x1` | 欄位中的 bit 0 |\n| `FLASH_ACR_LATENCY_1` | `0x2` | 欄位中的 bit 1 |\n| `FLASH_ACR_LATENCY_2` | `0x4` | 欄位中的 bit 2 |\n\n- 巨集名稱的數字 = **欄位中第幾個 bit**，不是設定的數值\n- 2 WS = 二進位 `010` → 用 `FLASH_ACR_LATENCY_1`\n- 之後的 PLLMUL、PPRE1 等多 bit 欄位也是同樣的命名方式",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 18:31",
+          "type": "解法",
+          "text": "【解法】Flash latency 的正確寫法與驗證\n**FLASH_ACR 設定：Prefetch 開啟 + 2 WS**\n\n- 開啟 Prefetch：`FLASH->ACR |= FLASH_ACR_PRFTBE_Msk;`\n- 設定 LATENCY（read-modify-write，一行完成）：\n  - `FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;`\n- 通用公式：`REG = (REG & ~欄位Msk) | 新值;`\n- 為什麼不能只用 `|=`：舊值 `001` |= `010` → `011`，舊的 bit 殘留\n- 不要寫 PRFTBS：它是 **r（唯讀）**，硬體回報狀態，寫入無效\n- 驗證：預期 `0011 0010` = **0x32 = 50**，debugger 實際值 50 ✅",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-17 18:32",
+          "type": "筆記",
+          "text": "【筆記】驗證的原則：先獨立算出預期值\n**錯的程式通過了錯的驗證**\n\n- 第一版程式：設定被跳過，實際值 48（0x30）\n- 預期值也算成 `110000`（漏了 LATENCY 的 `010`）→ 兩者「相同」，誤以為成功\n- 原則：\n  - 寫程式前，先**根據手冊獨立算出**預期的暫存器值（每個欄位逐一列出）\n  - 再用 debugger 比對實際值\n  - 不能看到實際值之後才去對答案\n- 實務上「錯的程式 + 錯的驗證」最危險，因為不會有任何錯誤訊息",
           "resolved": null
         }
       ]
