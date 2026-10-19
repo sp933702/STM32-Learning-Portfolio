@@ -17,14 +17,18 @@
  */
 
 #include <stdint.h>
-
 #include "stm32f1xx.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-#define TIME_OUT 5000U
+#define TIME_OUT 5000U	//等待 HSE 準備好，最多等待 5000 次的迴圈時間
+
+#define CLOCK_OK 0U
+#define CLOCK_ERROR_HSE 1U
+#define CLOCK_ERROR_PLL 2U
+
 
 uint32_t clock_init(void)
 {
@@ -39,27 +43,45 @@ uint32_t clock_init(void)
 	{
 		count ++;
 		if (count >= TIME_OUT)
-			return 0;
+			//return 0;
+			return CLOCK_ERROR_HSE;
 	}
 
 	// HSE 準備好後開啟 PRFTBE，並設定等待週期
-	// 開啟PRFTBE
+	// 開啟 PRFTBE
 	FLASH -> ACR |= FLASH_ACR_PRFTBE_Msk;
-	// 先清空 LATENCY 的設定值，再進行複值，清除和設定合併成一行（讀取 → 修改 → 寫回），這個寫法叫 read-modify-write
+	// 先清空 LATENCY 的設定值，再進行給值，清除和設定合併成一行（讀取 → 修改 → 寫回），這個寫法叫 read-modify-write
 	FLASH -> ACR = (FLASH -> ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;
 
+	// 設定前先清除舊設定
+	// 進行 PLL 設定 : 來源選擇 HSE、HSE 不分頻、x9、AHB ÷1、APB1 ÷2、APB2 ÷1
+	// 原則： 設定幾個欄位，就清除幾個欄位，兩邊的欄位要一一對應。這樣不管 CFGR 原本是什麼值，執行完都一定是你要的設定。
+	RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_PLLSRC_Msk  | RCC_CFGR_PLLXTPRE_Msk |
+            					RCC_CFGR_PLLMULL_Msk | RCC_CFGR_HPRE_Msk|
+								RCC_CFGR_PPRE1_Msk   | RCC_CFGR_PPRE2_Msk))
+			| (RCC_CFGR_PLLSRC_Msk | RCC_CFGR_PLLMULL9 | RCC_CFGR_HPRE_DIV1 | RCC_CFGR_PPRE1_DIV2 | RCC_CFGR_PPRE2_DIV1);
+	// 設定好後才能開啟 PLL
+	RCC -> CR |= RCC_CR_PLLON_Msk;
+	// 開啟後等待 PLL Ready
+	count = 0U;
+	while ((RCC -> CR & RCC_CR_PLLRDY_Msk) == 0U)
+	{
+		count ++;
+		if (count >= TIME_OUT)
+			//return 0;
+			return CLOCK_ERROR_PLL;
+	}
 
-
-	return 1;
+	return CLOCK_OK;
 }
 
 int main(void)
 {
-	uint32_t hserdy = 0U;
-	hserdy = clock_init();
-	while (hserdy == 0U)
+	uint32_t clock_state;
+	clock_state = clock_init();
+	while (clock_state != CLOCK_OK)
 	{
-		/* HSE 啟動失敗：停在這裡 */
+
 	}
 
 
