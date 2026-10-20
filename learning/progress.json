@@ -67,8 +67,8 @@
       "content": "讀 RM0008 RCC 章節；只用 CMSIS 標頭檔 stm32f1xx.h，手動啟用 HSE、設 Flash latency 2WS、PLL×9 → SYSCLK 72 MHz、APB1 ÷2",
       "output": "clock_init()、筆記：時脈樹圖",
       "criteria": "用 debugger 確認 RCC->CFGR 的 SWS 已切到 PLL；能解釋為何先調 Flash latency、APB1 為何最高 36 MHz",
-      "status": "進行中",
-      "finished_at": null,
+      "status": "已完成",
+      "finished_at": "2026-10-20",
       "orig": "W03-S01",
       "period": "10-15～10-21",
       "sessions": [
@@ -111,6 +111,12 @@
         {
           "start": "2026-10-19 21:29",
           "end": "2026-10-19 23:17",
+          "prev_status": "進行中",
+          "prev_finished": null
+        },
+        {
+          "start": "2026-10-20 22:03",
+          "end": "2026-10-20 23:09",
           "prev_status": "進行中",
           "prev_finished": null
         }
@@ -438,6 +444,72 @@
           "time": "2026-10-19 23:17",
           "type": "筆記",
           "text": "【筆記】SW 與 SWS：一個寫、一個讀\n**系統時脈切換：SW（寫）與 SWS（讀）**\n\n| 欄位 | bit | 屬性 | 巨集（選 PLL） | 值 |\n|---|---|---|---|---|\n| SW | 1:0 | rw | `RCC_CFGR_SW_PLL` | `0x2` |\n| SWS | 3:2 | r | `RCC_CFGR_SWS_PLL` | `0x8` |\n\n- 對照：`00` = HSI、`01` = HSE、`10` = PLL\n- SW 是「要求」，SWS 是硬體回報「實際正在使用」的時脈；寫入 SW 後要等 SWS 跟上\n- 同樣模式：HSEON/HSERDY、PLLON/PLLRDY、PRFTBE/PRFTBS\n- 不要寫入 SWS（唯讀）\n- 用 `RCC_CFGR_SW_PLL`，不要用 `RCC_CFGR_SW_1`：值相同（0x2），但 `_1` 代表「第 1 個 bit」，讀不出意圖\n- 切換完成後 CFGR 預期值：`0x001D0400 | 0x2 | 0x8` = **`0x001D040A`**",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:48",
+          "type": "問題",
+          "text": "【問題】SW 寫成 RCC->CR：沒切換卻回報成功\n**SW 寫成 `RCC->CR`，`clock_init()` 回傳 `CLOCK_OK`，但 SYSCLK 其實沒切換**\n\n- 錯誤寫法：`RCC->CR = (RCC->CR & ~(SW_Msk | SWS_Msk)) | (SW_PLL | SWS_PLL);`\n- 實際效果（巨集的值被套到 CR）：\n  - `& ~0xF` → 清掉 CR 的 bit 0～3（HSION、HSIRDY、保留位、HSITRIM 最低位）\n  - `| 0xA` → bit 3 被設成 1 → **改到 HSITRIM**，HSI 頻率偏移\n  - SW 完全沒有被設定 → SYSCLK 仍是 HSI 8 MHz\n- 等待迴圈讀 `RCC->CR & 0xC`：剛好讀到被設成 1 的 bit 3 → `0x8` = `RCC_CFGR_SWS_PLL` → **第一圈就判定成功**\n- 這是第二次寫錯暫存器（第一次是 ㊳ 的 PLLRDY）\n- 另一個錯誤：寫入了唯讀的 SWS\n- 防止方法：**巨集前綴必須和暫存器一致**\n  - `RCC->CFGR` ↔ `RCC_CFGR_xxx`\n  - `RCC->CR` ↔ `RCC_CR_xxx`\n  - `FLASH->ACR` ↔ `FLASH_ACR_xxx`",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-20 22:49",
+          "type": "筆記",
+          "text": "【筆記】只看回傳值不夠，要直接看暫存器\n**驗證時為什麼一定要看 SWS，不能只看 `clock_state`？**\n\n- `clock_state` 是程式自己的判斷，程式寫錯時判斷也會錯\n- ㊾ 的實例：SW 寫錯暫存器，等待條件又剛好成立 → `clock_state = CLOCK_OK`，但 SYSCLK 仍是 8 MHz\n- 不當機、不報錯、回傳值正常 → **最危險的一種錯誤**\n- 暫存器（SWS）是**硬體回報的實際狀態**，才是真正的證據\n- 這就是完成標準要求「用 debugger 確認 SWS」的原因\n- 原則：驗證要看**硬體狀態**，不要只相信軟體的判斷",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:49",
+          "type": "筆記",
+          "text": "【筆記】切換時脈的設定順序：任何時刻都要在規格內\n**切換時脈時，Flash latency 與 APB 分頻的順序**\n\n- 原則：**任何時刻，每個時脈都要在規格內**（Flash 夠時間讀、PCLK1 ≤ 36 MHz）\n- 比喻：SYSCLK = 總水壓、APB 分頻 = 減壓閥、APB1 支管上限 36；一次只能動一個\n\n| 寫法 | 升頻 8 → 72 | 降頻 72 → 8 |\n|---|---|---|\n| 先設目標分頻，再切換（自寫） | ✅ PCLK1：8 → 4 → 36 | ❌ 瞬間 72 |\n| 先切換，再設分頻 | ❌ 瞬間 72 | ✅ PCLK1：36 → 4 → 8 |\n| HAL：先 ÷16 → 切換 → 設目標 | ✅ 最高 4.5 | ✅ 最高 4.5 |\n\n- 前兩種寫法都要**先知道升頻或降頻**，選錯就超規格\n- HAL 先把 APB 分頻設成 ÷16：不管怎麼切，PCLK 最高 72 ÷ 16 = 4.5 MHz，**不用判斷方向**\n- HAL 降的是**匯流排分頻**，不是 SYSCLK；SYSCLK 照常切換\n- 自寫 `clock_init()` 只在開機執行、永遠是升頻 → 「先設 ÷2 再切換」已足夠\n- 同一原則用在 Flash latency：升頻先加 WS、降頻後減 WS（㉑）",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:50",
+          "type": "筆記",
+          "text": "【解法】S02 驗收回答範本（面試用）\n**SPRINT-W01-S02 驗收：四題的完整回答**\n\n**1. 怎麼確認 SYSCLK 已切到 PLL？**\n- 看 `RCC->CFGR` 的 SWS（bit 3:2）：`0x001D040A` 的最後一位 `0xA` = `1010`，SWS = `10` = PLL\n- SW 是軟體寫入的「要求」，SWS 是硬體回報的「實際狀態」\n- 不能只看函式回傳值：曾經寫錯暫存器，回傳成功但實際沒切換（㊾）\n\n**2. 為什麼要先設 Flash latency？**\n- Flash 讀取時間固定，約 41.7 ns（24 MHz 一個週期，所以 0 WS 最高 24 MHz）\n- 72 MHz 一個週期 13.9 ns → 41.7 ÷ 13.9 ≈ 3 個週期 → WS = 3 − 1 = **2**\n- 若先升頻：CPU 在 Flash 還沒準備好時取指令 → 讀到錯誤指令 → 程式亂跑或 HardFault\n- 升頻先加 WS 再升頻，降頻先降頻再減 WS；WS 只能多不能少\n\n**3. APB1 為什麼最高 36 MHz？**\n- 出處：Datasheet 方塊圖，以及 RM0008 的 RCC_CFGR PPRE1 說明：軟體必須保證 APB1 不超過 36 MHz\n- 屬硬體規格：APB1 上的周邊只依 36 MHz 設計與驗證，超過不保證正確運作\n- 原因：頻率越高，功耗越大、時序收斂越難（36 MHz 週期 27.8 ns，72 MHz 只有 13.9 ns）\n- 程式做法：**切換 SW 到 PLL 之前**先設好 APB1 ÷2，PCLK1 從 4 MHz 變成 36 MHz，全程在規格內\n\n**4. 和 HAL 版的差異**\n- timeout：HAL 用時間（`HAL_GetTick()`），自寫用圈數，會受時脈與編譯最佳化影響\n- 切換過程：HAL 先把 APB 分頻暫設 ÷16，升降頻都安全；自寫只針對開機升頻\n- 切換後：HAL 會更新 `SystemCoreClock` 並以 `HAL_InitTick()` 重設 SysTick\n- HAL 會讀回檢查 latency；支援所有時脈源\n- 自寫版簡短、每個 bit 都清楚，適合固定用途",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:50",
+          "type": "解法",
+          "text": "【解法】上板驗證結果（步驟 5 完成）\n**SYSCLK 72 MHz 上板驗證通過**\n\n| 項目 | 實際值 | 意義 |\n|---|---|---|\n| `clock_state` | 0 | `CLOCK_OK` |\n| `RCC->CFGR` | `0x001D040A` | SW = `10`、SWS = `10` → SYSCLK = PLL ✅ |\n| `RCC->CR` | `0x03038683` | HSE、PLL 皆就緒；HSITRIM = `10000` 未被改動 |\n| `FLASH->ACR` | `0x32` | Prefetch 開啟、2 WS |\n\n- `0xA` = `1010`：bit 1:0（SW）= `10`、bit 3:2（SWS）= `10`\n- 切換 SW 後第一次檢查 SWS 就已完成（count = 0）\n- 中斷點在 `main()` 時，`clock_init()` 內的區域變數會顯示 Error，屬正常",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:51",
+          "type": "筆記",
+          "text": "【筆記】自寫 clock_init() 與 HAL 版比較\n**`clock_init()` vs HAL `SystemClock_Config()`**\n\n| 項目 | 自寫 `clock_init()` | HAL |\n|---|---|---|\n| 結構 | 一個函式，依序設定 | `RCC_OscInitStruct`（時脈怎麼產生）＋ `RCC_ClkInitStruct`（時脈怎麼分配） |\n| 適用範圍 | 只做 HSE → PLL 72 MHz | 支援所有時脈源與任意升降頻 |\n| timeout | 迴圈圈數 | 時間（`HAL_GetTick()`，HSE 100 ms、PLL 2 ms、切換 5 s） |\n| Flash latency | 切換前設定一次 | 升頻在切換前、降頻在切換後；設定後**讀回檢查** |\n| APB 分頻 | 切換前直接設成 ÷2 | 切換前暫設 **÷16**，切換後才設目標值 |\n| 切換後 | 無 | 更新 `SystemCoreClock`、`HAL_InitTick()` 重設 SysTick |\n| 錯誤處理 | `CLOCK_OK` / `CLOCK_ERROR_xxx` | `HAL_OK` / `HAL_ERROR` / `HAL_TIMEOUT` → `Error_Handler()` |\n\n- 自寫版：簡短、每個 bit 都清楚，適合固定用途的開機初始化\n- HAL 版：通用、保守，代價是程式碼長、依賴 SysTick\n- HAL 原始碼：`STM32Cube_FW_F1_V1.8.7\\Drivers\\STM32F1xx_HAL_Driver\\Src\\stm32f1xx_hal_rcc.c`",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:52",
+          "type": "筆記",
+          "text": "【筆記】timeout 用時間比用圈數好\n**為什麼 timeout 要用時間，不用圈數？**\n\n- 一圈的時間會變：\n  - 編譯最佳化：`-O2` 比 `-O0` 快\n  - 時脈頻率：同一段程式在 72 MHz 比 8 MHz 快 9 倍\n- 同樣寫 5000 圈，實際等待時間可能差十倍以上，且無法從程式看出等了多久\n- 用時間：寫 100 ms 就是 100 ms，與編譯選項、時脈無關\n- Datasheet 的起振時間規格本來就以時間表示，可直接對照\n- 實測：HSE 209 圈 ≈ 0.39 ms（以每圈 15 個週期、8 MHz 估算）；HAL 給 100 ms，約 250 倍餘裕\n- TODO：做完 SysTick 後改成以時間判斷",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 22:52",
+          "type": "筆記",
+          "text": "【筆記】時脈改變後為什麼要更新 SystemCoreClock 與 SysTick\n**切換時脈後，HAL 多做的兩件事**\n\n- `SystemCoreClock`：存放目前 HCLK 頻率（Hz），其他程式靠它計算\n  - SysTick 1 ms 的重載值、UART 鮑率、`HAL_Delay()` 的時間基準\n  - 時脈改了卻沒更新 → 這些計算全部錯誤\n- `HAL_InitTick()`：依新頻率重設 SysTick\n  - 原本依 8 MHz 設定：8000 個週期 = 1 ms\n  - 切到 72 MHz 後：8000 個週期 = 8000 ÷ 72 MHz ≈ **0.111 ms**\n  - 不重設的話，`HAL_Delay(1000)` 實際只延遲約 **111 ms**\n- 注意：Empty 專案沒有 `system_stm32f1xx.c`，目前沒有 `SystemCoreClock`，下一個課題做 SysTick 時要自己處理",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 23:01",
+          "type": "筆記",
+          "text": "**STM32 開機一律從 HSI 8 MHz 開始**\n\n- reset 後 RCC 回到復位值：`RCC_CR` HSION = 1、`RCC_CFGR` = `0x00000000`（SW = SWS = `00` = HSI）\n- 設計理由：HSI 在晶片內部，不需外部零件，石英壞了 MCU 也能開機，再由程式決定是否切換\n- 會回到 HSI 的情況：上電、NRST、軟體重置、看門狗重置、Standby 喚醒\n- 例外：\n  - Stop 喚醒不是 reset，但硬體會把 SYSCLK 切回 HSI → 醒來要再呼叫 `clock_init()`\n  - 從 Bootloader 跳入時，時脈可能已被改過，不是復位值 → 要清除後再設定（㊵）\n- 驗證：在 `clock_init()` 之前設中斷點，`RCC->CFGR` 應為 `0x00000000`",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 23:07",
+          "type": "筆記",
+          "text": "**S02 縮寫總表**\n\n### 時脈來源\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| HSI | High-Speed Internal | 內部高速振盪器，8 MHz RC，開機預設 |\n| HSE | High-Speed External | 外部高速振盪器，本板接 8 MHz 石英 |\n| LSI | Low-Speed Internal | 內部低速振盪器，40 kHz，給 IWDG 用 |\n| LSE | Low-Speed External | 外部低速石英，32.768 kHz，給 RTC 用 |\n| PLL | Phase-Locked Loop | 鎖相迴路，把輸入時脈倍頻（本課題 ×9） |\n| RC | Resistor-Capacitor | 電阻電容振盪電路（HSI、LSI 的類型） |\n| OSC | Oscillator | 振盪器 |\n\n### 時脈與匯流排\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| SYSCLK | System Clock | 系統時脈，本課題 72 MHz |\n| HCLK | AHB Clock | AHB 匯流排時脈（CPU、記憶體），72 MHz |\n| PCLK1 | Peripheral Clock 1 | APB1 周邊時脈，上限 36 MHz |\n| PCLK2 | Peripheral Clock 2 | APB2 周邊時脈，上限 72 MHz |\n| AHB | Advanced High-performance Bus | 高效能匯流排 |\n| APB | Advanced Peripheral Bus | 周邊匯流排（APB1 低速、APB2 高速） |\n| MCO | Microcontroller Clock Output | 把內部時脈輸出到腳位（CFGR bit 26:24） |\n| MUX | Multiplexer | 多工器／選擇器，時脈樹上的梯形 |\n\n### 暫存器\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| RCC | Reset and Clock Control | 重置與時脈控制周邊 |\n| CR | Clock Control Register | RCC_CR：時脈開關與就緒旗標 |\n| CFGR | Clock Configuration Register | RCC_CFGR：PLL、分頻、時脈切換設定 |\n| ACR | Access Control Register | FLASH_ACR：Flash 等待週期與預取 |\n| SFR | Special Function Register | 特殊功能暫存器（debugger 的 SFRs 視窗） |\n\n### 暫存器欄位（bit 名稱）\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| HSEON / HSION / PLLON | … ON | 開關，寫 1 開啟（rw） |\n| HSERDY / HSIRDY / PLLRDY | … Ready | 就緒旗標，硬體設定（r） |\n| HSEBYP | HSE Bypass | 旁路：直接吃外部時脈訊號（接石英設 0） |\n| HSITRIM | HSI Trimming | HSI 微調值（CR bit 7:3） |\n| HSICAL | HSI Calibration | HSI 出廠校正值（CR bit 15:8） |\n| PLLSRC | PLL Source | PLL 輸入來源（HSI÷2 或 HSE） |\n| PLLXTPRE | PLL XT Prescaler | HSE 進 PLL 前的分頻（÷1／÷2），XT = 石英 |\n| PLLMUL | PLL Multiplication factor | PLL 倍數（×9 = `0111`）；巨集寫作 PLLMULL |\n| HPRE | AHB (HCLK) Prescaler | AHB 分頻 |\n| PPRE1 / PPRE2 | APB1 / APB2 Prescaler | APB1／APB2 分頻 |\n| SW | System clock Switch | 系統時脈選擇（rw） |\n| SWS | System clock Switch Status | 系統時脈實際狀態（r） |\n| LATENCY | Flash Latency | Flash 等待週期數（ACR bit 2:0） |\n| PRFTBE | Prefetch Buffer Enable | 預取緩衝開關（rw） |\n| PRFTBS | Prefetch Buffer Status | 預取緩衝狀態（r） |\n| WS | Wait State | 等待週期（72 MHz 需 2 WS） |\n\n### 命名規律與巨集後綴\n| 寫法 | 意義 |\n|---|---|\n| …ON／…RDY | 開關（寫）／就緒旗標（讀） |\n| …E／…S | Enable（寫）／Status（讀） |\n| `_Pos` | Position：欄位從第幾個 bit 開始 |\n| `_Msk` | Mask：已移好位置的遮罩 |\n| `_0`、`_1`、`_2` | 欄位中的第幾個 bit（不是設定值） |\n| `_DIV2`、`_PLL`、`MULL9` | 有意義的設定值巨集（優先使用） |\n| `U`／`UL` | unsigned／unsigned long 的數字後綴 |\n| `x`（手冊中） | don't care，寫程式時一律寫 0 |\n| rw／r／res | 可讀寫／唯讀／保留不可動 |\n\n### 文件與軟體\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| RM0008 | Reference Manual | F10x 參考手冊：周邊與暫存器定義 |\n| PM0056 | Programming Manual | Cortex-M3 程式設計手冊：NVIC、SysTick |\n| PM0075 | Programming Manual | Flash 程式設計手冊：FLASH_ACR |\n| DS | Datasheet | 資料手冊：腳位、電氣特性、頻率上限、實際周邊 |\n| CMSIS | Cortex Microcontroller Software Interface Standard | Arm 標準介面，提供暫存器定義標頭檔 |\n| HAL | Hardware Abstraction Layer | ST 的硬體抽象層函式庫 |\n| MISRA C | Motor Industry Software Reliability Association | 嵌入式 C 程式碼規範 |\n| IDE | Integrated Development Environment | 整合開發環境（STM32CubeIDE） |\n| ELF | Executable and Linkable Format | 編譯產生的執行檔格式（.elf） |\n| RMW | Read-Modify-Write | 讀取 → 修改 → 寫回，`REG = (REG & ~Msk) | 值` |\n\n### 燒錄與除錯\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| SWD | Serial Wire Debug | 兩線式除錯介面 |\n| SWDIO | Serial Wire Debug I/O | SWD 資料線（PA13） |\n| SWCLK | Serial Wire Clock | SWD 時脈線（PA14） |\n| ST-LINK | — | ST 的燒錄／除錯器 |\n| GDB | GNU Debugger | CubeIDE 背後的除錯程式 |\n| NRST | Reset pin（低電位有效） | 重置腳 |\n| BOOT0 | Boot mode pin 0 | 開機模式腳，設 1 進入內建 Bootloader |\n\n### 晶片與系統\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| MCU | Microcontroller Unit | 微控制器 |\n| CPU | Central Processing Unit | 中央處理器（Cortex-M3 核心） |\n| NVIC | Nested Vectored Interrupt Controller | 巢狀向量中斷控制器 |\n| SysTick | System Tick Timer | Cortex-M 內建的系統計時器 |\n| HardFault | — | 硬體錯誤例外，例如讀到錯誤指令 |\n| IWDG | Independent Watchdog | 獨立看門狗（用 LSI） |\n| WWDG | Window Watchdog | 窗口看門狗 |\n| RTC | Real-Time Clock | 即時時鐘（用 LSE） |\n| LD／MD／HD | Low／Medium／High Density | 小／中／大容量（C8 = 64 KB = MD） |\n\n### 本課題提到的周邊\n| 縮寫 | 英文全名 | 所在匯流排 |\n|---|---|---|\n| GPIO | General-Purpose I/O | APB2 |\n| AFIO | Alternate Function I/O | APB2 |\n| ADC | Analog-to-Digital Converter | APB2 |\n| TIM | Timer（TIM1 高級、TIM2～4 一般） | TIM1 在 APB2；TIM2～4 在 APB1 |\n| USART | Universal Synchronous/Asynchronous Receiver Transmitter | USART1 在 APB2；USART2、3 在 APB1 |\n| SPI | Serial Peripheral Interface | SPI1 在 APB2；SPI2 在 APB1 |\n| I²C | Inter-Integrated Circuit | APB1 |\n| CAN | Controller Area Network | APB1 |\n| USB | Universal Serial Bus | APB1（需要 48 MHz） |\n| PWR／BKP | Power control／Backup | APB1 |\n\n### 單位與電路概念\n| 縮寫 | 說明 |\n|---|---|\n| MHz／kHz | 百萬赫茲／千赫茲 |\n| ns／µs／ms | 奈秒／微秒／毫秒，1 µs = 1000 ns；週期（ns）= 1000 ÷ 頻率（MHz） |\n| FF | Flip-Flop，正反器 |\n| Timing closure | 時序收斂：訊號要在一個週期內傳到下一個正反器 |\n| Bring-up | 晶片初次上電驗證 |",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-20 23:09",
+          "type": "筆記",
+          "text": "**從開機到 clock_init() 完成的流程（SPRINT-W01-S02 專案實測）**\n\n圖例：⭐ = S02 本課學到的內容　🔜 = 預習，之後課題會深入（W01 Startup／Linker Script）\n\n---\n\n**0. 上電／Reset（硬體）⭐**\n- ⭐ 暫存器回到**復位值**：\n  - ⭐ `RCC_CR`：HSION = 1、HSIRDY = 1 → HSI 8 MHz 開啟；HSE、PLL 關閉\n  - ⭐ `RCC_CFGR` = `0x00000000` → SW = SWS = `00` → **SYSCLK = HSI**\n  - ⭐ `FLASH_ACR` = `0x30` → 0 WS、Prefetch 開啟\n- ⭐ 設計理由：HSI 在晶片內部，石英壞了 MCU 也能開機\n- ⭐ 會回到 HSI 的情況：上電、NRST、軟體重置、看門狗、Standby 喚醒；Stop 喚醒也會切回 HSI\n\n**1. 讀 BOOT0（硬體）⭐**\n- BOOT0 = 0 → 從主 Flash（0x0800_0000）開機\n- ⭐ BOOT0 = 1 → 進入 ST 內建 Bootloader，不執行自己的程式（SWD 救援法，⑮）\n\n**2. 讀向量表 `g_pfnVectors`（硬體）🔜**\n- 🔜 0x0800_0000：`_estack` = `0x2000_5000` → 載入 SP（堆疊指標）\n- 🔜 0x0800_0004：`Reset_Handler` = `0x0800_0271` → 載入 PC（最低位 1 = Thumb 模式）\n\n**3. Reset_Handler：設定 SP（啟動檔）🔜**\n\n**4. `bl SystemInit`：本專案中被換成 `nop.w` 🔜**\n- 🔜 啟動檔宣告 `.weak SystemInit`：找不到定義時，連結器把呼叫換成 NOP\n- 🔜 證據：`.list` 檔中 `bl SystemInit` → `8000274: f3af 8000 nop.w`\n- 🔜 所以進入 `main()` 時時脈是復位狀態，也沒有 `SystemCoreClock`\n- 🔜 HAL 專案的 `SystemInit()` 會重設 RCC、設定向量表位置\n\n**5. 準備 C 執行環境（啟動檔）🔜**\n- 🔜 複製 `.data`：有初始值的全域變數，Flash（`_sidata`）→ RAM（`_sdata`～`_edata`）\n- 🔜 清零 `.bss`：沒有初始值的全域變數，RAM（`_sbss`～`_ebss`）寫 0\n- 🔜 `__libc_init_array`：C 函式庫初始化\n- 🔜 `bl main`\n\n**6. `main()` → `clock_init()` ⭐⭐ 本課主體**\n\n| 步驟 | 暫存器 | 等待 | 失敗回傳 |\n|---|---|---|---|\n| ⭐ HSE 開啟 | CR HSEON | HSERDY（209 圈） | `CLOCK_ERROR_HSE` |\n| ⭐ Flash 2 WS + Prefetch | ACR = `0x32` | — | — |\n| ⭐ PLL 與分頻 | CFGR = `0x001D0400` | — | — |\n| ⭐ PLL 開啟 | CR PLLON | PLLRDY（31 圈） | `CLOCK_ERROR_PLL` |\n| ⭐ 切換 SYSCLK | CFGR SW = PLL | SWS = PLL（0 圈） | `CLOCK_ERROR_SWITCH` |\n| ⭐ 完成 | CFGR = `0x001D040A` | — | `CLOCK_OK` |\n\n- ⭐ 順序原則：**任何時刻每個時脈都要在規格內**\n  - ⭐ 先設 Flash latency，再升頻（㉑）\n  - ⭐ 先設 APB1 ÷2，再切換 SW（51）\n  - ⭐ PLL 參數要在 PLLON = 0 時設定（㉘）\n- ⭐ 每個等待都有 timeout，避免石英或 PLL 故障時卡死（㊲）\n- ⭐ 驗證要看 SWS，不能只看回傳值（㊿）\n\n**7. 回到 `main()`**\n- ⭐ 失敗停在 `while (clock_state != CLOCK_OK)`；成功進入 `for(;;)`\n- 🔜 `main()` 若 return → 啟動檔 `LoopForever` 無窮迴圈（MCU 沒有作業系統可回）\n\n---\n\n**相關檔案**\n- ⭐ `Src/main.c`：`clock_init()`\n- ⭐ `Inc/CMSIS/stm32f103xb.h`：暫存器結構與 bit 巨集\n- 🔜 `Startup/startup_stm32f103c8tx.s`：向量表、`Reset_Handler`\n- 🔜 `STM32F103C8TX_FLASH.ld`：記憶體配置（FLASH 64K @ 0x0800_0000、RAM 20K @ 0x2000_0000）、`_estack`\n- 🔜 `Debug/SPRINT-W01-S02.list`：反組譯結果，可看到實際的指令與位址",
           "resolved": null
         }
       ]

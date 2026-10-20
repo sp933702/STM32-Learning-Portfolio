@@ -53,6 +53,7 @@ uint32_t clock_init(void)
 	FLASH -> ACR |= FLASH_ACR_PRFTBE_Msk;
 	// 先清空 LATENCY 的設定值，再進行給值，清除和設定合併成一行（讀取 → 修改 → 寫回），這個寫法叫 read-modify-write
 	FLASH -> ACR = (FLASH -> ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;
+	//
 
 	// 設定前先清除舊設定
 	// 進行 PLL 設定 : 來源選擇 HSE、HSE 不分頻、x9、AHB ÷1、APB1 ÷2、APB2 ÷1

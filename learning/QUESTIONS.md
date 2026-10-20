@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（23）
+## ❓ 未解決（24）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -277,6 +277,24 @@
   - 同類錯誤：㉞ 的 PLLMUL 左移；**比較欄位值時一律用巨集，不要自己寫數字**
   - 也不能寫 `== 0U`：SWS 為 `01`（HSE）時同樣不是 0，要比對的是「**等於 PLL**」
 
+- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-20 22:48）
+
+  【問題】SW 寫成 RCC->CR：沒切換卻回報成功
+  **SW 寫成 `RCC->CR`，`clock_init()` 回傳 `CLOCK_OK`，但 SYSCLK 其實沒切換**
+  
+  - 錯誤寫法：`RCC->CR = (RCC->CR & ~(SW_Msk | SWS_Msk)) | (SW_PLL | SWS_PLL);`
+  - 實際效果（巨集的值被套到 CR）：
+    - `& ~0xF` → 清掉 CR 的 bit 0～3（HSION、HSIRDY、保留位、HSITRIM 最低位）
+    - `| 0xA` → bit 3 被設成 1 → **改到 HSITRIM**，HSI 頻率偏移
+    - SW 完全沒有被設定 → SYSCLK 仍是 HSI 8 MHz
+  - 等待迴圈讀 `RCC->CR & 0xC`：剛好讀到被設成 1 的 bit 3 → `0x8` = `RCC_CFGR_SWS_PLL` → **第一圈就判定成功**
+  - 這是第二次寫錯暫存器（第一次是 ㊳ 的 PLLRDY）
+  - 另一個錯誤：寫入了唯讀的 SWS
+  - 防止方法：**巨集前綴必須和暫存器一致**
+    - `RCC->CFGR` ↔ `RCC_CFGR_xxx`
+    - `RCC->CR` ↔ `RCC_CR_xxx`
+    - `FLASH->ACR` ↔ `FLASH_ACR_xxx`
+
 
 ## ✅ 已解決的問題與解法
 
@@ -413,5 +431,21 @@
   
   - 原則：**清除的欄位與設定的欄位一一對應**
   - 結構：`REG = (REG & ~(清除清單)) | (設定清單);`，不要混用 `&`、`|` 卻不加括號
+
+- **解法**（2026-10-20 22:50）：
+
+  【解法】上板驗證結果（步驟 5 完成）
+  **SYSCLK 72 MHz 上板驗證通過**
+  
+  | 項目 | 實際值 | 意義 |
+  |---|---|---|
+  | `clock_state` | 0 | `CLOCK_OK` |
+  | `RCC->CFGR` | `0x001D040A` | SW = `10`、SWS = `10` → SYSCLK = PLL ✅ |
+  | `RCC->CR` | `0x03038683` | HSE、PLL 皆就緒；HSITRIM = `10000` 未被改動 |
+  | `FLASH->ACR` | `0x32` | Prefetch 開啟、2 WS |
+  
+  - `0xA` = `1010`：bit 1:0（SW）= `10`、bit 3:2（SWS）= `10`
+  - 切換 SW 後第一次檢查 SWS 就已完成（count = 0）
+  - 中斷點在 `main()` 時，`clock_init()` 內的區域變數會顯示 Error，屬正常
 
 
