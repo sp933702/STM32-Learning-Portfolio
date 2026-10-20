@@ -23,11 +23,12 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
-#define TIME_OUT 5000U	//等待 HSE 準備好，最多等待 5000 次的迴圈時間
+#define TIME_OUT 5000U	// 等待旗標的最大迴圈數，最多等待 5000 次的迴圈時間
 
 #define CLOCK_OK 0U
 #define CLOCK_ERROR_HSE 1U
 #define CLOCK_ERROR_PLL 2U
+#define CLOCK_ERROR_SWITCH 3U
 
 
 uint32_t clock_init(void)
@@ -59,7 +60,9 @@ uint32_t clock_init(void)
 	RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_PLLSRC_Msk  | RCC_CFGR_PLLXTPRE_Msk |
             					RCC_CFGR_PLLMULL_Msk | RCC_CFGR_HPRE_Msk|
 								RCC_CFGR_PPRE1_Msk   | RCC_CFGR_PPRE2_Msk))
-			| (RCC_CFGR_PLLSRC_Msk | RCC_CFGR_PLLMULL9 | RCC_CFGR_HPRE_DIV1 | RCC_CFGR_PPRE1_DIV2 | RCC_CFGR_PPRE2_DIV1);
+				| (RCC_CFGR_PLLSRC_Msk | RCC_CFGR_PLLXTPRE_HSE |                     // ← 設定：補上這個
+		           RCC_CFGR_PLLMULL9   | RCC_CFGR_HPRE_DIV1    |
+		           RCC_CFGR_PPRE1_DIV2 | RCC_CFGR_PPRE2_DIV1);
 	// 設定好後才能開啟 PLL
 	RCC -> CR |= RCC_CR_PLLON_Msk;
 	// 開啟後等待 PLL Ready
@@ -70,6 +73,18 @@ uint32_t clock_init(void)
 		if (count >= TIME_OUT)
 			//return 0;
 			return CLOCK_ERROR_PLL;
+	}
+
+	// PLL Ready 後，將 SW 設為 PLL
+	RCC -> CFGR = (RCC -> CFGR & ~(RCC_CFGR_SW_Msk))
+			| (RCC_CFGR_SW_PLL);
+	// 等待 SWS 中的值變更為 PLL
+	count = 0U;
+	while ((RCC -> CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL)
+	{
+		count ++;
+		if (count >= TIME_OUT)
+			return CLOCK_ERROR_SWITCH;
 	}
 
 	return CLOCK_OK;
