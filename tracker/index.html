@@ -206,6 +206,22 @@ function mdInline(s){
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
 }
+// 表格列切欄位：\| 是文字的 |；`反引號程式碼` 裡的 | 也不當欄位分隔
+function splitCells(row){
+  let s = row.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+  const out = []; let cur = "", code = false;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (c === "\\" && s[i + 1] === "|"){ cur += "|"; i++; continue; }
+    if (c === "`") code = !code;
+    if (c === "|" && !code){ out.push(cur.trim()); cur = ""; continue; }
+    cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
 function md(text){
   const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
   let html = "", i = 0;
@@ -233,7 +249,7 @@ function md(text){
     if (isRow(l)){                                // 表格
       const rows = [];
       while (i < lines.length && isRow(lines[i])) rows.push(lines[i++]);
-      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const cells = splitCells;
       const sep = rows.length > 1 && /^[\s|:-]+$/.test(rows[1]);
       let t = "<table>";
       rows.forEach((r, k) => { if (sep && k === 1) return;
