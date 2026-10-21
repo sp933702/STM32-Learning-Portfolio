@@ -1,0 +1,79 @@
+/*
+ * clock_init.c
+ *
+ *  Created on: 2026年10月21日
+ *      Author: user
+ */
+
+// 有用到 uint32_t，所以要 include
+// 但 clock_init.h 已經 include 過，可以不用重複
+// # include <stdint.h>
+
+// 不要直接 include stm32f103xb.h
+// stm32f1xx.h 是總入口，靠巨集選擇型號
+// 直接寫死 stm32f103xb.h，等於繞過了這個機制
+// 之後換晶片時，你得逐個檔案修改
+#include "clock_init.h"
+#include "stm32f1xx.h"
+
+#define TIME_OUT 5000U	// 等待旗標的最大迴圈數，最多等待 5000 次的迴圈時間
+
+uint32_t Clock_Init(void)
+{
+	uint32_t count = 0U;
+
+	// 啟動 HSE
+	RCC -> CR |= RCC_CR_HSEON_Msk;
+
+	//等待 HSE 準備，出 while 代表 HSE 準備好了
+	// while(((RCC -> CR >> RCC_CR_HSERDY_Pos) & 1U) != 1U) ， 此寫法不夠直觀
+	while((RCC -> CR & RCC_CR_HSERDY_Msk) == 0U)
+	{
+		count ++;
+		if (count >= TIME_OUT)
+			//return 0;
+			return CLOCK_ERROR_HSE;
+	}
+
+	// HSE 準備好後開啟 PRFTBE，並設定等待週期
+	// 開啟 PRFTBE
+	FLASH -> ACR |= FLASH_ACR_PRFTBE_Msk;
+	// 先清空 LATENCY 的設定值，再進行給值，清除和設定合併成一行（讀取 → 修改 → 寫回），這個寫法叫 read-modify-write
+	FLASH -> ACR = (FLASH -> ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;
+	//
+
+	// 設定前先清除舊設定
+	// 進行 PLL 設定 : 來源選擇 HSE、HSE 不分頻、x9、AHB ÷1、APB1 ÷2、APB2 ÷1
+	// 原則： 設定幾個欄位，就清除幾個欄位，兩邊的欄位要一一對應。這樣不管 CFGR 原本是什麼值，執行完都一定是你要的設定。
+	RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_PLLSRC_Msk  | RCC_CFGR_PLLXTPRE_Msk |
+								RCC_CFGR_PLLMULL_Msk | RCC_CFGR_HPRE_Msk|
+								RCC_CFGR_PPRE1_Msk   | RCC_CFGR_PPRE2_Msk))
+				| (RCC_CFGR_PLLSRC_Msk | RCC_CFGR_PLLXTPRE_HSE |                     // ← 設定：補上這個
+				   RCC_CFGR_PLLMULL9   | RCC_CFGR_HPRE_DIV1    |
+				   RCC_CFGR_PPRE1_DIV2 | RCC_CFGR_PPRE2_DIV1);
+	// 設定好後才能開啟 PLL
+	RCC -> CR |= RCC_CR_PLLON_Msk;
+	// 開啟後等待 PLL Ready
+	count = 0U;
+	while ((RCC -> CR & RCC_CR_PLLRDY_Msk) == 0U)
+	{
+		count ++;
+		if (count >= TIME_OUT)
+			//return 0;
+			return CLOCK_ERROR_PLL;
+	}
+
+	// PLL Ready 後，將 SW 設為 PLL
+	RCC -> CFGR = (RCC -> CFGR & ~(RCC_CFGR_SW_Msk))
+			| (RCC_CFGR_SW_PLL);
+	// 等待 SWS 中的值變更為 PLL
+	count = 0U;
+	while ((RCC -> CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL)
+	{
+		count ++;
+		if (count >= TIME_OUT)
+			return CLOCK_ERROR_SWITCH;
+	}
+
+	return CLOCK_OK;
+}

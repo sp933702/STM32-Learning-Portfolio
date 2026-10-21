@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（24）
+## ❓ 未解決（26）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -295,6 +295,30 @@
     - `RCC->CR` ↔ `RCC_CR_xxx`
     - `FLASH->ACR` ↔ `FLASH_ACR_xxx`
 
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-21 21:42）
+
+  【問題】main.c 出現 'CLOCK_OK' undeclared
+  **錯誤碼定義在 clock_init.c，main.c 看不到**
+  
+  - 原因：`#define` 只在定義它的檔案內有效，`main.c` 只 include 了 `clock_init.h`
+  - 解法：呼叫者會用到的常數（錯誤碼）搬到 `clock_init.h`
+  - 判斷原則：問自己「呼叫這個函式的人需要知道它嗎？」需要 → .h；不需要 → .c
+
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-21 21:43）
+
+  【問題】Build 成功，但編輯器顯示 Unresolved inclusion: "clock_init.h"
+  **真正原因：新程式存到了 S02 專案的 main.c**
+  
+  | 專案 | 當時的 main.c | 結果 |
+  |---|---|---|
+  | S02 | 新版（include `clock_init.h`） | S02 沒有 `clock_init.h` → Unresolved inclusion |
+  | S03 | 舊版（時鐘程式還寫在 main.c） | Build 通過，但其實沒用到 `clock_init.c` |
+  
+  - 檢查：看視窗**標題列**路徑，例如 `workspace - SPRINT-W01-S03/Src/main.c`
+  - 預防：不用的專案右鍵 → **Close Project**；開檔一律從 Project Explorer 對應專案展開
+  - 還原：S02 已 commit，用 Git 取回 HEAD 版本
+  - 和 S02 那則「Index → Rebuild」不同：那次是索引沒更新，這次是真的改錯檔案
+
 
 ## ✅ 已解決的問題與解法
 
@@ -447,5 +471,23 @@
   - `0xA` = `1010`：bit 1:0（SW）= `10`、bit 3:2（SWS）= `10`
   - 切換 SW 後第一次檢查 SWS 就已完成（count = 0）
   - 中斷點在 `main()` 時，`clock_init()` 內的區域變數會顯示 Error，屬正常
+
+
+### [SPRINT-W01-S03](notes/SPRINT-W01-S03.md) GPIO（暫存器重做）
+
+- **解法**（2026-10-21 21:43）：
+
+  【解法】複製舊專案建立新課題專案
+  **Copy → Paste 之後要處理名稱與 launch 設定兩個坑**
+  
+  1. Project Explorer 對舊專案右鍵 → Copy → Paste，取新名稱
+  2. 刪掉新專案的 `Debug/` 資料夾
+  3. 名稱檢查：顯示成 `名稱 (in 資料夾)` 代表專案名稱 ≠ 資料夾名稱 → 右鍵 **Rename** 改成一致
+  4. 刪掉複製過來的 `舊專案 Debug.launch`（它仍指向舊專案的 `.elf`）
+  5. 右鍵 → **Debug As → STM32 C/C++ Application**，自動產生新的 launch 設定
+  6. 路徑和名稱不要有空白，避免 GCC／Make 出錯
+  
+  - 自我檢查：燒錄後故意改一個明顯行為，板子沒變 → 先懷疑 launch 設定
+  - Workspace 不用切換：同一個 Workspace 可以放多個專案
 
 

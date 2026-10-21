@@ -385,6 +385,74 @@ def _history_block(t, limit=6, skip=""):
     return lines
 
 
+def _entry_title(e):
+    """筆記的第一行當標題（去掉 ** 粗體符號）。"""
+    for line in e["text"].splitlines():
+        line = line.strip().strip("*").strip()
+        if line:
+            return line[:80]
+    return "（空白）"
+
+
+def _previous_block(db, t):
+    """上一課的重點：讓 Claude 知道我上一課學到哪、留下哪些 TODO。"""
+    same = [x for x in db["tasks"] if x.get("plan") == t.get("plan")]
+    idx = next((i for i, x in enumerate(same) if x["id"] == t["id"]), 0)
+    before = same[:idx]
+    prev = next((x for x in reversed(before) if x.get("sessions") or x.get("entries")), None)
+    if not prev:
+        return []
+    lines = ["", f"## 上一課：{prev['id']}「{prev['title']}」（{prev['status']}）",
+             f"- 完成標準：{prev.get('criteria') or '（無）'}"]
+    if prev.get("summary"):
+        lines.append(f"- 總結：{prev['summary']}")
+    files = [f["path"] for f in _code_files(prev["id"])]
+    if files:
+        lines.append(f"- 程式碼（projects/{prev['id']}/）：" + "、".join(files[:12]))
+    todos = []
+    for e in prev.get("entries", []):
+        for line in e["text"].splitlines():
+            if "TODO" in line.upper():
+                todos.append(line.strip().lstrip("-・ ").strip())
+    if todos:
+        lines += ["", "### 上一課留下的 TODO（看本課是否要處理）"] + [f"- {x}" for x in dict.fromkeys(todos)]
+    ents = prev.get("entries", [])
+    if ents:
+        shown = ents[-40:]
+        lines += ["", f"### 上一課學過的主題（筆記標題，共 {len(ents)} 則" + ("，列最新 40 則" if len(ents) > 40 else "") + "）"]
+        lines += [f"- {_entry_title(e)}" if _entry_title(e).startswith("【") else f"- [{e['type']}] {_entry_title(e)}"
+                  for e in shown]
+    done = [x for x in before if x["status"] == "已完成" and x["id"] != prev["id"]]
+    if done:
+        lines += ["", "### 更早已完成的課題"] + [f"- {x['id']}「{x['title']}」" for x in done]
+    return lines
+
+
+NOTE_FORMAT = [
+    "## 筆記格式（每次幫我整理重點都照這個格式）",
+    "App 會用 Markdown 顯示筆記。每則筆記放在**獨立的 ```markdown 程式碼區塊**裡，方便我一鍵複製貼進 App；一則只講一個主題。",
+    "- 第 1 行：`【筆記】`、`【問題】` 或 `【解法】` 加標題（對應 App 的三種類型；踩到的錯誤用【問題】，正確做法用【解法】）",
+    "- 第 2 行：**一句話重點**（粗體）",
+    "- 之後：條列說明，一行一個重點；對照、bit 定義、比較用 Markdown 表格；暫存器、巨集、程式碼用 `反引號`，多行程式用程式碼區塊",
+    "- 驗收題的答案寫成面試可以直接講的版本",
+    "- 編號引用之前的筆記時，寫出標題，不要只寫編號",
+    "",
+    "範例：",
+    "````markdown",
+    "【筆記】RCC_CR 的 HSE 相關 bit",
+    "**HSEON 開啟 HSE，HSERDY 由硬體回報已穩定**",
+    "",
+    "| bit | 名稱 | 屬性 | 意義 |",
+    "|---|---|---|---|",
+    "| 16 | HSEON | rw | 1 = 開啟 HSE |",
+    "| 17 | HSERDY | r | 1 = HSE 已穩定（硬體設定） |",
+    "",
+    "- 命名規律：結尾 **ON** 是開關（rw）、結尾 **RDY** 是就緒旗標（r）",
+    "- 本板接被動石英 → HSEBYP 設 `0`",
+    "````",
+]
+
+
 def _code_files(tid):
     return [f for f in list_files(tid)
             if os.path.splitext(f["path"])[1].lower() in CODE_EXT and not any(s in f["path"] for s in CODE_SKIP)]
@@ -399,21 +467,24 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
     if kind == "start":
         first = n <= 1 and not t.get("entries")
         lines = [f"我要{'開始' if first else '繼續'} STM32 學習課題 {tid}「{t['title']}」。"
-                 + ("" if first else f"這是第 {n} 次進行，請從上次的進度接續，不用從頭講。"),
+                 + ("" if first else (f"這是第 {n} 次進行，" if n > 1 else "這個課題已經有進度，")
+                    + "請從下面的筆記接續，不用從頭講。"),
                  "我的背景、硬體與 2 個月衝刺計畫在專案說明（CLAUDE.md／STM32學習背景與進度）裡。", "",
                  "## 本課題"] + _task_block(t) + _history_block(t)
+        lines += _previous_block(db, t)
         if files:
             lines += ["", f"### 目前的程式碼（{rel}，共 {len(files)} 個檔案）"]
             lines += [f"- {f['path']}" for f in _code_files(tid)[:30]] or ["- （沒有 .c/.h/.py 檔）"]
         lines += ["", "## 請這樣帶我",
-                  "1. 先用 3–5 句說明這個課題要練什麼、為什麼 IC 設計公司的韌體工程師需要會，以及最後怎麼驗收（對照完成標準）。",
+                  "0. 先看「上一課」：用 2–3 句說明本課怎麼接續上一課（沿用哪些檔案或函式、上一課的 TODO 本課要不要處理）；我上一課已經學過的觀念直接引用，不要重講。",
+                  "1. 用 3–5 句說明這個課題要練什麼、為什麼 IC 設計公司的韌體工程師需要會，以及最後怎麼驗收（對照完成標準）。",
                   "2. 把課題拆成 3–6 個小步驟，列出清單後**一次只帶一步**，等我回報結果再進下一步。",
                   "3. 涉及暫存器的步驟：先問我要查 RM0008 哪一章、哪個暫存器、哪幾個 bit，讓我自己查完再寫程式；完成後和舊 HAL 版比較差異。",
                   "4. 不要一次給完整答案。我卡住時先給方向提示，第二次還卡住再給關鍵程式片段並解釋。",
-                  "5. 遇到值得記的觀念或錯誤，提醒我在 App 記成「問題／筆記／解法」。",
+                  "5. 每完成一個步驟，或我踩到值得記的錯誤時，主動用下面的「筆記格式」幫我整理，讓我貼進 App。",
                   "6. 最後依完成標準逐條驗收我（包含口頭解釋），全部通過才算完成。",
-                  "7. 請用繁體中文。", "",
-                  "準備好了就從第 1 點開始。"]
+                  "7. 請用繁體中文。", ""] + NOTE_FORMAT + ["",
+                  "準備好了就從第 0 點開始。"]
     else:
         lines = [f"我在 STM32 學習課題 {tid}「{t['title']}」卡關了，需要協助。", "",
                  "## 卡在哪裡", stuck_text.strip() or "（請先問我卡在哪裡）", "",
@@ -438,8 +509,8 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
                   "1. 先問我 1–3 個釐清問題（例如：完整錯誤訊息、debugger 看到的暫存器值、LED／波形實際表現），不要急著給答案。",
                   "2. 列出最可能的 2–3 個原因，每個原因給一個我能自己驗證的檢查方法（看哪個暫存器、量哪支腳、加哪行測試）。",
                   "3. 等我回報結果再縮小範圍；確定原因後才給修正方向，必要時附上關鍵片段並解釋為什麼。",
-                  "4. 解決後幫我整理一段「原因＋解法」，讓我記到 App 的「解法」，面試時也能講。",
-                  "5. 請用繁體中文。"]
+                  "4. 解決後用下面的「筆記格式」幫我整理：踩到的錯誤一則【問題】、正確做法一則【解法】，面試時也能講。",
+                  "5. 請用繁體中文。", ""] + NOTE_FORMAT
     return "\n".join(lines)
 
 
