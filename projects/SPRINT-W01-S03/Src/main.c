@@ -32,8 +32,13 @@ int main(void)
 	clock_state = Clock_Init();
 	while (clock_state != CLOCK_OK)
 	{
-
+		/**/
 	}
+
+	// 啟動 I/O Port B Clock & I/O Port C Clock
+	// 先重置再賦值 => 多此一舉
+	// 原因 : 單一 bit。先把它清成 0、再設成 1，結果和直接 |= 完全一樣，清除那一步沒有任何作用。
+	RCC -> APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);
 
 
     /* Loop forever */
