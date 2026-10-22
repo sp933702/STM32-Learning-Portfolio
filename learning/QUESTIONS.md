@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（27）
+## ❓ 未解決（29）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -338,6 +338,30 @@
   - RSTR 正確用法：先寫 1 再寫 0，讓周邊回到復位值（驅動程式重新初始化時使用）
   - 驗證名稱：打錯會出現 undeclared；也可以按 F3 跳進 `stm32f103xb.h` 確認
 
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-22 22:03）
+
+  【問題】GPIO 設定的兩個誤解
+  **L／H 不是速度；LED 一設成輸出就會亮**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | CRL 的 L 代表低速，PC13 不需要高速所以用 CRL | L／H 代表 pin 0～7／pin 8～15；PC13 是 pin 13 → CRH；速度由 MODE 決定 |
+  | PC13 設成輸出後 LED 是暗的 | ODR 復位值 0 → 輸出 0 → Active-Low LED 亮 |
+  
+  - 找不到「PC13」：暫存器圖是 GPIOx 共用格式，要看欄位名稱的數字（MODE13、CNF13）
+  - 預測腳位行為時，要同時考慮「設定（CRH）」和「資料（ODR）」兩個暫存器
+
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-22 22:52）
+
+  【問題】LED 亮／暗用錯 Set／Reset
+  **直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**
+  
+  - 錯誤答案：亮 → BS13；暗 → BS13（還把 BSRR 打成 BSR）
+  - 正確答案：亮 → 清除 bit 13（BSRR bit 29 或 BRR bit 13）；暗 → 設定 bit 13（BSRR bit 13）
+  - 原因：電路是 3.3V → LED → PC13，腳位接地（0）才有電流
+  - 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）
+  - 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記
+
 
 ## ✅ 已解決的問題與解法
 
@@ -565,5 +589,35 @@
   - `a = a | b` 縮寫成 `a |= b`：暫存器名稱只寫一次，避免左右寫成不同暫存器
   - 同一行的 mask 名稱要統一（都用 `_Msk`）
   - 驗證：APB2ENR 前 `0x0` → 後 `0x18`（`0b11000`，bit 3、bit 4 = 1）
+
+- **解法**（2026-10-22 22:05）：
+
+  【解法】PC13 設為通用推挽輸出 2 MHz
+  **CNF13 + MODE13 是多 bit 欄位 → 先清再設**
+  
+  ```c
+  // PC13：CNF13 = 00（通用推挽）、MODE13 = 10（輸出 2 MHz）
+  GPIOC->CRH = (GPIOC->CRH & ~(GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk))
+             | GPIO_CRH_MODE13_1;
+  ```
+  
+  - 清除：兩個欄位都要清（共 4 bit），設定幾個欄位就清幾個
+  - 設定：只需設 MODE13 的 bit 1（GPIO_CRH_MODE13_1 = bit 21），CNF13 = 00 清完就是了
+  - 可用巨集：在 stm32f103xb.h 搜尋 GPIO_CRH_MODE13
+  - 預測值：0x4444_4444 只改 bit [23:20]，0100 → 0010 → 0x4424_4444
+  - 驗證：Debugger 讀到 GPIOC->CRH = 0x44244444，與預測一致；LED 同時亮起
+
+- **解法**（2026-10-22 22:52）：
+
+  【解法】用 BSRR／BRR 控制 PC13 LED（Active-Low）
+  **LED 亮 = PC13 輸出 0 = 清除 bit 13**
+  
+  | 動作 | ODR bit 13 | BSRR 寫哪個 bit | BRR 寫哪個 bit |
+  |---|---|---|---|
+  | LED 亮 | 0 | bit 29（BR13） | bit 13 |
+  | LED 暗 | 1 | bit 13（BS13） | 做不到，BRR 只能清除 |
+  
+  - Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset
+  - 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR
 
 

@@ -539,6 +539,12 @@
           "end": "2026-10-21 22:50",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-10-22 21:58",
+          "end": "2026-10-22 23:04",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -607,6 +613,54 @@
           "type": "解法",
           "text": "【解法】單一 bit 與多 bit 欄位的寫法選擇\n**單一 bit 不需要先清再設**\n\n| 欄位類型 | 寫法 | 例子 |\n|---|---|---|\n| 單一 bit 設 1 | 或等於 | 開 GPIOB、GPIOC 時脈 |\n| 單一 bit 清 0 | 且等於「反相 mask」 | 關閉某個 bit |\n| 多 bit 欄位 | 先清再設 | S02 的 PLLMUL（4 bit） |\n\n```c\n// 單一 bit 設 1\nRCC->APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);\n\n// 單一 bit 清 0\nREG &= ~BIT_Msk;\n\n// 多 bit 欄位：先清再設\nREG = (REG & ~FIELD_Msk) | FIELD_VALUE;\n```\n\n- 我原本的寫法：單一 bit 也先清再設 → 結果相同，但清除那一步沒有作用\n- `a = a | b` 縮寫成 `a |= b`：暫存器名稱只寫一次，避免左右寫成不同暫存器\n- 同一行的 mask 名稱要統一（都用 `_Msk`）\n- 驗證：APB2ENR 前 `0x0` → 後 `0x18`（`0b11000`，bit 3、bit 4 = 1）",
           "resolved": null
+        },
+        {
+          "time": "2026-10-22 21:59",
+          "type": "筆記",
+          "text": "【筆記】F1 GPIO 的 CNF/MODE 4-bit 編碼\n**每個腳位用 4 bit 設定：高 2 bit 是 CNF，低 2 bit 是 MODE**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 管哪些腳位 |\n|---|---|---|---|---|\n| GPIOx_CRL | 8.2.1／9.2.1 | 0x00 | 0x4444_4444 | pin 0～7 |\n| GPIOx_CRH | 8.2.2／9.2.2 | 0x04 | 0x4444_4444 | pin 8～15 |\n\n- L／H = Low／High，指「低編號 8 隻腳／高編號 8 隻腳」，跟速度無關\n- 32 bit ÷ 4 bit = 8 個腳位，所以 16 隻腳要兩個暫存器\n- 欄位名稱的數字 = 腳位編號（MODE13、CNF13 = pin 13）；暫存器是 GPIOA～E 共用格式\n- 起始 bit：CRL 為 y × 4，CRH 為 (y − 8) × 4 → PC13 在 CRH 的 bit [23:20]\n\n**MODE（低 2 bit）：決定輸入或輸出，輸出時決定最大速度（表18）**\n\n| MODE | 意義 |\n|---|---|\n| 00 | 輸入模式（復位值） |\n| 01 | 輸出，最大 10 MHz |\n| 10 | 輸出，最大 2 MHz |\n| 11 | 輸出，最大 50 MHz |\n\n**CNF（高 2 bit）：意義依 MODE 而不同（表17）**\n\n| CNF | 輸入模式（MODE = 00） | 輸出模式（MODE 不為 00） |\n|---|---|---|\n| 00 | 類比輸入 | 通用推挽 |\n| 01 | 浮空輸入（復位值） | 通用開漏 |\n| 10 | 上拉／下拉輸入 | 複用推挽 |\n| 11 | 保留 | 複用開漏 |\n\n**常用組合**\n\n| 用途 | CNF | MODE | 4-bit |\n|---|---|---|---|\n| 復位值：浮空輸入 | 01 | 00 | 0100 = 0x4 |\n| PC13 通用推挽輸出 2 MHz | 00 | 10 | 0010 = 0x2 |\n| PB0 上拉輸入（Step 4） | 10 | 00 | 1000 = 0x8 |\n\n- 復位值 0x4444_4444 = 每個腳位都是 0100 → 開機全部是浮空輸入",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:01",
+          "type": "筆記",
+          "text": "【筆記】GPIO 模式名詞：推挽／開漏、通用／複用、浮空／上拉／下拉／類比\n**一個腳位的設定要回答三件事：方向、誰在控制、電路結構**\n\n**輸出電路結構**：腳位內部有兩個開關，上開關（P-MOS）接 VDD、下開關（N-MOS）接 GND\n\n| 模式 | 輸出 1 | 輸出 0 | 用途 |\n|---|---|---|---|\n| 推挽 Push-Pull | 上開關導通，推到 VDD | 下開關導通，拉到 GND | LED、一般數位輸出 |\n| 開漏 Open-Drain | 放開（懸空），靠外部上拉電阻拉高 | 下開關導通，拉到 GND | I²C、多裝置共用線、不同電壓介面 |\n\n**誰在控制腳位**\n\n| 模式 | 腳位聽誰的 | 例子 |\n|---|---|---|\n| 通用 General Purpose | 程式（ODR、BSRR） | 點 LED |\n| 複用 Alternate Function | 晶片內的周邊硬體 | USART TX、PWM 輸出、SPI SCK |\n\n- 複用模式下寫 ODR 無效（表17 的 PxODR 欄寫「不使用」）\n\n**輸入電路結構**\n\n| 模式 | 腳位內部 | 沒接東西時讀到 |\n|---|---|---|\n| 浮空 Floating | 什麼都不接，像天線 | 不確定，受雜訊亂跳 |\n| 上拉 Pull-up | 內部電阻接 VDD | 1 |\n| 下拉 Pull-down | 內部電阻接 GND | 0 |\n| 類比 Analog | 關閉數位電路，接到 ADC | ADC 使用 |\n                VDD\n                 │\n               [上開關]  ← P-MOS\n                 │\n  腳位 ──┤\n                 │\n               [下開關]  ← N-MOS\n                 │\n                GND\n- 開機預設浮空輸入：腳位不輸出電壓，不會和外部電路衝突，最安全\n- 按鍵 PB0 按下接 GND → 要用上拉，放開時才會穩定讀到 1",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:03",
+          "type": "問題",
+          "text": "【問題】GPIO 設定的兩個誤解\n**L／H 不是速度；LED 一設成輸出就會亮**\n\n| 誤解 | 正確 |\n|---|---|\n| CRL 的 L 代表低速，PC13 不需要高速所以用 CRL | L／H 代表 pin 0～7／pin 8～15；PC13 是 pin 13 → CRH；速度由 MODE 決定 |\n| PC13 設成輸出後 LED 是暗的 | ODR 復位值 0 → 輸出 0 → Active-Low LED 亮 |\n\n- 找不到「PC13」：暫存器圖是 GPIOx 共用格式，要看欄位名稱的數字（MODE13、CNF13）\n- 預測腳位行為時，要同時考慮「設定（CRH）」和「資料（ODR）」兩個暫存器",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-22 22:04",
+          "type": "筆記",
+          "text": "【筆記】ODR 與 PC13 LED 電路\n**輸出模式下，腳位電位 = ODR 對應 bit 的值；PC13 LED 是 Active-Low**\n\n| 項目 | 內容 |\n|---|---|\n| ODR | Output Data Register，bit y 對應 pin y，只用 bit 15:0 |\n| ODR 復位值 | 0 → PC13 一設成輸出就輸出 0 |\n| LED 電路 | 3.3V → 電阻 → LED → PC13 |\n| Active-Low | PC13 輸出 0（接地）才有電流 → 亮；輸出 1 → 暗 |\n| LED 位置 | 板上標示 PC13 的那顆（另一顆是電源燈） |\n\n- 驗證：CRH 設定完成（0x44244444）的瞬間 LED 就亮了，因為 ODR bit13 = 0\n- PC13～PC15 驅動能力弱：速度不超過 2 MHz、不能當電流源 → 板子只能接成 Active-Low\n\n**推挽 vs 開漏（用 PC13 LED 推導）**\n\n| 輸出值 | 推挽 | 開漏 |\n|---|---|---|\n| 0 | 接 GND → 亮 | 接 GND → 亮 |\n| 1 | 接 3.3V → 暗 | 懸空，沒有電流路徑 → 暗 |\n\n- 這個電路兩種都能用：LED 接在 3.3V，等於幫腳位提供上拉\n- LED 改成 Active-High（PC13 → LED → GND）時，開漏無法輸出高電位 → 不能用\n- 選推挽：兩個方向都主動驅動，最通用；開漏用於 I²C 共用線、不同電壓的介面\n- 輸出懸空 = 沒有電流路徑（結果確定）；輸入懸空 = 讀值不確定（兩者不同）",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:05",
+          "type": "解法",
+          "text": "【解法】PC13 設為通用推挽輸出 2 MHz\n**CNF13 + MODE13 是多 bit 欄位 → 先清再設**\n\n```c\n// PC13：CNF13 = 00（通用推挽）、MODE13 = 10（輸出 2 MHz）\nGPIOC->CRH = (GPIOC->CRH & ~(GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk))\n           | GPIO_CRH_MODE13_1;\n```\n\n- 清除：兩個欄位都要清（共 4 bit），設定幾個欄位就清幾個\n- 設定：只需設 MODE13 的 bit 1（GPIO_CRH_MODE13_1 = bit 21），CNF13 = 00 清完就是了\n- 可用巨集：在 stm32f103xb.h 搜尋 GPIO_CRH_MODE13\n- 預測值：0x4444_4444 只改 bit [23:20]，0100 → 0010 → 0x4424_4444\n- 驗證：Debugger 讀到 GPIOC->CRH = 0x44244444，與預測一致；LED 同時亮起",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:52",
+          "type": "筆記",
+          "text": "【筆記】GPIO 資料暫存器：IDR／ODR／BSRR／BRR\n**ODR 儲存輸出值；BSRR、BRR 是「命令」暫存器，只寫不存**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 屬性 | 作用 |\n|---|---|---|---|---|---|\n| GPIOx_IDR | 8.2.3／9.2.3 | 0x08 | 0x0000_XXXX | r | 讀取腳位實際電位 |\n| GPIOx_ODR | 8.2.4／9.2.4 | 0x0C | 0x0000_0000 | rw | 輸出資料，bit y = pin y |\n| GPIOx_BSRR | 8.2.5／9.2.5 | 0x10 | 0x0000_0000 | w | 設定或清除 ODR 的指定 bit |\n| GPIOx_BRR | 8.2.6／9.2.6 | 0x14 | 0x0000_0000 | w | 清除 ODR 的指定 bit |\n\n**BSRR 的兩半**\n\n| 位置 | 名稱 | 寫 1 | 寫 0 |\n|---|---|---|---|\n| bit 15:0 | BSy（Bit Set） | ODR bit y 設為 1 | 沒有效果 |\n| bit 31:16 | BRy（Bit Reset） | ODR bit y 清為 0 | 沒有效果 |\n\n- BRy 位置公式：bit (y + 16)，例如 BR13 = bit 29\n- BRR 只有 BRy（bit 15:0），功能等同 BSRR 的 bit 31:16；BRR 只能清除，不能設定\n- IDR 的 X：沒有固定值，反映腳位實際電位，所以唯讀\n- BSRR、BRR 是寫入專用，讀回來固定是 0（不儲存值）\n  - 寫法用 `=` 不用 `|=`：寫 0 的 bit 沒效果，直接寫入也不會影響其他腳位\n- 與 CRL／CRH 合起來，GPIO 暫存器 offset 依序為：CRL 0x00、CRH 0x04、IDR 0x08、ODR 0x0C、BSRR 0x10、BRR 0x14\n補充：寫入專用的暫存器讀回來是什麼\n\nBSRR、BRR 都是寫入專用（屬性標 w），讀回來固定是 0。原因是它們不儲存任何值：\n\nODR 是「儲存」暫存器：寫進去的值會被記住，讀回來就是那個值。\nBSRR 是「命令」暫存器：寫入的瞬間，硬體依照你寫的 1 去設定或清除 ODR，動作完成後什麼都不留。",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:52",
+          "type": "解法",
+          "text": "【解法】用 BSRR／BRR 控制 PC13 LED（Active-Low）\n**LED 亮 = PC13 輸出 0 = 清除 bit 13**\n\n| 動作 | ODR bit 13 | BSRR 寫哪個 bit | BRR 寫哪個 bit |\n|---|---|---|---|\n| LED 亮 | 0 | bit 29（BR13） | bit 13 |\n| LED 暗 | 1 | bit 13（BS13） | 做不到，BRR 只能清除 |\n\n- Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset\n- 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-22 22:52",
+          "type": "問題",
+          "text": "【問題】LED 亮／暗用錯 Set／Reset\n**直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**\n\n- 錯誤答案：亮 → BS13；暗 → BS13（還把 BSRR 打成 BSR）\n- 正確答案：亮 → 清除 bit 13（BSRR bit 29 或 BRR bit 13）；暗 → 設定 bit 13（BSRR bit 13）\n- 原因：電路是 3.3V → LED → PC13，腳位接地（0）才有電流\n- 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）\n- 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記",
+          "resolved": false
         }
       ]
     },
