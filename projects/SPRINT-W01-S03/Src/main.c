@@ -39,9 +39,17 @@ int main(void)
 	// 先重置再賦值 => 多此一舉
 	// 原因 : 單一 bit。先把它清成 0、再設成 1，結果和直接 |= 完全一樣，清除那一步沒有任何作用。
 	RCC -> APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);
-	//
+	// 將 GPIOC 的第 13 腳位設定為通用推挽輸出
 	GPIOC -> CRH = (GPIOC -> CRH & ~(GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk))
 			| (GPIO_CRH_MODE13_1);
+	// 依照程式說明讓 LED 依序 : 暗 (BSRR) -> 亮 (BSRR) -> 暗 (BSRR) -> 亮 (BRR)
+	GPIOC -> BSRR |= GPIO_BSRR_BS13_Msk;
+	GPIOC -> BSRR |= GPIO_BSRR_BR13_Msk;
+	GPIOC -> BSRR |= GPIO_BSRR_BS13_Msk;
+	GPIOC -> BRR |= GPIO_BRR_BR13_Msk;
+
+
+
 
 
     /* Loop forever */

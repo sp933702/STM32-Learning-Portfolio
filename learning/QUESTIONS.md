@@ -620,4 +620,27 @@
   - Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset
   - 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR
 
+- **解法**（2026-10-24 21:54）：
+
+  【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證
+  **命令暫存器用 = 直接寫入**
+  
+  ```c
+  GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗
+  GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮
+  GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗
+  GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
+  ```
+  
+  | 步驟 | 寫入 | ODR | LED |
+  |---|---|---|---|
+  | ① | BSRR BS13 | 0x2000 | 暗 |
+  | ② | BSRR BR13 | 0x0000 | 亮 |
+  | ③ | BSRR BS13 | 0x2000 | 暗 |
+  | ④ | BRR BR13 | 0x0000 | 亮 |
+  
+  - 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義
+  - Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
+  - 8192 = 0x2000 = 只有 bit 13 為 1
+
 
