@@ -551,6 +551,12 @@
           "end": "2026-10-24 22:44",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-10-27 22:37",
+          "end": "2026-10-27 22:55",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -690,6 +696,24 @@
           "time": "2026-10-24 22:25",
           "type": "筆記",
           "text": "【筆記】上拉輸入為什麼要寫 ODR = 1\n**CNF = 10 只代表「上拉或下拉」，由 ODR 的 bit 決定接通哪一顆內部電阻**\n\n| 模式 | CNF | MODE | 4-bit | PxODR |\n|---|---|---|---|---|\n| 上拉輸入 | 10 | 00 | 1000 | 1 |\n| 下拉輸入 | 10 | 00 | 1000 | 0 |\n\n**晶片內部結構**\n\n```\n  VDD ──[上拉電阻]──/ ──┐   ← ODR = 1 時接通\n                        ├── PB0\n  GND ──[下拉電阻]──/ ──┘   ← ODR = 0 時接通\n```\n\n| 模式 | 接通的電阻 | 沒有外力時的電位 |\n|---|---|---|\n| 上拉輸入 | 上拉電阻接 VDD | 1 |\n| 下拉輸入 | 下拉電阻接 GND | 0 |\n| 浮空輸入（CNF = 01） | 兩顆都不接 | 不確定 |\n\n- 輸出模式：ODR bit = 腳位輸出的電位\n- 輸入模式（CNF = 10）：ODR bit = 選擇上拉（1）或下拉（0）\n- PxODR 的 x 是 port 字母（PBODR = GPIOB 的 ODR），不是腳位編號\n- 設定方式：`GPIOB->BSRR = GPIO_BSRR_BS0_Msk;`（用 BSRR，不必讀改寫 ODR）\n\n**按鍵電路（按鍵接在 PB0 與 GND 之間）**\n\n| 按鍵狀態 | PB0 接到 | IDR bit 0 |\n|---|---|---|\n| 放開 | 經上拉電阻（約 40 kΩ）接 VDD | 1 |\n| 按下 | 經按鍵直接接 GND | 0 |\n\n- 按下時讀到 0 → 按鍵也是 Active-Low\n- 電阻的作用：決定放開時的電位；按下時限制電流（否則 VDD 直接短路到 GND）\n\n**忘記寫 ODR = 1 的後果**\n\n- ODR 復位值是 0 → 變成下拉輸入\n- 放開讀到 0、按下也讀到 0 → 按鍵完全沒有作用\n- 程式和 CRL 看起來都正確，很難發現",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-27 22:54",
+          "type": "問題",
+          "text": "【問題】讀按鍵時沒有 mask，LED 恆暗\n**IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**\n\n- 錯誤寫法：`if (GPIOB->IDR != 0U)`\n- 正確寫法：`if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)`\n- 現象：不論按下或放開，LED 都是暗的\n- Debugger 讀到 `GPIOB->IDR` = 0xFFF3、0xFFF1：bit 0 都是 1（兩次都是放開）；差在 bit 1，PB1 浮空輸入讀值亂跳\n- 原因：其他腳位不一定是 0（浮空亂跳、JTAG 腳位預設帶上拉），整個 IDR 永遠不等於 0\n- PB2 = BOOT1，板上接 GND，所以 bit 2 恆為 0\n\n**判斷單一 bit：一律和 0U 比較**\n\n| 運算 | 結果 |\n|---|---|\n| `IDR & GPIO_IDR_IDR0_Msk` | 0 或 0x0001 |\n| `IDR & GPIO_IDR_IDR13_Msk` | 0 或 0x2000（不是 1） |\n\n- `&` 之後 bit 留在原位置，不會移到 bit 0\n- 寫 `== 1U` 只對 pin 0 有效，換腳位就錯 → 用 `== 0U` 或 `!= 0U`",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-27 22:54",
+          "type": "解法",
+          "text": "【解法】PB0 上拉輸入讀按鍵、控制 PC13 LED\n**先設 ODR（選上拉），再設 CRL（切成輸入上拉／下拉）**\n\n```c\n// PB0 上拉輸入：先設 ODR 再設 CRL\nGPIOB->BSRR = GPIO_BSRR_BS0_Msk;\nGPIOB->CRL  = (GPIOB->CRL & ~(GPIO_CRL_CNF0_Msk | GPIO_CRL_MODE0_Msk))\n            | GPIO_CRL_CNF0_1;               // CNF0 = 10、MODE0 = 00\n\nfor (;;)\n{\n    if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)\n    {\n        GPIOC->BSRR = GPIO_BSRR_BS13_Msk;    // 放開：PC13 = 1 → LED 暗\n    }\n    else\n    {\n        GPIOC->BSRR = GPIO_BSRR_BR13_Msk;    // 按下：PC13 = 0 → LED 亮\n    }\n}\n```\n\n| 項目 | 預測 | 實測 |\n|---|---|---|\n| GPIOB->CRL | 0x4444_4448 | 一致 |\n| GPIOB->ODR | 0x0000_0001 | 一致 |\n| 按下（PB0 接 GND） | LED 亮 | LED 亮 |\n| 放開 | LED 暗 | LED 暗 |\n\n- 沒有按鍵：用杜邦線一端接 GND、另一端碰 PB0 代替；內部上拉約 40 kΩ，電流約 0.08 mA，安全\n- 杜邦線只能碰 PB0，不要碰 3.3V／5V（會短路）\n- 第一次寫成 `ODR |=`：改成 BSRR，程式裡不再出現 ODR 的讀改寫",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-27 22:54",
+          "type": "筆記",
+          "text": "【筆記】設定順序：先設 ODR，再設 CRL\n**先設資料、再切模式，避免腳位出現短暫的錯誤狀態**\n\n| 順序 | 中間狀態 | 結果 |\n|---|---|---|\n| 先 CRL 後 ODR | CNF = 10 但 ODR = 0 → 短暫下拉輸入 | 讀到 0，誤判為按下 |\n| 先 ODR 後 CRL | 仍是浮空輸入，內部電阻都沒接上 | ODR 沒有作用，也沒有副作用 |\n\n- 本課影響很小（只有幾個時脈週期），但接了外部電路的腳位可能出問題（例如馬達、電源控制）\n- 輸出腳也適用：先用 BSRR 設好初始電位，再把 CRH／CRL 切成輸出，避免輸出瞬間的錯誤電位",
           "resolved": null
         }
       ]

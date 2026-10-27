@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（29）
+## ❓ 未解決（30）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -362,6 +362,28 @@
   - 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）
   - 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記
 
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-27 22:54）
+
+  【問題】讀按鍵時沒有 mask，LED 恆暗
+  **IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**
+  
+  - 錯誤寫法：`if (GPIOB->IDR != 0U)`
+  - 正確寫法：`if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)`
+  - 現象：不論按下或放開，LED 都是暗的
+  - Debugger 讀到 `GPIOB->IDR` = 0xFFF3、0xFFF1：bit 0 都是 1（兩次都是放開）；差在 bit 1，PB1 浮空輸入讀值亂跳
+  - 原因：其他腳位不一定是 0（浮空亂跳、JTAG 腳位預設帶上拉），整個 IDR 永遠不等於 0
+  - PB2 = BOOT1，板上接 GND，所以 bit 2 恆為 0
+  
+  **判斷單一 bit：一律和 0U 比較**
+  
+  | 運算 | 結果 |
+  |---|---|
+  | `IDR & GPIO_IDR_IDR0_Msk` | 0 或 0x0001 |
+  | `IDR & GPIO_IDR_IDR13_Msk` | 0 或 0x2000（不是 1） |
+  
+  - `&` 之後 bit 留在原位置，不會移到 bit 0
+  - 寫 `== 1U` 只對 pin 0 有效，換腳位就錯 → 用 `== 0U` 或 `!= 0U`
+
 
 ## ✅ 已解決的問題與解法
 
@@ -642,5 +664,40 @@
   - 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義
   - Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
   - 8192 = 0x2000 = 只有 bit 13 為 1
+
+- **解法**（2026-10-27 22:54）：
+
+  【解法】PB0 上拉輸入讀按鍵、控制 PC13 LED
+  **先設 ODR（選上拉），再設 CRL（切成輸入上拉／下拉）**
+  
+  ```c
+  // PB0 上拉輸入：先設 ODR 再設 CRL
+  GPIOB->BSRR = GPIO_BSRR_BS0_Msk;
+  GPIOB->CRL  = (GPIOB->CRL & ~(GPIO_CRL_CNF0_Msk | GPIO_CRL_MODE0_Msk))
+              | GPIO_CRL_CNF0_1;               // CNF0 = 10、MODE0 = 00
+  
+  for (;;)
+  {
+      if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)
+      {
+          GPIOC->BSRR = GPIO_BSRR_BS13_Msk;    // 放開：PC13 = 1 → LED 暗
+      }
+      else
+      {
+          GPIOC->BSRR = GPIO_BSRR_BR13_Msk;    // 按下：PC13 = 0 → LED 亮
+      }
+  }
+  ```
+  
+  | 項目 | 預測 | 實測 |
+  |---|---|---|
+  | GPIOB->CRL | 0x4444_4448 | 一致 |
+  | GPIOB->ODR | 0x0000_0001 | 一致 |
+  | 按下（PB0 接 GND） | LED 亮 | LED 亮 |
+  | 放開 | LED 暗 | LED 暗 |
+  
+  - 沒有按鍵：用杜邦線一端接 GND、另一端碰 PB0 代替；內部上拉約 40 kΩ，電流約 0.08 mA，安全
+  - 杜邦線只能碰 PB0，不要碰 3.3V／5V（會短路）
+  - 第一次寫成 `ODR |=`：改成 BSRR，程式裡不再出現 ODR 的讀改寫
 
 
