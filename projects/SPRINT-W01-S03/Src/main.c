@@ -28,6 +28,9 @@
 
 int main(void)
 {
+	// 將系統時脈切到 72 MHz
+	// 對 GPIO 的影響： 本課的 GPIO 不依賴 72 MHz，用 8 MHz 也能動。
+	// 放在最前面，是因為「開機先把時脈定好」是所有專案的慣例。
 	uint32_t clock_state;
 	clock_state = Clock_Init();
 	while (clock_state != CLOCK_OK)
@@ -35,6 +38,7 @@ int main(void)
 		/**/
 	}
 
+	// GPIOB、GPIOC 開始運作
 	// 啟動 I/O Port B Clock & I/O Port C Clock
 	// 先重置再賦值 => 多此一舉
 	// 原因 : 單一 bit。先把它清成 0、再設成 1，結果和直接 |= 完全一樣，清除那一步沒有任何作用。
