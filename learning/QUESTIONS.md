@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（32）
+## ❓ 未解決（34）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -405,6 +405,39 @@
   - 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開
   - 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動
 
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-29 22:25）
+
+  【問題】main.c 寫成 #include "bsp_gpio.c"，連結時 multiple definition
+  **.c 交給編譯器編譯，只 include .h**
+  
+  - 錯誤訊息：`ld.exe: ./Src/main.o: in function 'BSP_GPIO_Init': multiple definition of 'BSP_GPIO_Init'; ./Src/bsp_gpio.o: first defined here`
+  - 原因：include 會把檔案內容原封不動貼進來 → main.o 裡也有一份函式本體 → 連結時同一函式出現兩次
+  - 解法：改成 `#include "bsp_gpio.h"`
+  
+  **看懂錯誤訊息**
+  
+  | 階段 | 工具 | 做什麼 |
+  |---|---|---|
+  | 編譯 | arm-none-eabi-gcc -c | 每個 .c 各自編譯成 .o |
+  | 連結 | ld.exe | 合併所有 .o 成 .elf，每個函式只能定義一次 |
+  
+  - 訊息開頭是 ld.exe → 連結階段錯誤，每個 .c 單獨編譯都沒問題
+  - 6 個 error 其實只有一個原因：4 個函式各報一次，加上 collect2、make 各一次
+
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-29 22:26）
+
+  【問題】按鍵函式把 Active-Low 洩漏給 main
+  **回傳腳位電位時，按下反而是 false**
+  
+  | 設計 | 按下時回傳 | main 需要知道 Active-Low 嗎 |
+  |---|---|---|
+  | 輸入 0 回傳 false、1 回傳 true | false | 需要（要記得 false 才是按下） |
+  | 按下回傳 true | true | 不需要 |
+  
+  - 名稱叫 State 或 IsPressed 都可以，關鍵是「行為」要是按下回傳 true
+  - 轉換寫在 .c：`return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);`
+  - main 裡的 `== true` 可省略：函式本身就回傳 bool
+
 
 ## ✅ 已解決的問題與解法
 
@@ -742,5 +775,44 @@
   - 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義
   - Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
   - 8192 = 0x2000 = 只有 bit 13 為 1
+
+- **解法**（2026-10-29 22:27）：
+
+  【解法】bsp_gpio.c 的結構與初始化順序
+  **static 小函式藏起實作，Init 依序呼叫；LED 腳也「先設資料再切模式」**
+  
+  ```c
+  static void Gpio_Clock_Enable(void);   // RCC->APB2ENR 開 IOPBEN、IOPCEN，讀回一次
+  static void Led_Pin_Init(void);        // GPIOC->CRH：CNF13 = 00、MODE13 = 10
+  static void Button_Pin_Init(void);     // GPIOB->BSRR 的 BS0，再 GPIOB->CRL：CNF0 = 10、MODE0 = 00
+  
+  void BSP_GPIO_Init(void)
+  {
+      Gpio_Clock_Enable();
+      BSP_GPIO_Led_Off();     // 先設資料：PC13 預先輸出 1
+      Led_Pin_Init();         // 再切模式：切成輸出時 LED 保持暗
+      Button_Pin_Init();
+  }
+  ```
+  
+  **為什麼設定 LED 腳（GPIOC->CRH）之前要先呼叫 Led_Off**
+  
+  | 做法 | 切成輸出的瞬間 | LED |
+  |---|---|---|
+  | 直接切成輸出 | ODR bit 13 是復位值 0 → 輸出 0 | 亮一下才熄滅 |
+  | 先寫 BS13 再切 | 寫 BS13 時還是浮空輸入，不影響腳位；切成輸出時輸出 1 | 一直是暗的 |
+  
+  - 和「選 PB0 上拉（BSRR 的 BS0）在設定 PB0 模式（GPIOB->CRL）之前」同一個原則
+  - 控制馬達或電源的腳位，開機多動作一次可能出事
+  - static 函式命名：「做什麼 + 對象」，硬體細節寫在註解
+  - Init 可以呼叫 Led_Off：.c 第一行 include 了 bsp_gpio.h，宣告已經存在
+  
+  **main.c 的原則**
+  
+  - 只 include clock_init.h、bsp_gpio.h，不再需要 stm32f1xx.h
+  - 不出現任何 GPIOx->、RCC->
+  - 註解只寫「做什麼」，不寫 BSP 內部步驟和 Active-Low
+  
+  **驗證**：Build 0 errors、0 warnings；初始化後 LED 暗；按下亮、放開暗
 
 
