@@ -1,7 +1,8 @@
 #ifndef CLOCK_INIT_H
+#define CLOCK_INIT_H
+
 // 有用到 uint32_t，所以要 include
 # include <stdint.h>
-#define CLOCK_INIT_H
 
 // 用來標示 clock 初始化的成功與失敗
 #define CLOCK_OK 0U

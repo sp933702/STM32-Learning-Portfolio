@@ -17,9 +17,9 @@
  */
 
 #include <stdint.h>
-#include "stm32f1xx.h"
 
 #include "clock_init.h"
+#include "bsp_gpio.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -38,40 +38,24 @@ int main(void)
 		/**/
 	}
 
-	// GPIOB、GPIOC 開始運作
-	// 啟動 I/O Port B Clock & I/O Port C Clock
-	// 先重置再賦值 => 多此一舉
-	// 原因 : 單一 bit。先把它清成 0、再設成 1，結果和直接 |= 完全一樣，清除那一步沒有任何作用。
-	RCC -> APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);
-	// 將 GPIOC 的第 13 腳位設定為通用推挽輸出
-	GPIOC -> CRH = (GPIOC -> CRH & ~(GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk))
-			| (GPIO_CRH_MODE13_1);
-	// 依照程式說明讓 LED 依序 : 暗 (BSRR) -> 亮 (BSRR) -> 暗 (BSRR) -> 亮 (BRR)
-	// BSRR 讀回來恆為 0，所以 |= 實際做的是「讀出 0 → OR 你的 bit → 寫回」，結果和直接 = 一樣，只是多了一次沒有意義的讀取
-	GPIOC -> BSRR = GPIO_BSRR_BS13_Msk;
-	GPIOC -> BSRR = GPIO_BSRR_BR13_Msk;
-	GPIOC -> BSRR = GPIO_BSRR_BS13_Msk;
-	GPIOC -> BRR = GPIO_BRR_BR13_Msk;
-	// 將 PB0 設定為上拉輸入
-	// 先設定 ODR 再設定 CRL，反過來會出事
-	// 記法： 要改 ODR 的某個 bit，設 1 寫 BSRR 的 BSy，清 0 寫 BSRR 的 BRy（或 BRR）
-	// GPIOB->ODR |= GPIO_ODR_ODR0_Msk;      // 讀改寫：讀出 → OR → 寫回
-	GPIOB -> BSRR = GPIO_BSRR_BS0_Msk;      // 一次寫入：只把 ODR bit 0 設成 1
-	GPIOB -> CRL = (GPIOB -> CRL & ~(GPIO_CRL_CNF0_Msk | GPIO_CRL_MODE0_Msk))
-			| (GPIO_CRL_CNF0_1);
+	// 進行 GPIO 初始化
+	// 1. 啟動 GPIOB & GPIOC 時脈
+	// 2. 設定 PC13 功能
+	// 3. 設定 PB0 功能
+	BSP_GPIO_Init();
 
-    /* Loop forever */
 	for(;;)
 	{
-		// 讀取 GPIOB -> IDR 的 bit 0
-		// 按下時，LED 亮；鬆開時，LED 暗
-		if ((GPIOB -> IDR & GPIO_IDR_IDR0_Msk) != 0U)
+		// 按下按鍵時時 LED 亮，放開 LED 暗
+		// 按鍵和 LED 都是 Active-Low： 按下讀到 0，寫 0 點亮。
+		// if (BSP_GPIO_Button_IsPressed() == true)，BSP_GPIO_Button_IsPressed() 本身就回傳 bool
+		if (BSP_GPIO_Button_IsPressed())
 		{
-			GPIOC -> BSRR = GPIO_BSRR_BS13_Msk;
+			BSP_GPIO_Led_On();
 		}
 		else
 		{
-			GPIOC -> BSRR = GPIO_BSRR_BR13_Msk;
+			BSP_GPIO_Led_Off();
 		}
 	}
 }

@@ -557,6 +557,12 @@
           "end": "2026-10-27 22:55",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-10-28 21:04",
+          "end": null,
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -715,6 +721,48 @@
           "type": "筆記",
           "text": "【筆記】設定順序：先設 ODR，再設 CRL\n**先設資料、再切模式，避免腳位出現短暫的錯誤狀態**\n\n| 順序 | 中間狀態 | 結果 |\n|---|---|---|\n| 先 CRL 後 ODR | CNF = 10 但 ODR = 0 → 短暫下拉輸入 | 讀到 0，誤判為按下 |\n| 先 ODR 後 CRL | 仍是浮空輸入，內部電阻都沒接上 | ODR 沒有作用，也沒有副作用 |\n\n- 本課影響很小（只有幾個時脈週期），但接了外部電路的腳位可能出問題（例如馬達、電源控制）\n- 輸出腳也適用：先用 BSRR 設好初始電位，再把 CRH／CRL 切成輸出，避免輸出瞬間的錯誤電位",
           "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:24",
+          "type": "筆記",
+          "text": "【筆記】HAL 開時脈巨集 __HAL_RCC_GPIOC_CLK_ENABLE() 拆解\n**設好 bit 後讀回一次，用讀取動作當作延遲**\n\n```c\n#define __HAL_RCC_GPIOC_CLK_ENABLE()   do { \\\n        __IO uint32_t tmpreg; \\\n        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        /* Delay after an RCC peripheral clock enabling */ \\\n        tmpreg = READ_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        UNUSED(tmpreg); \\\n    } while(0U)\n```\n\n| 程式 | 作用 |\n|---|---|\n| `SET_BIT(REG, BIT)` | 開時脈，展開後就是「REG 或等於 BIT」 |\n| `tmpreg = READ_BIT(...)` | 讀回同一暫存器：CPU 必須等前一筆寫入完成才能讀，形成延遲 |\n| `__IO uint32_t tmpreg` | `__IO` = `volatile`，防止編譯器把沒人用的讀取刪掉 |\n| `UNUSED(tmpreg)` | `(void)tmpreg`，消除 set but not used 的 warning |\n| `do { } while(0U)` | 把多行巨集包成「一個敘述」 |\n\n- 為什麼要延遲：開時脈的寫入經過匯流排要幾個週期才生效，馬上設定周邊可能被忽略\n- 讀回的「值」不重要，「讀」這個動作才重要（不是二次確認）\n- 正式記載於 ST Errata Sheet（Delay after an RCC peripheral clock enabling）\n- 自己的寫法：`(void)RCC->APB2ENR;`，整理 bsp_gpio.c 時決定是否加入\n- 定義位置：`SET_BIT`、`READ_BIT` 在 `stm32f1xx.h`；`__IO` 在 `core_cm3.h`；`UNUSED` 是 HAL 專用（`stm32f1xx_hal_def.h`）\n- volatile 的「暫存器」要分清楚：CPU 暫存器（R0～R12）vs 周邊暫存器（RCC->APB2ENR）",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:24",
+          "type": "筆記",
+          "text": "【筆記】F1 GPIO 的 CNF/MODE 4-bit 編碼\n**每個腳位用 4 bit 設定：高 2 bit 是 CNF，低 2 bit 是 MODE**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 管哪些腳位 |\n|---|---|---|---|---|\n| GPIOx_CRL | 8.2.1／9.2.1 | 0x00 | 0x4444_4444 | pin 0～7 |\n| GPIOx_CRH | 8.2.2／9.2.2 | 0x04 | 0x4444_4444 | pin 8～15 |\n\n- L／H = Low／High，指「低編號 8 隻腳／高編號 8 隻腳」，跟速度無關\n- 32 bit ÷ 4 bit = 8 個腳位，所以 16 隻腳要兩個暫存器\n- 欄位名稱的數字 = 腳位編號（MODE13、CNF13 = pin 13）；暫存器是 GPIOA～E 共用格式\n- 起始 bit：CRL 為 y × 4，CRH 為 (y − 8) × 4 → PC13 在 CRH 的 bit [23:20]\n\n**MODE（低 2 bit）：決定輸入或輸出，輸出時決定最大速度（表18）**\n\n| MODE | 意義 |\n|---|---|\n| 00 | 輸入模式（復位值） |\n| 01 | 輸出，最大 10 MHz |\n| 10 | 輸出，最大 2 MHz |\n| 11 | 輸出，最大 50 MHz |\n\n**CNF（高 2 bit）：意義依 MODE 而不同（表17）**\n\n| CNF | 輸入模式（MODE = 00） | 輸出模式（MODE 不為 00） |\n|---|---|---|\n| 00 | 類比輸入 | 通用推挽 |\n| 01 | 浮空輸入（復位值） | 通用開漏 |\n| 10 | 上拉／下拉輸入 | 複用推挽 |\n| 11 | 保留 | 複用開漏 |\n\n**常用組合**\n\n| 用途 | CNF | MODE | 4-bit |\n|---|---|---|---|\n| 復位值：浮空輸入 | 01 | 00 | 0100 = 0x4 |\n| PC13 LED：通用推挽輸出 2 MHz | 00 | 10 | 0010 = 0x2 |\n| PB0 按鍵：上拉輸入 | 10 | 00 | 1000 = 0x8 |\n\n- 復位值 0x4444_4444 = 每個腳位都是 0100 → 開機全部是浮空輸入",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:24",
+          "type": "解法",
+          "text": "【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證\n**命令暫存器用 = 直接寫入**\n\n```c\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗\nGPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗\nGPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）\n```\n\n| 寫入 | 執行後 ODR | LED |\n|---|---|---|\n| BSRR 的 BS13 | 0x2000 | 暗 |\n| BSRR 的 BR13 | 0x0000 | 亮 |\n| BRR 的 BR13 | 0x0000 | 亮 |\n\n- 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義\n- Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值\n- 8192 = 0x2000 = 只有 bit 13 為 1",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:24",
+          "type": "筆記",
+          "text": "【筆記】Expressions 視窗顯示 Error: Multiple\n**區域變數離開作用範圍後，Debugger 讀不到**\n\n- `count` 是 `Clock_Init()` 裡的區域變數，中斷點停在 `main()` 時它已不存在\n- 要觀察區域變數：中斷點設在該函式內部\n- 全域變數和周邊暫存器（RCC->CR）不受影響，隨時都看得到\n\n**拆出 clock_init.c 後的驗證結果（與 SPRINT-W01-S02 時脈系統一致）**\n\n| 暫存器 | 十六進位 | 解讀 |\n|---|---|---|\n| FLASH->ACR | 0x32 | 2 WS、Prefetch 開啟 |\n| RCC->CR | 0x03038683 | HSEON、HSERDY、PLLON、PLLRDY = 1 |\n| RCC->CFGR | 0x001D040A | SW = SWS = 10（PLL）、×9、APB1 ÷2 |\n| clock_state | 0 | CLOCK_OK |",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:25",
+          "type": "問題",
+          "text": "【問題】PB0 誤寫成 CRH\n**pin 0～7 用 CRL，pin 8～15 用 CRH**\n\n- PB0 是 pin 0 → GPIOB->CRL 的 bit [3:0]\n- 判斷時只看腳位編號，不看 port 字母",
+          "resolved": false
+        },
+        {
+          "time": "2026-10-28 22:25",
+          "type": "筆記",
+          "text": "【筆記】GPIO 初始化完整流程：為什麼設、設了什麼、為什麼這個順序\n**先開時脈 → 先設資料再切模式 → 設定完成才使用**\n\n```\n上電／Reset：時脈 = HSI 8 MHz、GPIO 時脈關閉、所有腳位浮空輸入\n  ↓\n系統時脈 72 MHz：Clock_Init()（RCC、FLASH）\n  ↓\n開 GPIOB、GPIOC 時脈：RCC->APB2ENR 的 IOPBEN、IOPCEN\n  ↓\n設定 PC13 為輸出：GPIOC->CRH\n  ↓\n選 PB0 上拉：GPIOB->BSRR 的 BS0（ODR bit 0 = 1）\n  ↓\n設定 PB0 為上拉／下拉輸入：GPIOB->CRL\n  ↓\n迴圈：讀 GPIOB->IDR → 寫 GPIOC->BSRR\n```\n\n| 設定 | 值 | 為什麼 |\n|---|---|---|\n| 系統時脈 Clock_Init() | 72 MHz | 開機先把時脈定好是慣例；本課 GPIO 用 8 MHz 也能動 |\n| 開時脈 RCC->APB2ENR | 0x18（bit 3、bit 4） | F1 周邊預設沒時脈，沒開時寫入會被忽略；用或等於，不蓋掉其他周邊 |\n| PC13 模式 GPIOC->CRH | 0x4424_4444（CNF13 = 00、MODE13 = 10） | 推挽最通用；PC13 硬體上限 2 MHz；多 bit 欄位先清再設 |\n| PB0 選上拉 GPIOB->BSRR 的 BS0 | ODR = 0x0001 | CNF = 10 由 ODR 選上拉或下拉，復位值 0 是下拉；用 BSRR 避免讀改寫 |\n| PB0 模式 GPIOB->CRL | 0x4444_4448（CNF0 = 10、MODE0 = 00） | 按鍵接 GND，放開時需要上拉到確定的 1 |\n| 讀按鍵 GPIOB->IDR | 和 IDR0 mask 做且運算後，和 0U 比較 | IDR 含 16 隻腳，其他腳不一定是 0 |\n\n**順序原則**\n\n| 原則 | 本課的例子 |\n|---|---|\n| 先開時脈，才能設定周邊 | 開 GPIO 時脈（RCC->APB2ENR）在設定 CRH、CRL、BSRR 之前 |\n| 先設資料，再切模式 | 選上拉（BSRR 的 BS0）在設定 PB0 模式（GPIOB->CRL）之前 |\n| 設定完成，才開始使用 | CRH、CRL 都設好，迴圈才開始讀 IDR、寫 BSRR |\n\n- 改進方向：PC13 也可以先用 BSRR 的 BS13 設成 1（LED 暗），再切成輸出，避免一切換成輸出 LED 就亮\n- 按鍵和 LED 都是 Active-Low：按下讀到 0，寫 0 點亮",
+          "resolved": null
+        },
+        {
+          "time": "2026-10-28 22:25",
+          "type": "問題",
+          "text": "【問題】複習時兩個觀念的修正\n**沒開時脈是「寫入被忽略」；浮空輸入是「放開時亂跳」**\n\n| 情境 | 我原本的想法 | 正確 |\n|---|---|---|\n| 開 GPIO 時脈（RCC->APB2ENR）放在設定 PC13 模式（GPIOC->CRH）之後 | 時脈不對，寫入的值不如預期 | 沒時脈時寫入直接被忽略，CRH 保持 0x4444_4444，PC13 從頭到尾都不是輸出，LED 完全不受控制 |\n| PB0 的 CNF0 設成 01（浮空輸入） | 按了沒反應 | 按下穩定讀到 0；放開時沒有電阻拉住，讀值隨雜訊亂跳，LED 可能亂閃或看起來一直是按下 |\n\n- 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開\n- 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動",
+          "resolved": false
         }
       ]
     },
