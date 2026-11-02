@@ -1,9 +1,10 @@
 # SPRINT-W01-S03：GPIO（暫存器重做）
 
-- 狀態：**進行中**
+- 狀態：**已完成**
 - 週次：W01　主題：GPIO
 - 對應原任務（HAL 版）：W01-S03, W02-S01
-- 進行次數：6 次（最近一次：2026-10-28）
+- 進行次數：7 次（最近一次：2026-11-02）
+- 完成日期：2026-11-03
 - 程式碼：[projects/SPRINT-W01-S03](../../projects/SPRINT-W01-S03)
 
 ## 任務內容
@@ -937,3 +938,321 @@ void BSP_GPIO_Init(void)
 - 註解只寫「做什麼」，不寫 BSP 內部步驟和 Active-Low
 
 **驗證**：Build 0 errors、0 warnings；初始化後 LED 暗；按下亮、放開暗
+
+### [筆記] 2026-11-02 22:05
+
+【筆記】自寫 bsp_gpio 與 HAL GPIO 比較
+**HAL 是通用驅動（回報電位），BSP 是板級驅動（回報意義）**
+
+| 項目 | HAL | 自寫 bsp_gpio |
+|---|---|---|
+| 選 CRL／CRH | 執行時判斷：pin 小於 8 用 CRL，否則 CRH | 寫程式時就決定：PC13 用 CRH、PB0 用 CRL |
+| 4-bit 位置 | registeroffset = (position − 8) << 2，config << registeroffset | 直接用巨集 GPIO_CRH_MODE13_1 |
+| 寫入設定 | MODIFY_REG（先清再設） | 先清再設 |
+| 上拉的 ODR | GPIOx->BSRR = ioposition（BS0），在 MODIFY_REG 之前 | GPIOB->BSRR 的 BS0，在設定 GPIOB->CRL 之前 |
+| 開時脈 | 不在 HAL_GPIO_Init 裡，由 MX_GPIO_Init 呼叫 __HAL_RCC_GPIOx_CLK_ENABLE | 包在 BSP_GPIO_Init 裡 |
+| 輸出初始電位 | MX_GPIO_Init 先 WritePin 再 Init；CubeMX 預設 Low → LED 亮 | 先 Led_Off 再切輸出 → LED 暗 |
+| 寫腳位 | WritePin：SET 寫 BSRR 前半，RESET 寫後半（pin << 16） | Led_On 寫 BR13、Led_Off 寫 BS13 |
+| 讀腳位 | ReadPin 回傳 GPIO_PIN_SET／RESET（電位） | IsPressed 回傳 true／false（按下與否） |
+| Active-Low 誰記住 | main | bsp_gpio.c |
+
+**PC13 代入 HAL 計算**
+
+- position = 13 → registeroffset = (13 − 8) × 4 = 20（PC13 欄位的起始 bit）
+- config = Speed（GPIO_CRL_MODE0_1 = 0x2）+ CNF_GP_OUTPUT_PP（0x0）= 0x2
+- config << 20 = 0x0020_0000 = bit 21 = GPIO_CRH_MODE13_1 → 和自寫版相同
+
+**巨集後綴**
+
+- `_Msk`：整個欄位；`_0`：欄位內第 0 個 bit；`_1`：欄位內第 1 個 bit
+- GPIO_CRL_MODE0_1 = bit 1 = 0x2（不是 0x1）
+
+**HAL 版 main 判斷按下**
+
+```c
+if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET)
+{
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+}
+```
+
+- main 要自己記住「RESET 是按下」、「RESET 是亮」
+- 自寫版：`if (BSP_GPIO_Button_IsPressed()) BSP_GPIO_Led_On();`
+- 實務：BSP 內部可以呼叫 HAL，對上層提供有意義的介面（Driver／BSP／App 分層）
+- CubeMX 讓 LED 初始化後暗：GPIO 設定的 output level 改成 High
+
+### [問題] 2026-11-02 22:05 ❓ 未解決
+
+【問題】讀 HAL 原始碼時的四個誤解
+**欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**
+
+| 誤解 | 正確 |
+|---|---|
+| GPIO_CRL_MODE0_1 是 bit 1:0、值為 1 | _1 是欄位內第 1 個 bit → bit 1、值 0x2 |
+| GPIOx->BSRR = ioposition 是設定 CRL 的 bit 0 | 寫 BSRR 的 BS0 → 把 ODR bit 0 設成 1（CRL 由後面的 MODIFY_REG 寫） |
+| WritePin(GPIO_PIN_RESET) 寫前半、輸出 1、LED 暗 | RESET 走 else 寫後半（BR13）→ 輸出 0 → Active-Low LED 亮 |
+| main 寫 if (bitstatus == 0U) | bitstatus 是 ReadPin 的區域變數，main 看不到；要用回傳值和 GPIO_PIN_RESET 比較 |
+
+- ODR 名稱是 Output，但上拉／下拉輸入時用來選上拉或下拉，所以設定出現在 GPIO_MODE_INPUT 分支
+- 追函式時：先看參數值，再看 if 條件成立與否，一路追到實際寫入的暫存器和 bit
+
+### [筆記] 2026-11-02 22:12
+
+【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
+**名稱告訴你「哪一格」，數值是「只有那一格是 1」的整數**
+
+```
+bit 位置：            3   2   1   0
+GPIO_CRL_MODE0_0：    0   0   0   1   → 0x1
+GPIO_CRL_MODE0_1：    0   0   1   0   → 0x2
+GPIO_CRL_MODE0_Msk：  0   0   1   1   → 0x3
+```
+
+| 後綴 | 意義 | 定義方式 |
+|---|---|---|
+| _Pos | 欄位的起始 bit | MODE0 為 0、MODE13 為 20 |
+| _Msk | 整個欄位都是 1 | 0x3 << _Pos |
+| _0 | 欄位內第 0 格 | 0x1 << _Pos |
+| _1 | 欄位內第 1 格 | 0x2 << _Pos |
+
+- 第 n 格的數值 = 1 << n，所以第 1 格是 2，不是 1
+- 區分「bit 的值（0 或 1）」和「巨集的數值（整數）」
+- GPIO_CRH_MODE13_1 = 0x2 << 20 = bit 21
+- 驗證：對巨集按 F3，到 stm32f103xb.h 看定義
+
+### [筆記] 2026-11-02 22:13
+
+【筆記】ODR 的兩份工作：輸出電位與上拉／下拉選擇
+**ODR 的每個 bit 由模式決定做哪份工作**
+
+輸出模式：ODR bit 接到輸出開關
+
+```
+  ODR = 1 → 上開關導通 → 腳位輸出高電位（VDD）
+  ODR = 0 → 下開關導通 → 腳位輸出低電位（GND）
+
+                 VDD
+                  │
+  ODR bit = 1 ──► [上開關] 導通
+                  │
+                  ├────► 腳位輸出 1
+                  │
+  ODR bit = 0 ──► [下開關] 導通
+                  │
+                 GND
+```
+
+上拉／下拉輸入模式：輸出開關全關，ODR bit 借來當電阻選擇開關
+
+```
+  VDD ──[上拉電阻]──/ ──┐   ← ODR = 1 時接通
+                        ├── 腳位 → IDR
+  GND ──[下拉電阻]──/ ──┘   ← ODR = 0 時接通
+```
+
+| 模式 | ODR bit 接到 | ODR = 1 | ODR = 0 |
+|---|---|---|---|
+| 輸出 | 輸出開關 | 輸出高電位 | 輸出低電位 |
+| 上拉／下拉輸入 | 電阻選擇開關 | 上拉 | 下拉 |
+| 浮空、類比輸入 | 沒接 | 沒作用 | 沒作用 |
+
+- 名稱 Output 來自主要工作；上拉／下拉輸入時是兼差
+- 所以 HAL_GPIO_Init() 把「寫 BSRR 選上拉」放在 case GPIO_MODE_INPUT 的 Pull == GPIO_PULLUP 分支
+
+### [筆記] 2026-11-02 22:14
+
+課題複習：從上電到按鍵控制 LED
+
+上電／Reset：時脈 = HSI 8 MHz、GPIO 時脈關閉、所有腳位浮空輸入（CRL／CRH = 0x4444_4444）
+  ↓
+系統時脈 72 MHz：Clock_Init()（RCC、FLASH）
+  ↓
+BSP_GPIO_Init()
+  ├─ 開 GPIOB、GPIOC 時脈：RCC->APB2ENR 的 IOPBEN、IOPCEN，讀回一次
+  ├─ PC13 預先輸出 1：GPIOC->BSRR 的 BS13
+  ├─ PC13 切成推挽輸出 2 MHz：GPIOC->CRH
+  ├─ PB0 選上拉：GPIOB->BSRR 的 BS0
+  └─ PB0 切成上拉／下拉輸入：GPIOB->CRL
+  ↓
+迴圈：BSP_GPIO_Button_IsPressed() 讀 GPIOB->IDR → BSP_GPIO_Led_On／Off() 寫 GPIOC->BSRR
+
+### [問題] 2026-11-03 00:05 ❓ 未解決
+
+【問題】驗收時的觀念修正：CNF/MODE 與通用／複用
+**L／H 是腳位分組；CNF 高位決定誰控制腳位**
+
+| 誤解 | 正確 |
+|---|---|
+| CRL 管 bit 15～0、CRH 管 bit 31～16 | CRL 管 pin 0～7、CRH 管 pin 8～15（bit 範圍的分法是 BSRR 的兩半） |
+| 通用和複用的差別是「內部或外部」 | 兩者訊號來源都在晶片內；差在誰決定腳位輸出 |
+| 複用時由「外部設備」產生訊號 | 由晶片內的周邊（例如 USART1）產生 |
+
+**輸出模式時 CNF 的兩個 bit**
+
+| CNF bit | 決定什麼 | 0 | 1 |
+|---|---|---|---|
+| 高位 | 誰控制腳位 | 通用（程式透過 ODR） | 複用（周邊硬體） |
+| 低位 | 電路結構 | 推挽 | 開漏 |
+
+```
+  程式 → BSRR／BRR → ODR ──┐
+                            ├─[來源選擇器]→ 輸出開關 → 腳位
+  周邊（USART1 TX）─────────┘
+          CNF 高位：0 選 ODR、1 選周邊
+```
+
+**應用題**
+
+| 設定 | 暫存器與 bit | 4-bit | 暫存器值 |
+|---|---|---|---|
+| PA5 通用推挽 50 MHz | GPIOA->CRL [23:20] | 0011 | 0x4434_4444 |
+| PA9 複用推挽 50 MHz（USART1 TX） | GPIOA->CRH [7:4] | 1011 | 0x4444_44B4 |
+
+### [筆記] 2026-11-03 00:05
+
+【筆記】寫 1 清除旗標的暫存器不能用讀改寫（EXTI_PR）
+**讀到的 1 被寫回，會清掉不相干的旗標，造成漏掉中斷**
+
+- EXTI_PR：每個 bit 是一條外部中斷線的待處理旗標，屬性 rc_w1（寫 1 清除、寫 0 沒作用）
+- 情境：線 0、線 1 同時觸發（PR = 0b11），線 0 的 ISR 只想清 PR0
+
+| 寫法 | 實際寫入 | 結果 |
+|---|---|---|
+| EXTI->PR = EXTI_PR_PR0 | 0b01 | 只清 PR0，PR1 保留 |
+| EXTI->PR 或等於 EXTI_PR_PR0 | 讀到 0b11，OR 後寫回 0b11 | PR0、PR1 都被清掉，線 1 的中斷被漏掉 |
+
+- 這種 bug 只在中斷同時發生時出現，很難重現
+- F1 的 USART、Timer 狀態旗標是「寫 0 清除」（rc_w0），不要搞混
+- 判斷方法：先看手冊的存取屬性；w、rc_w1 一律用等號直接寫；rw 且只改部分 bit 才用讀改寫
+
+**和 BSRR 對照**
+
+| 暫存器 | 屬性 | 讀回 | 用讀改寫的後果 |
+|---|---|---|---|
+| BSRR | w | 永遠 0 | 結果正確，只是多讀一次 |
+| EXTI_PR | rc_w1 | 目前旗標 | 清掉不相干的旗標 |
+
+- 小測驗：PR = 0b0110，線 2 的 ISR 用讀改寫清 PR2 → 線 1、線 2 都被清掉；正確是 EXTI->PR = EXTI_PR_PR2
+- ISR = 中斷服務函式；EXTI = 外部中斷，兩者不同
+
+### [解法] 2026-11-03 00:06
+
+【解法】LED Toggle 的寫法與風險
+**讀 ODR 決定方向，再用 BSRR 一次寫入**
+
+```c
+void BSP_GPIO_Led_Toggle(void)
+{
+    if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)
+    {
+        GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // 目前 1 → 改成 0
+    }
+    else
+    {
+        GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 目前 0 → 改成 1
+    }
+}
+```
+
+HAL 的寫法（stm32f1xx_hal_gpio.c，HAL_GPIO_TogglePin）：
+
+```c
+odr = GPIOx->ODR;
+GPIOx->BSRR = ((odr & GPIO_Pin) << 16u) | (~odr & GPIO_Pin);
+```
+
+- 讀 ODR（命令的輸出值）比讀 IDR（腳位實際電位）更直接
+- Toggle 只是翻轉，和 Active-Low 無關
+- 風險：讀 ODR 到寫 BSRR 之間，若 ISR 也改了 PC13 本身，會根據過時的值翻轉；其他腳位不受影響
+- 原則：同一隻腳只讓一個地方控制，或在這兩步之間關中斷
+
+**我寫錯的地方**
+
+| 錯誤 | 原因 |
+|---|---|
+| GPIOx->IDR | GPIOx 是手冊通用寫法，程式要寫 GPIOC |
+| IDR 不等於 0U，沒有 mask | 和讀按鍵 LED 恆暗是同一個 bug |
+| GPIO_BSRR_BR13_Msk 左移 15 | BR13 是 bit 29，再移 15 會超出 32 bit 變成 0；要用 GPIO_BSRR_BS13_Msk |
+| IDR 且 mask 不等於 0U 沒加括號 | 不等於的優先順序比且運算高，會變成 IDR 且 1，讀到 PC0 |
+
+### [筆記] 2026-11-03 00:06
+
+【筆記】按鍵該用上拉還是下拉：彈簧與鐵鍊
+**放開時由電阻決定電位，按下時由按鍵決定；兩種狀態要讀到不同的值**
+
+- 上拉／下拉電阻 = 軟彈簧（往 3.3V／GND 拉）
+- 按鍵按下 = 粗鐵鍊（直接扯到按鍵接的那一邊，一定贏過彈簧）
+
+| 按鍵接法 | 選上拉 | 選下拉 | 結論 |
+|---|---|---|---|
+| 接 GND（PB0） | 放開 1、按下 0 | 放開 0、按下 0 | 用上拉，ODR = 1 |
+| 接 3.3V（PA1） | 放開 1、按下 1 | 放開 0、按下 1 | 用下拉，ODR = 0 |
+
+- 原則：電阻拉向「按鍵的另一邊」
+- PA1 下拉：GPIOA->CRL [7:4] = 1000；ODR bit 1 = 0，寫 GPIOA->BRR = GPIO_BRR_BR1_Msk（或 BSRR 的 BR1 = bit 17）
+- PA1 的 IsPressed：IDR bit 1 不等於 0 時回傳 true
+
+**忘記寫 ODR 的除錯方法**
+
+| 暫存器 | 值 | 判讀 |
+|---|---|---|
+| GPIOB->CRL | 0x4444_4448 | PB0 為 1000，設定正確 |
+| GPIOB->ODR | 0x0000_0000 | bit 0 = 0 → 下拉，問題在這裡 |
+
+- 現象：PB0 放開、按下都讀到 0，IsPressed 永遠 true，LED 恆亮
+- CNF = 10 只說了一半，一定要搭配 ODR 一起看
+- 先寫 CRL 的那一瞬間：PB0 是下拉輸入，IsPressed 回傳 true（誤判按下）
+
+### [筆記] 2026-11-03 00:11
+
+【筆記】腳位要設輸入還是輸出
+**判斷標準：這條線的電壓由誰決定**
+
+| | 輸出 | 輸入 |
+|---|---|---|
+| 誰決定電壓 | MCU 主動驅動 | 外部決定，MCU 只讀 |
+| 資訊流向 | MCU → 外部 | 外部 → MCU |
+| 腳位內部 | 輸出開關打開 | 輸出開關關閉，高阻抗 |
+| 程式 | 寫 BSRR／BRR | 讀 IDR |
+
+**常見用途**
+
+| 用途 | 設定 |
+|---|---|
+| LED、蜂鳴器、繼電器、SPI／OLED 的 CS | 通用推挽輸出 |
+| 按鍵、開關 | 上拉或下拉輸入（電阻拉向按鍵的另一邊） |
+| 感測器 INT 腳 | 輸入 |
+| UART TX、SPI SCK／MOSI | 複用推挽輸出 |
+| UART RX、SPI MISO | 輸入 |
+| I²C SCL／SDA | 複用開漏輸出 + 上拉電阻 |
+| ADC 量電壓 | 類比輸入 |
+
+- 一條線同時只能有一個輸出：兩邊都輸出且電位相反 → 短路（bus contention）
+- 開機預設浮空輸入：設定好之前不驅動任何線，最安全
+- I²C 用開漏：只能拉低、不會推高，多個裝置共用也不會短路
+- 沒用到的腳位：浮空會亂跳又耗電 → 低功耗產品設成類比輸入，或上拉／下拉固定電位
+
+### [筆記] 2026-11-03 00:17
+
+【筆記】上拉輸入的意義：預設為 1 的耳朵
+**平常靠弱上拉維持高電位；外部想傳訊息時把它拉低**
+
+- 上拉輸入時 MCU 沒有輸出，輸出開關是關閉的
+- 高電位來自內部約 40 kΩ 的上拉電阻（軟彈簧），不是 MCU 主動驅動
+
+| | 上拉輸入的「高」 | 輸出模式的「高」 |
+|---|---|---|
+| 來源 | 弱上拉電阻（軟彈簧） | 上開關直接接 VDD（粗鐵鍊） |
+| 外部能不能拉低 | 能，輕鬆就拉下來 | 不該拉，硬拉會短路 |
+| 意義 | 預設值：沒人說話時是 1 | MCU 正在說 1 |
+
+**訊號慣例（Active-Low）**
+
+| 電位 | 意義 |
+|---|---|
+| 高 | 平靜，沒事發生 |
+| 被拉低 | 有事發生：按鍵按下、感測器資料準備好、有人要開始通訊 |
+
+- 常見例子：按鍵、晶片的中斷輸出（INT）、重置（RESET），都是平常高、有事拉低，搭配上拉電阻
+- I²C 同理：線平常靠上拉電阻維持高電位，誰要說話就把它拉低
+- 一句話：上拉輸入 = 預設為 1 的耳朵，外部想說話就把它拉成 0

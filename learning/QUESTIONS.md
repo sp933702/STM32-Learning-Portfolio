@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（34）
+## ❓ 未解決（36）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -438,6 +438,53 @@
   - 轉換寫在 .c：`return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);`
   - main 裡的 `== true` 可省略：函式本身就回傳 bool
 
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-11-02 22:05）
+
+  【問題】讀 HAL 原始碼時的四個誤解
+  **欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | GPIO_CRL_MODE0_1 是 bit 1:0、值為 1 | _1 是欄位內第 1 個 bit → bit 1、值 0x2 |
+  | GPIOx->BSRR = ioposition 是設定 CRL 的 bit 0 | 寫 BSRR 的 BS0 → 把 ODR bit 0 設成 1（CRL 由後面的 MODIFY_REG 寫） |
+  | WritePin(GPIO_PIN_RESET) 寫前半、輸出 1、LED 暗 | RESET 走 else 寫後半（BR13）→ 輸出 0 → Active-Low LED 亮 |
+  | main 寫 if (bitstatus == 0U) | bitstatus 是 ReadPin 的區域變數，main 看不到；要用回傳值和 GPIO_PIN_RESET 比較 |
+  
+  - ODR 名稱是 Output，但上拉／下拉輸入時用來選上拉或下拉，所以設定出現在 GPIO_MODE_INPUT 分支
+  - 追函式時：先看參數值，再看 if 條件成立與否，一路追到實際寫入的暫存器和 bit
+
+- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-11-03 00:05）
+
+  【問題】驗收時的觀念修正：CNF/MODE 與通用／複用
+  **L／H 是腳位分組；CNF 高位決定誰控制腳位**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | CRL 管 bit 15～0、CRH 管 bit 31～16 | CRL 管 pin 0～7、CRH 管 pin 8～15（bit 範圍的分法是 BSRR 的兩半） |
+  | 通用和複用的差別是「內部或外部」 | 兩者訊號來源都在晶片內；差在誰決定腳位輸出 |
+  | 複用時由「外部設備」產生訊號 | 由晶片內的周邊（例如 USART1）產生 |
+  
+  **輸出模式時 CNF 的兩個 bit**
+  
+  | CNF bit | 決定什麼 | 0 | 1 |
+  |---|---|---|---|
+  | 高位 | 誰控制腳位 | 通用（程式透過 ODR） | 複用（周邊硬體） |
+  | 低位 | 電路結構 | 推挽 | 開漏 |
+  
+  ```
+    程式 → BSRR／BRR → ODR ──┐
+                              ├─[來源選擇器]→ 輸出開關 → 腳位
+    周邊（USART1 TX）─────────┘
+            CNF 高位：0 選 ODR、1 選周邊
+  ```
+  
+  **應用題**
+  
+  | 設定 | 暫存器與 bit | 4-bit | 暫存器值 |
+  |---|---|---|---|
+  | PA5 通用推挽 50 MHz | GPIOA->CRL [23:20] | 0011 | 0x4434_4444 |
+  | PA9 複用推挽 50 MHz（USART1 TX） | GPIOA->CRH [7:4] | 1011 | 0x4444_44B4 |
+
 
 ## ✅ 已解決的問題與解法
 
@@ -814,5 +861,45 @@
   - 註解只寫「做什麼」，不寫 BSP 內部步驟和 Active-Low
   
   **驗證**：Build 0 errors、0 warnings；初始化後 LED 暗；按下亮、放開暗
+
+- **解法**（2026-11-03 00:06）：
+
+  【解法】LED Toggle 的寫法與風險
+  **讀 ODR 決定方向，再用 BSRR 一次寫入**
+  
+  ```c
+  void BSP_GPIO_Led_Toggle(void)
+  {
+      if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)
+      {
+          GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // 目前 1 → 改成 0
+      }
+      else
+      {
+          GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 目前 0 → 改成 1
+      }
+  }
+  ```
+  
+  HAL 的寫法（stm32f1xx_hal_gpio.c，HAL_GPIO_TogglePin）：
+  
+  ```c
+  odr = GPIOx->ODR;
+  GPIOx->BSRR = ((odr & GPIO_Pin) << 16u) | (~odr & GPIO_Pin);
+  ```
+  
+  - 讀 ODR（命令的輸出值）比讀 IDR（腳位實際電位）更直接
+  - Toggle 只是翻轉，和 Active-Low 無關
+  - 風險：讀 ODR 到寫 BSRR 之間，若 ISR 也改了 PC13 本身，會根據過時的值翻轉；其他腳位不受影響
+  - 原則：同一隻腳只讓一個地方控制，或在這兩步之間關中斷
+  
+  **我寫錯的地方**
+  
+  | 錯誤 | 原因 |
+  |---|---|
+  | GPIOx->IDR | GPIOx 是手冊通用寫法，程式要寫 GPIOC |
+  | IDR 不等於 0U，沒有 mask | 和讀按鍵 LED 恆暗是同一個 bug |
+  | GPIO_BSRR_BR13_Msk 左移 15 | BR13 是 bit 29，再移 15 會超出 32 bit 變成 0；要用 GPIO_BSRR_BS13_Msk |
+  | IDR 且 mask 不等於 0U 沒加括號 | 不等於的優先順序比且運算高，會變成 IDR 且 1，讀到 PC0 |
 
 
