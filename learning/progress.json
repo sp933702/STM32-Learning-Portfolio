@@ -877,11 +877,18 @@
       "content": "設定 SysTick LOAD/VAL/CTRL 產生 1 ms 中斷，自寫 millis()；重做 non-blocking LED 與按鍵去彈跳狀態機",
       "output": "bsp_systick.c、debounce 狀態機",
       "criteria": "tick 計數變數為何要 volatile；32-bit 溢位時 (now - last) 仍正確的原因",
-      "status": "未開始",
+      "status": "進行中",
       "finished_at": null,
       "orig": "W01-S05, W02-S03",
       "period": "10-15～10-21",
-      "sessions": [],
+      "sessions": [
+        {
+          "start": "2026-11-03 22:14",
+          "end": null,
+          "prev_status": "未開始",
+          "prev_finished": null
+        }
+      ],
       "entries": []
     },
     {
