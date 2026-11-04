@@ -887,6 +887,12 @@
           "end": "2026-11-04 16:33",
           "prev_status": "未開始",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-04 21:03",
+          "end": "2026-11-04 22:46",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -937,6 +943,54 @@
           "type": "筆記",
           "text": "【筆記】SysTick 設定順序：LOAD → VAL → CTRL\n**先把設定準備好，最後才寫 CTRL 打開計數器；VAL 在打開前清 0，第一輪才是完整的 1 ms**\n\n| 順序 | 暫存器 | 做什麼 | 跳過或順序錯會怎樣 |\n|---|---|---|---|\n| 1 | `SysTick->LOAD` | 設一輪長度 | 先開 `CTRL` → 載入 0 或不確定值，第一輪長度失控 |\n| 2 | `SysTick->VAL` | 寫任意值 → 歸 0、清 COUNTFLAG | 殘留舊值（例如 `0xABCD`）→ 第一次中斷提早或延後 |\n| 3 | `SysTick->CTRL` | CLKSOURCE、TICKINT、ENABLE 一次設好 | — |\n\n- `LOAD`、`VAL` 都在 `CTRL` 前寫，兩者對調也能動（計數器還沒開）；照 PM0056 4.5.6 與 CMSIS 的順序寫\n- RELOAD = 0 時不產生中斷，計數器只會一直重載 0\n- 和【筆記】設定順序：先設 ODR，再設 CRL 同一個原則：先設好，最後才打開開關",
           "resolved": null
+        },
+        {
+          "time": "2026-11-04 21:03",
+          "type": "筆記",
+          "text": "【筆記】讀取清除的旗標：先拿到值，再清除\n**讀 `SysTick->CTRL` 會先回傳當下的 COUNTFLAG，讀完硬體才清 0；看到 1 的那次讀取就是清除它的那次**\n\n```c\nwhile ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完一輪\n```\n\n- `== 0U` 是「繼續等」的條件：讀到 0 → 繼續空轉；讀到 1 → 跳出迴圈 = 數完一輪\n- 讀取順序：CPU 拿到當下的值 → 讀完後硬體把 COUNTFLAG 清 0\n- 不會漏看：看到 1 的那次讀取同時清掉它；同一個 1 不會被看到兩次\n- 比喻：打開信箱看到信就順手拿走，下次要等郵差（下一次數到 0）再送來\n- 意義：每次讀到的是「從上次讀到現在，有沒有數完過一輪」\n\n| 時間 | 硬體 | 讀到 | 迴圈 |\n|---|---|---|---|\n| 0.2 ms | 還在數 | 0 | 繼續等 |\n| 1.0 ms | 1 → 0，COUNTFLAG = 1 | — | — |\n| 1.0 ms 多一點 | 讀完後清 0 | 1 | 跳出 |",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-04 21:38",
+          "type": "問題",
+          "text": "【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到\n**SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**\n\n| 定義 | 所在檔案 | 寫的人 |\n|---|---|---|\n| `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |\n| `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |\n\n- `stm32f103xb.h` 第 131 行 `#include \"core_cm3.h\"`，所以 include `stm32f1xx.h` 就能用，不必另外 include\n- 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值\n- 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`",
+          "resolved": false
+        },
+        {
+          "time": "2026-11-04 22:10",
+          "type": "問題",
+          "text": "【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到\n**SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**\n\n| 定義 | 所在檔案 | 寫的人 |\n|---|---|---|\n| `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |\n| `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |\n\n- `stm32f103xb.h` 第 131 行 `#include \"core_cm3.h\"`，所以 include `stm32f1xx.h` 就能用，不必另外 include\n- 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值\n- 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`",
+          "resolved": false
+        },
+        {
+          "time": "2026-11-04 22:15",
+          "type": "問題",
+          "text": "【問題】想把 SysTick_Handler 加上 static 來「不公開」\n**handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**\n\n| 寫法 | 連結器看得到嗎 | 中斷發生時 |\n|---|---|---|\n| `.c` 裡 `void SysTick_Handler(void)`（不加 static） | 看得到，蓋過 weak | 執行你的程式 |\n| `.c` 裡 `static void SysTick_Handler(void)` | 看不到 | 用 weak 備用 → `Default_Handler` 卡死 |\n\n- 「不讓 main 呼叫」靠的是 `.h` 不宣告它，不是加 `static`\n- 正確做法：`.h` 不放 handler 宣告；`.c` 照常定義、不加 `static`\n- 不報錯、只是卡死，和名字拼錯同一種症狀（見【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死）",
+          "resolved": false
+        },
+        {
+          "time": "2026-11-04 22:15",
+          "type": "筆記",
+          "text": "【筆記】handler 就是 ISR，由硬體呼叫\n**中斷發生時 CPU 自己查向量表跳進 handler，不是程式呼叫它；所以不放進公開介面**\n\n| 種類 | CMSIS 命名 | 例子 |\n|---|---|---|\n| 核心系統例外 | `XXX_Handler` | `SysTick_Handler`、`HardFault_Handler` |\n| ST 周邊中斷（經 NVIC） | `XXX_IRQHandler` | `EXTI0_IRQHandler`、`USART1_IRQHandler` |\n\n- ISR ＝ Interrupt Service Routine，中斷服務常式\n- 名字必須和 startup 檔向量表裡的完全一樣\n- main 不會、也不該直接呼叫 handler",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-04 22:16",
+          "type": "筆記",
+          "text": "【筆記】標頭檔 include 原則：介面要什麼才 include 什麼\n**.h 只 include 公開介面需要的；暫存器定義只在 .c 裡 include，而且用 stm32f1xx.h**\n\n| 檔案 | 用到什麼 | 該 include |\n|---|---|---|\n| `bsp_systick.h` | 只有 `void BSP_SysTick_Init(void);` | 不用 |\n| `bsp_systick.c` | `SysTick->...`、`_Msk`、`uint32_t` | `stm32f1xx.h`、`<stdint.h>` |\n| `main.c` | 只呼叫 `BSP_...()` | BSP 的 `.h` |\n\n- `.h` include 暫存器定義 → `main.c` 跟著拿到 → `main` 可以直接改暫存器，繞過 BSP（違反【筆記】BSP 介面設計原則）\n- `stm32f1xx.h` 是 F1 系列總入口，依專案巨集 `STM32F103xB` 自動選裝置標頭檔；換晶片只改巨集\n- 直接 include `stm32f103xb.h` → 程式綁死在這顆晶片\n- 介面用到 `uint32_t`（例如 `millis()` 回傳值）時，`.h` 才需要 `<stdint.h>`",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-04 22:45",
+          "type": "筆記",
+          "text": "【筆記】Debugger 停在 SysTick_Handler 時的 CTRL 與 VAL\n**停在 handler 時 CTRL 永遠是 0x10007；VAL 少掉的 18 個時脈就是中斷延遲**\n\n| 觀察 | 值 | 原因 |\n|---|---|---|\n| `SysTick->LOAD` | 71999（`0x1193F`） | 和預期一致，設定後不變 |\n| `SysTick->CTRL`（停在 handler） | `0x10007` | 剛數到 0 → COUNTFLAG = 1；進 handler 不會清，每次 Resume 又被設回 1 |\n| `SysTick->CTRL`（在 main 按 Pause） | `0x7` | debugger 讀取已清掉 COUNTFLAG |\n| `SysTick->VAL`（停在 `tick++`） | 71981 | 從重載到執行 `tick++` 經過 18 個時脈 |\n\n- CPU 停下來時 SysTick 也停止計數，所以 `VAL` 凍結在 handler 那一刻\n- 18 個時脈 ≈ 0.25 µs（72 MHz）＝ 中斷延遲：Cortex-M3 進中斷固定 12 個時脈（硬體推堆疊、查向量表）＋ 函式開頭指令\n- 驗證 tick：中斷點停住時 tick 會一次加 1；拿掉中斷點跑一陣子，數值持續增加（實測 4 → 8306）",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-04 22:46",
+          "type": "問題",
+          "text": "【問題】以為 ~Msk 的值是 0\n**~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**\n\n| 寫法 | 值／意思 |\n|---|---|\n| `SysTick_VAL_CURRENT_Msk` | `0x00FFFFFF` |\n| `~SysTick_VAL_CURRENT_Msk` | `0xFF000000`（bit 31:24 為 1） |\n| `REG & ~Msk` | REG 的這個欄位清 0，其他 bit 保留 |\n| `0U` | 0 |\n\n- 錯在哪：把讀改寫 `(REG & ~Msk) \\| 新值` 裡的 `~Msk` 當成「清 0 的值」\n- 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0\n- 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算\n- 正確寫法：`SysTick->VAL = 0U;`",
+          "resolved": false
         }
       ]
     },

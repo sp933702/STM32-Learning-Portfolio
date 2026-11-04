@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（38）
+## ❓ 未解決（42）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -514,6 +514,65 @@
   - 錯在哪：以為選高速時脈「以後低速也能用」；實際上時脈越快，24 bit 能數的時間越短
   - 正確理由：1 ms 兩種都放得下 → 選 72 MHz 換取高解析度（讀 `VAL` 可做微秒級量測），且和 CMSIS／HAL 慣例一致
   - 一輪要超過 233 ms 時才需要改用 /8
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 21:38）
+
+  【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
+  **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
+  
+  | 定義 | 所在檔案 | 寫的人 |
+  |---|---|---|
+  | `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |
+  | `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |
+  
+  - `stm32f103xb.h` 第 131 行 `#include "core_cm3.h"`，所以 include `stm32f1xx.h` 就能用，不必另外 include
+  - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
+  - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:10）
+
+  【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
+  **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
+  
+  | 定義 | 所在檔案 | 寫的人 |
+  |---|---|---|
+  | `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |
+  | `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |
+  
+  - `stm32f103xb.h` 第 131 行 `#include "core_cm3.h"`，所以 include `stm32f1xx.h` 就能用，不必另外 include
+  - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
+  - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:15）
+
+  【問題】想把 SysTick_Handler 加上 static 來「不公開」
+  **handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**
+  
+  | 寫法 | 連結器看得到嗎 | 中斷發生時 |
+  |---|---|---|
+  | `.c` 裡 `void SysTick_Handler(void)`（不加 static） | 看得到，蓋過 weak | 執行你的程式 |
+  | `.c` 裡 `static void SysTick_Handler(void)` | 看不到 | 用 weak 備用 → `Default_Handler` 卡死 |
+  
+  - 「不讓 main 呼叫」靠的是 `.h` 不宣告它，不是加 `static`
+  - 正確做法：`.h` 不放 handler 宣告；`.c` 照常定義、不加 `static`
+  - 不報錯、只是卡死，和名字拼錯同一種症狀（見【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死）
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:46）
+
+  【問題】以為 ~Msk 的值是 0
+  **~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**
+  
+  | 寫法 | 值／意思 |
+  |---|---|
+  | `SysTick_VAL_CURRENT_Msk` | `0x00FFFFFF` |
+  | `~SysTick_VAL_CURRENT_Msk` | `0xFF000000`（bit 31:24 為 1） |
+  | `REG & ~Msk` | REG 的這個欄位清 0，其他 bit 保留 |
+  | `0U` | 0 |
+  
+  - 錯在哪：把讀改寫 `(REG & ~Msk) \| 新值` 裡的 `~Msk` 當成「清 0 的值」
+  - 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0
+  - 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算
+  - 正確寫法：`SysTick->VAL = 0U;`
 
 
 ## ✅ 已解決的問題與解法
