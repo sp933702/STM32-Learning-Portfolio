@@ -3,7 +3,7 @@
 - 狀態：**進行中**
 - 週次：W01　主題：SysTick
 - 對應原任務（HAL 版）：W01-S05, W02-S03
-- 進行次數：2 次（最近一次：2026-11-04）
+- 進行次數：3 次（最近一次：2026-11-05）
 - 程式碼：[projects/SPRINT-W01-S04](../../projects/SPRINT-W01-S04)
 
 ## 任務內容
@@ -266,3 +266,223 @@ while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完�
 - 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0
 - 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算
 - 正確寫法：`SysTick->VAL = 0U;`
+
+### [筆記] 2026-11-05 11:01
+
+【筆記】SysTick 設定對照 CMSIS SysTick_Config() 與 HAL_InitTick()
+**CMSIS 多做了範圍檢查與設最低優先權；HAL 因為切時脈時需要 tick，所以設定兩次**
+
+| 項目 | CMSIS／HAL | 自寫版（修正前） |
+|---|---|---|
+| `LOAD` 來源 | `SystemCoreClock / 1000` 計算 | 寫死 `71999U` |
+| 範圍檢查 | 執行時 `if ((ticks - 1) > 0xFFFFFF) return 1;` | 無 → 改用 `_Static_assert` 編譯時檢查 |
+| 優先權 | `NVIC_SetPriority(SysTick_IRQn, 15)` 最低 | 沒設 → 重設值 0（最高） |
+| `VAL` | 寫 `0UL` | 寫 `~Msk` → 改為 `0U` |
+| 設定次數 | `HAL_Init()`（8 MHz）＋ `HAL_RCC_ClockConfig()` 結尾（72 MHz） | `Clock_Init()` 之後一次 |
+
+- 優先權 0～15，數字越小越優先；F1 用 4 bit，寫在 `SCB->SHP[11]`（SHPR3 bit 31:24）的高 4 bit → 15 寫成 `0xF0`
+- 設最低的理由：tick 晚幾微秒無妨，其他中斷（UART、緊急按鍵）不能被它擋
+- HAL 讓使用者改 tick 優先權的原因：在中斷裡呼叫 `HAL_Delay()`，若 SysTick 優先權較低就插不進去 → tick 不增加 → 死結；根本解法是不要在中斷裡等待
+- HAL 設兩次：`HAL_RCC_OscConfig()` 等 HSE 時用 `HAL_GetTick()` 判斷逾時，所以 8 MHz 時就要有 tick；切到 72 MHz 後 `LOAD` 要重算，否則 tick 快 9 倍
+- 自寫版只設一次：`Clock_Init()` 用迴圈次數 `TIME_OUT` 判斷逾時，不需要 tick
+
+### [解法] 2026-11-05 11:02
+
+【解法】SysTick 產生 1 ms 中斷（暫存器版）
+**Clock_Init() 之後依序寫 LOAD → 優先權 → VAL → CTRL；LOAD 由 SYSCLK_FREQ_HZ 計算，handler 只做 tick++**
+
+**為什麼**
+- 不用 HAL 就沒有 `HAL_GetTick()`，要自己建 1 ms 時間基準，non-blocking 程式全靠它
+- `LOAD` 錯 → tick 不是 1 ms；handler 名字錯或加 `static` → 掉進 `Default_Handler` 卡死
+
+**設了什麼、代表什麼**
+
+| 暫存器 | 欄位（bit） | 設定值 | 代表什麼 | 為什麼選這個值 |
+|---|---|---|---|---|
+| `SysTick->LOAD` | RELOAD（23:0） | `0x1193F`（71999） | 每輪 72,000 個時脈 | 72 MHz × 1 ms，再 −1 |
+| `SCB->SHP[11]` | PRI_15（31:24 的高 4 bit） | `0xF0` | SysTick 優先權 15（最低） | tick 晚幾 µs 無妨，讓路給其他中斷 |
+| `SysTick->VAL` | CURRENT（23:0） | 寫 `0` | 歸 0、清 COUNTFLAG | 第一輪不受殘留值影響 |
+| `SysTick->CTRL` | CLKSOURCE（2） | `1` | 處理器時脈 72 MHz | 解析度高，與 CMSIS／HAL 一致 |
+| `SysTick->CTRL` | TICKINT（1） | `1` | 數到 0 觸發中斷 | 每 1 ms 自動進 handler |
+| `SysTick->CTRL` | ENABLE（0） | `1` | 開始計數 | 最後才打開 |
+
+- 預期值：`LOAD = 0x0001193F`、`SHP[11] = 0xF0`、`CTRL = 0x7`（停在 handler 時 `0x10007`）
+- Debugger 實測：一致
+
+**程式碼**
+```c
+static volatile uint32_t tick = 0U;
+
+void BSP_SysTick_Init(void)
+{
+    _Static_assert((SYSCLK_FREQ_HZ / 1000U - 1U) <= SysTick_LOAD_RELOAD_Msk,
+                   "SysTick LOAD 超過 24 bit");
+    SysTick->LOAD = (SYSCLK_FREQ_HZ / 1000U) - 1U;
+    NVIC_SetPriority(SysTick_IRQn, 15U);
+    SysTick->VAL  = 0U;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk
+                  | SysTick_CTRL_TICKINT_Msk
+                  | SysTick_CTRL_ENABLE_Msk;
+}
+
+void SysTick_Handler(void)          // 不可加 static，名字要和向量表一致
+{
+    tick++;
+}
+```
+
+**為什麼是這個順序**
+- 在 `Clock_Init()` 之後：`LOAD` 依 72 MHz 計算
+- `LOAD`、優先權、`VAL` 都在 `CTRL` 之前：先設好再打開開關，否則第一輪長度與中斷時間點失控
+
+**對照 CMSIS／HAL**
+- `SysTick_Config()` 流程相同（`LOAD` → 優先權 → `VAL` → `CTRL`），範圍檢查在執行時；自寫版用 `_Static_assert` 在編譯時擋
+- HAL 設兩次 SysTick（8 MHz、72 MHz），因為切時脈的逾時判斷要用 tick；自寫版 `Clock_Init()` 用迴圈次數逾時，只設一次
+
+### [筆記] 2026-11-05 11:02
+
+【筆記】_Static_assert：編譯時期的檢查
+**條件不成立就編譯失敗；只能檢查常數運算式，不產生任何程式碼**
+
+```c
+#define SYSTICK_LOAD_VALUE   ((SYSCLK_FREQ_HZ / 1000U) - 1U)
+
+_Static_assert(SYSTICK_LOAD_VALUE <= SysTick_LOAD_RELOAD_Msk,
+               "SysTick LOAD 超過 24 bit");
+```
+
+| 方式 | 檢查時機 | 失敗時 | 適用 |
+|---|---|---|---|
+| `_Static_assert` | 編譯時 | 編譯失敗，無法燒錄 | 巨集、數字、`sizeof` 等常數 |
+| `if (...) return 錯誤碼;` | 執行時 | 回傳錯誤 | 執行時才知道的值（例如 `SystemCoreClock` 變數） |
+
+- C11 關鍵字，可放在函式外（檔案層級）或函式內
+- `LOAD` 完全由巨集決定 → 超過 24 bit 是寫錯，應在編譯時擋下
+- HAL 只能用 `if`：它的 `SystemCoreClock` 是變數
+- 算式定義成 `.c` 內的巨集，斷言和 `SysTick->LOAD` 共用，避免改了一邊忘了另一邊
+- 驗證：暫時把 `1000U` 改成 `1U`（需 72,000,000 > 16,777,215）→ 應出現編譯錯誤
+
+### [筆記] 2026-11-05 21:37
+
+【筆記】GCC 最佳化等級與 CubeIDE 設定位置
+**-O0 每次都老實讀寫記憶體；-O2／-Os 會刪掉它認為多餘的讀取，沒加 volatile 的共用變數就會出事**
+
+| 選項 | 意思 | 常見於 |
+|---|---|---|
+| `-O0` | 不最佳化，逐行翻譯 | Debug 組態預設 |
+| `-Og` | 輕度最佳化，方便除錯 | |
+| `-O2` | 積極最佳化：搬動、合併、刪除讀寫 | |
+| `-Os` | 以大小為優先的最佳化（強度近 `-O2`） | Release 組態常用 |
+
+- 設定位置：專案右鍵 → Properties → C/C++ Build → Settings → Tool Settings → MCU/MPU GCC Compiler → Optimization → Optimization level
+- 改完要 Project → Clean 再 Build
+- `-O2` 除錯的正常現象：單步跳行、變數 `<optimized out>`、中斷點位置偏移
+- 危險之處：`-O0` 下缺 `volatile` 往往看起來正常，換成 Release 才出錯
+- 「快取」指放在 CPU 核心暫存器（R0～R12），不是周邊暫存器
+
+### [問題] 2026-11-05 21:38 ❓ 未解決
+
+【問題】延遲函式用 if，沒有等待
+**if 只判斷一次就往下走；要「一直等到條件不成立」必須用 while**
+
+```c
+// 錯：只檢查一次，立刻返回
+if ((tick - start) < ms) { ; }
+
+// 對：重複檢查，直到經過 ms 個 tick
+while ((tick - start) < ms) { }
+```
+
+- 現象：延遲沒有作用，LED 切換太快，看起來常亮或半亮
+- 變數命名：存的是「開始等待的時間點」→ 叫 `start`，不叫 `now`
+
+### [筆記] 2026-11-05 21:39
+
+【筆記】SysTick 延遲的實測與 tick 量化誤差
+**邏輯分析儀實測 Delay(500) 為 499.925 ms，誤差來自起點落在某個 tick 中間**
+
+| 量測 | 預期 | 實測 |
+|---|---|---|
+| 脈寬 | 500 ms | 499.925 ms |
+| 週期 | 1000 ms | 999.849 ms（1.00015 Hz） |
+
+- `start = tick` 可能發生在某個 1 ms 的中間 → 第一次 tick 加 1 不到 1 ms → 實際等待介於 499～500 ms
+- 量化誤差：以 1 ms 為單位計時，誤差最多 1 個 tick
+- 要保證「至少」N ms → 等 N + 1 個 tick（HAL_Delay 的 `wait += 1`）
+- 剩餘萬分之一級差異：石英振盪器與邏輯分析儀時脈誤差
+- 結論：誤差 0.015%，SysTick 設定正確
+- 工具：LA1010（KingstVIS），5 MSa/s 取樣，量測面板直接讀脈寬、週期、頻率
+
+### [問題] 2026-11-05 21:53 ❓ 未解決
+
+【問題】改了最佳化等級，LED 現象卻沒變
+**Clean／Build 只在電腦上產生 .elf，沒有按 Debug／Run 下載，晶片跑的還是舊程式**
+
+- 現象：拿掉 `volatile`＋`-O2` 後 LED 照常閃，邏輯分析儀數字和之前幾乎相同
+- 查證：`Debug/SPRINT-W01-S04.list` 裡的延遲函式已經變成無窮迴圈，代表新程式碼是對的，只是沒燒進去
+- 正確做法：改設定 → Clean → Build → **按 Debug 或 Run 下載** → 才觀察現象
+
+### [筆記] 2026-11-05 21:53
+
+【筆記】拿掉 volatile＋-O2：延遲迴圈被編譯成無窮迴圈
+**編譯器認為 tick 在迴圈裡不會變，tick - start 恆為 0，整個迴圈化簡成「跳回自己」，連一次 tick 都不讀**
+
+```c
+static uint32_t tick = 0U;           // 沒有 volatile
+void BSP_SysTick_Delay(uint32_t ms)
+{
+    uint32_t start = tick;
+    while (tick - start < ms) { }
+}
+```
+
+```
+0800020c <BSP_SysTick_Delay>:
+ 800020c:  cbnz  r0, 8000210   ; ms != 0 → 跳到 8000210
+ 800020e:  bx    lr            ; ms == 0 → 返回
+ 8000210:  b.n   8000210       ; 跳回自己：無窮迴圈
+```
+
+- 沒有任何 `ldr` 讀 tick，連 `start = tick` 也被刪掉
+- 中斷照常讓 SRAM 裡的 tick 增加，但迴圈根本不看
+- `-O0` 下不會發生：每行 C 老實翻譯，每圈都從記憶體讀 tick
+- `volatile` 的作用：告訴編譯器這個變數可能被中斷等外部因素改變，每次使用都要重新讀記憶體，不准快取或化簡
+- 查反組譯：`Debug/<專案>.list`，或除錯時開 Disassembly 視窗
+
+### [解法] 2026-11-05 22:02
+
+【解法】BSP_SysTick_GetTick() 與 volatile 的實驗驗證
+**ISR 寫、主程式讀的 tick 必須 volatile：實測 -O2 拿掉 volatile，延遲迴圈被編譯成無窮迴圈**
+
+**為什麼**
+- 編譯器最佳化只分析眼前程式流程，不知道中斷會改 tick
+- 少了 `volatile`：`-O0` 正常、`-O2`／`-Os` 卡死 → Debug 正常、Release 才出事
+
+**程式碼**
+```c
+static volatile uint32_t tick = 0U;     // 只在 .c 內可見，外部透過 GetTick 讀
+
+void SysTick_Handler(void) { tick++; }
+
+uint32_t BSP_SysTick_GetTick(void) { return tick; }
+```
+
+**實驗結果**
+
+| `volatile` | 最佳化 | LED | 延遲迴圈反組譯 |
+|---|---|---|---|
+| 有 | `-O0` | 1 Hz，脈寬 499.92 ms | — |
+| 無 | `-O0` | 正常 | — |
+| 無 | `-O2` | 卡住；tick 仍在增加 | `b.n 8000210`（跳回自己），無 `ldr` |
+| 有 | `-O2` | 正常 | 每圈 `ldr r3, [r2]` 從 `0x2000001c` 讀 tick |
+
+**跨檔案呼叫 GetTick() 為何通常不會卡**
+- 編譯器一次只編譯一個 `.c`，看不到函式內容 → 當黑盒子，每圈都呼叫
+- 會失效的情況：改成 `.h` 裡的 `static inline`、開 LTO、在同一個 `.c` 內寫等待迴圈
+- 結論：正確性不能靠檔案拆分，`volatile` 要標在變數本身
+
+**面試版**
+- tick 在 SysTick 中斷加 1、主程式讀；編譯器不知道中斷會改它，可能只讀一次放 CPU 暫存器甚至整段刪除
+- 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM
+- `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取
+- 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫

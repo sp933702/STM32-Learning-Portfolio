@@ -10,6 +10,9 @@
 #define CLOCK_ERROR_PLL 2U
 #define CLOCK_ERROR_SWITCH 3U
 
+// 提供給 systick 計算幾個時脈會是 1ms 看得
+#define SYSCLK_FREQ_HZ 72000000U
+
 uint32_t Clock_Init(void);
 
 #endif /* CLOCK_INIT_H */

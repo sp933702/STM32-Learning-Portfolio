@@ -22,6 +22,8 @@
 #include "bsp_gpio.h"
 #include "bsp_systick.h"
 
+#include "stm32f103xb.h"
+
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
@@ -49,18 +51,27 @@ int main(void)
 	// 3. 設定 PB0 功能
 	BSP_GPIO_Init();
 
+	BSP_GPIO_Led_On();
 	for(;;)
 	{
 		// 按下按鍵時時 LED 亮，放開 LED 暗
 		// 按鍵和 LED 都是 Active-Low： 按下讀到 0，寫 0 點亮。
 		// if (BSP_GPIO_Button_IsPressed() == true)，BSP_GPIO_Button_IsPressed() 本身就回傳 bool
-		if (BSP_GPIO_Button_IsPressed())
-		{
+		// if (BSP_GPIO_Button_IsPressed())
+		// {
+		//	 BSP_GPIO_Led_On();
+		// }
+		// else
+		// {
+		// 	 BSP_GPIO_Led_Off();
+		// }
+
+		// 亮 -> 延遲 500ms -> 暗 -> 延遲 500ms -> .....
+		BSP_SysTick_Delay(500U);
+
+		if ((GPIOC -> IDR & GPIO_IDR_IDR13_Msk) != 0U)
 			BSP_GPIO_Led_On();
-		}
 		else
-		{
 			BSP_GPIO_Led_Off();
-		}
 	}
 }
