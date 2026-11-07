@@ -3,7 +3,7 @@
 - 狀態：**進行中**
 - 週次：W01　主題：SysTick
 - 對應原任務（HAL 版）：W01-S05, W02-S03
-- 進行次數：3 次（最近一次：2026-11-05）
+- 進行次數：4 次（最近一次：2026-11-07）
 - 程式碼：[projects/SPRINT-W01-S04](../../projects/SPRINT-W01-S04)
 
 ## 任務內容
@@ -486,3 +486,14 @@ uint32_t BSP_SysTick_GetTick(void) { return tick; }
 - 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM
 - `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取
 - 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫
+
+### [問題] 2026-11-07 18:03 ❓ 未解決
+
+【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
+**每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**
+
+- 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`
+- 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理
+- 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組
+- 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組
+- 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險

@@ -899,6 +899,12 @@
           "end": "2026-11-06 02:43",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-07 16:06",
+          "end": "2026-11-07 18:03",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1051,6 +1057,12 @@
           "type": "解法",
           "text": "【解法】BSP_SysTick_GetTick() 與 volatile 的實驗驗證\n**ISR 寫、主程式讀的 tick 必須 volatile：實測 -O2 拿掉 volatile，延遲迴圈被編譯成無窮迴圈**\n\n**為什麼**\n- 編譯器最佳化只分析眼前程式流程，不知道中斷會改 tick\n- 少了 `volatile`：`-O0` 正常、`-O2`／`-Os` 卡死 → Debug 正常、Release 才出事\n\n**程式碼**\n```c\nstatic volatile uint32_t tick = 0U;     // 只在 .c 內可見，外部透過 GetTick 讀\n\nvoid SysTick_Handler(void) { tick++; }\n\nuint32_t BSP_SysTick_GetTick(void) { return tick; }\n```\n\n**實驗結果**\n\n| `volatile` | 最佳化 | LED | 延遲迴圈反組譯 |\n|---|---|---|---|\n| 有 | `-O0` | 1 Hz，脈寬 499.92 ms | — |\n| 無 | `-O0` | 正常 | — |\n| 無 | `-O2` | 卡住；tick 仍在增加 | `b.n 8000210`（跳回自己），無 `ldr` |\n| 有 | `-O2` | 正常 | 每圈 `ldr r3, [r2]` 從 `0x2000001c` 讀 tick |\n\n**跨檔案呼叫 GetTick() 為何通常不會卡**\n- 編譯器一次只編譯一個 `.c`，看不到函式內容 → 當黑盒子，每圈都呼叫\n- 會失效的情況：改成 `.h` 裡的 `static inline`、開 LTO、在同一個 `.c` 內寫等待迴圈\n- 結論：正確性不能靠檔案拆分，`volatile` 要標在變數本身\n\n**面試版**\n- tick 在 SysTick 中斷加 1、主程式讀；編譯器不知道中斷會改它，可能只讀一次放 CPU 暫存器甚至整段刪除\n- 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM\n- `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取\n- 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫",
           "resolved": null
+        },
+        {
+          "time": "2026-11-07 18:03",
+          "type": "問題",
+          "text": "【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組\n**每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**\n\n- 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`\n- 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理\n- 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組\n- 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組\n- 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險",
+          "resolved": false
         }
       ]
     },

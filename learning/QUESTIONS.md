@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（44）
+## ❓ 未解決（45）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -598,6 +598,17 @@
   - 現象：拿掉 `volatile`＋`-O2` 後 LED 照常閃，邏輯分析儀數字和之前幾乎相同
   - 查證：`Debug/SPRINT-W01-S04.list` 裡的延遲函式已經變成無窮迴圈，代表新程式碼是對的，只是沒燒進去
   - 正確做法：改設定 → Clean → Build → **按 Debug 或 Run 下載** → 才觀察現象
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-07 18:03）
+
+  【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
+  **每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**
+  
+  - 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`
+  - 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理
+  - 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組
+  - 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組
+  - 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險
 
 
 ## ✅ 已解決的問題與解法

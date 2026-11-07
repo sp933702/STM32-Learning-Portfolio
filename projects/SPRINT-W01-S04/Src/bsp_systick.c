@@ -9,6 +9,7 @@
 #include "stm32f1xx.h"
 // 定義 SYSCLK 的頻率，影響到計算 1ms 所需的時脈數
 #include "clock_init.h"
+
 // 1ms 需要經過 (SYSCLK_FREQ_HZ* 0.001) -1 個時脈
 #define SYSTICK_LOAD_VALUE   ((SYSCLK_FREQ_HZ / 1000U) - 1U)   // 1 ms 一輪
 // 條件成立（不是 0）：什麼事都沒有，不會產生任何程式碼，也不會佔 Flash。
@@ -49,14 +50,3 @@ uint32_t BSP_SysTick_GetTick(void)
 	// 回傳 tick 數值
 	return tick;
 }
-
-// 阻塞等待 ms 毫秒（僅供 volatile 實驗用）
-void BSP_SysTick_Delay(uint32_t ms)
-{
-	uint32_t start = tick;
-	while(tick - start < ms)
-	{
-		;
-	}
-}
-

@@ -18,5 +18,6 @@ bool BSP_GPIO_Button_IsPressed(void);
 void BSP_GPIO_Led_On(void);
 // 使 LED 暗
 void BSP_GPIO_Led_Off(void);
-
+// 根據 PC13 決定 LED 開關切換
+void BSP_GPIO_Led_Toggle(void);
 #endif /* BSP_GPIO_H_ */
