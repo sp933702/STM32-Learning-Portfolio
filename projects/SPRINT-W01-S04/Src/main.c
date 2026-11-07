@@ -49,16 +49,20 @@ int main(void)
 	// 3. 設定 PB0 功能
 	BSP_GPIO_Init();
 
-	uint32_t start = BSP_SysTick_GetTick();
+	// led_last_toggle 紀錄最後一次命令轉換的時間
+	uint32_t led_last_toggle = BSP_SysTick_GetTick();
+	// 用來驗證 non-blocking 的紀錄
 	uint32_t background_counter = 0U;
 	for(;;)
 	{
-		// 亮 -> 延遲 500ms -> 暗 -> 延遲 500ms -> .....
+		// 每 500 ms 切換一次 LED，不阻塞主迴圈
 		uint32_t now = BSP_SysTick_GetTick();
-		if (now - start >= 500U)
+		if (now - led_last_toggle >= 500U)
 		{
 			BSP_GPIO_Led_Toggle();
-			start = now;
+			// 更新命令轉換時間
+			// 1. led_last_toggle = now & led_last_toggle += 500U 的差別在筆記中
+			led_last_toggle += 500U;
 		}
 		background_counter ++;
 	}

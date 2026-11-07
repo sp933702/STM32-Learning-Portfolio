@@ -75,11 +75,15 @@ bool BSP_GPIO_Button_IsPressed(void)
     return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);
 }
 
-// 讀取 PC13 的狀態，如果輸出是0，就代表 LED 亮起
+// ODR = 1（目前輸出高 = LED 暗）→ 點亮；ODR = 0 → 熄滅
 void BSP_GPIO_Led_Toggle(void)
 {
-	if ((GPIOC -> IDR & GPIO_IDR_IDR13_Msk) != 0U)
+	if ((GPIOC -> IDR & GPIO_ODR_ODR13_Msk) != 0U)
+	{
 		BSP_GPIO_Led_On();
+	}
 	else
+	{
 		BSP_GPIO_Led_Off();
+	}
 }

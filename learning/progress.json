@@ -905,6 +905,12 @@
           "end": "2026-11-07 18:03",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-07 18:44",
+          "end": "2026-11-07 20:19",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1063,6 +1069,36 @@
           "type": "問題",
           "text": "【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組\n**每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**\n\n- 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`\n- 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理\n- 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組\n- 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組\n- 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險",
           "resolved": false
+        },
+        {
+          "time": "2026-11-07 18:44",
+          "type": "筆記",
+          "text": "【筆記】Toggle 讀 ODR 而不是 IDR\n**ODR 是「我命令的輸出」，IDR 是「腳位實際電位」；Toggle 是反轉命令，所以讀 ODR**\n\n| | `ODR` | `IDR` |\n|---|---|---|\n| 代表 | 命令輸出的值 | 腳位實際電位（取樣） |\n| 誰決定 | 程式寫入（BSRR／BRR 改的就是它） | 外部電路＋硬體取樣 |\n| 寫完馬上讀 | 立即反映 | 晚幾個時脈 |\n\n- 推挽輸出時兩者通常相同；不同的情況：\n  - 開漏輸出：`ODR` = 1 只是放手，外部拉低時 `IDR` = 0 → 用 `IDR` 做 Toggle 會永遠卡住（I²C 就是開漏）\n  - 腳位短路或負載過重\n  - 剛寫 BSRR 就讀 `IDR`，可能讀到舊值\n- 原則：寫的是 `ODR` 就讀 `ODR`；`IDR` 用來確認實際結果（如讀按鍵）",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-07 18:46",
+          "type": "筆記",
+          "text": "【筆記】週期任務更新時間：last = now 與 last += 週期\n**last = now 不會補做但會漂移；last += 週期 長期準時但卡太久會連續補做**\n\n範例：週期 500 ms，t = 1000 那次延遲到 1003 才處理\n\n| 第幾次 | `last = now` | `last += 500U` |\n|---|---|---|\n| 2 | 1003（last = 1003） | 1003（last = 1000） |\n| 3 | 1503 | 1500 |\n| 4 | 2003 | 2000 |\n\n卡住 2 秒（t = 1000 → 3000）時，`last += 500U` 會在幾 µs 內連續 toggle 5 次補回進度\n\n| 寫法 | 優點 | 缺點 | 適合 |\n|---|---|---|---|\n| `last = now` | 不會連續補做 | 延遲累積，週期漂移 | 「間隔至少 N ms」：去彈跳、逾時 |\n| `last += 週期` | 長期不漂移 | 卡太久會連續補做 | 取樣、時鐘節拍 |\n| `last += 週期`，落後超過一個週期改 `last = now` | 兼顧兩者 | 較複雜 | 一般週期任務 |\n\n- 主迴圈很快時兩者實測無差別；遇到耗時工作（例如畫 SPI 螢幕 10 ms 以上）才會顯現",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-07 18:47",
+          "type": "筆記",
+          "text": "【筆記】Debugger 看得到其他檔案的 static 變數，卻看不到巨集\n**debugger 讀 .elf 的除錯資訊找變數位址，不受 C 的 static 範圍限制；巨集在前處理就消失了**\n\n| | 是什麼 | 在除錯資訊裡 | 停在 `main.c` 時 |\n|---|---|---|---|\n| `tick`（`bsp_systick.c` 的 static） | 變數，位址 `0x2000001c` | 有 | 看得到 |\n| `SysTick`、`GPIOC` | 巨集 | 只在 include 它的檔案範圍 | `Error: Multiple errors reported` |\n\n- `static` 限制的是「程式碼能不能用這個名字」，是給編譯器的規則\n- debugger 找名字的順序：區域變數 → 目前檔案 → 整個程式\n- 要看暫存器：用 SFRs 視窗，或停在有 include `stm32f1xx.h` 的檔案裡\n- 停在 `main.c` 看不到暫存器巨集 = `main.c` 沒 include 暫存器定義，分層乾淨的證據",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-07 18:48",
+          "type": "筆記",
+          "text": "【筆記】Non-blocking：問一下就走，不在原地等\n**時間沒到就立刻離開判斷式去做別的事；主迴圈每圈都很短，多個任務輪流檢查，看起來像同時進行**\n\n```c\nuint32_t now = BSP_SysTick_GetTick();\nif ((now - led_last_toggle) >= 500U)   // 沒到：馬上往下走\n{\n    BSP_GPIO_Led_Toggle();\n    led_last_toggle = now;\n}\nbackground_counter++;                  // 每圈都會執行\n```\n\n| | blocking（`Delay(500)`） | non-blocking |\n|---|---|---|\n| 時間沒到時 | 待在 while 裡等 | 判斷一次就離開 |\n| 一圈主迴圈 | 約 500 ms | 不到 1 µs |\n| 500 ms 內 `background_counter` 增加 | 1 | 約 81 萬（實測 817,711 → 1,635,424） |\n\n- 比喻：煮飯 20 分鐘，blocking 是盯著電鍋；non-blocking 是做家事時每做完一件瞄一眼時鐘\n- 同一個主迴圈可以放多個任務（LED、按鍵、UART），各自記自己的「上次時間」",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-07 18:48",
+          "type": "筆記",
+          "text": "【筆記】SysTick 實測週期誤差來自頻率比例，不是 tick 量化\n**Delay 版與 non-blocking 版都是 499.924 ms／500 ms，固定少約 150 ppm，來自石英與邏輯分析儀時基的誤差**\n\n| 寫法 | 脈寬 | 週期 | 頻率 |\n|---|---|---|---|\n| `BSP_SysTick_Delay(500)` | 499.925 ms | 999.849 ms | 1.00015 Hz |\n| `now - last >= 500` | 499.924 ms | 999.849 ms | 1.00015 Hz |\n\n- 主迴圈很快 → 每次 toggle 緊跟在 tick 加 1 之後，起點都對齊 tick 邊界 → 量化誤差只有 µs 級\n- 固定少 76 µs／500 ms ≈ 150 ppm → 頻率比例誤差：板上 8 MHz 石英＋邏輯分析儀時基，兩者誤差加總\n- 量化誤差（最多 1 tick）只發生在從任意時間點開始等的時候，例如開機後第一次\n- 更正：先前【筆記】SysTick 延遲的實測與 tick 量化誤差把原因歸給量化誤差，是錯的",
+          "resolved": null
         }
       ]
     },
