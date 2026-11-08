@@ -3,7 +3,7 @@
 - 狀態：**進行中**
 - 週次：W01　主題：SysTick
 - 對應原任務（HAL 版）：W01-S05, W02-S03
-- 進行次數：5 次（最近一次：2026-11-07）
+- 進行次數：6 次（最近一次：2026-11-08）
 - 程式碼：[projects/SPRINT-W01-S04](../../projects/SPRINT-W01-S04)
 
 ## 任務內容
@@ -591,3 +591,156 @@ background_counter++;                  // 每圈都會執行
 - 固定少 76 µs／500 ms ≈ 150 ppm → 頻率比例誤差：板上 8 MHz 石英＋邏輯分析儀時基，兩者誤差加總
 - 量化誤差（最多 1 tick）只發生在從任意時間點開始等的時候，例如開機後第一次
 - 更正：先前【筆記】SysTick 延遲的實測與 tick 量化誤差把原因歸給量化誤差，是錯的
+
+### [筆記] 2026-11-08 22:23
+
+【筆記】HAL 的 tick 實作對照：uwTick、uwTickFreq、HAL_Delay、__weak
+**HAL 的 tick 單位固定是 ms、可降頻省電；HAL_Delay 多等 1 tick 保證至少 N ms；__weak 讓使用者替換時間基準**
+
+| 項目 | HAL | 自寫版 |
+|---|---|---|
+| 計數變數 | `__IO uint32_t uwTick;`（`__IO` = `volatile`，無 static） | `static volatile uint32_t tick;` |
+| 中斷內 | `uwTick += uwTickFreq;` | `tick++;` |
+| 中斷頻率 | 可選 1 kHz／100 Hz／10 Hz | 固定 1 kHz |
+| 函式 | `__weak`，可被覆蓋 | 一般函式 |
+
+**uwTick 沒有 static 的風險**
+- 任何模組都能寫 `uwTick = 0;` → 進行中的逾時計算 `now - start` 變成超大數 → 全部同時逾時
+- 自寫版用 `static` 加上只提供 `GetTick()`：外部只能讀
+
+**uwTickFreq**
+- Hz = 每秒幾次；1 kHz ↔ 每 1 ms、100 Hz ↔ 每 10 ms
+- 值的意義是「每次中斷代表幾 ms」：`1KHZ = 1`、`100HZ = 10`、`10HZ = 100`
+- `uwTick += uwTickFreq` → 不論中斷頻率，`uwTick` 單位永遠是 ms
+- 降頻目的：省電（睡眠時被叫醒的次數變少），代價是解析度變差
+
+**HAL_Delay 的 `wait += uwTickFreq`**
+- 從任意時間點開始等，第一個 tick 可能幾 µs 後就到 → 不加 1 只等 N − 1～N ms
+- 加 1 → N～N + 1 ms，保證「至少」N ms（`HAL_Delay(1)` 不加 1 可能只等 1 µs）
+- `if (wait < HAL_MAX_DELAY)`：`0xFFFFFFFF` 代表永遠等；再加 1 會溢位成 0，變成完全不等
+
+**__weak 的兩種用途**
+
+| | startup handler | HAL 函式 |
+|---|---|---|
+| 備用版本 | `Default_Handler` 無窮迴圈 | 完整可用的實作 |
+| 目的 | 沒寫就卡住，方便抓錯 | 預設可用，允許替換 |
+
+- 用 RTOS 時 SysTick 被拿去排程 → CubeMX 產生 `stm32f1xx_hal_timebase_tim.c` 重新定義 `HAL_InitTick()`，改用 TIM 當時間基準，HAL 原始碼不用改
+
+### [筆記] 2026-11-08 22:27
+
+【筆記】LOAD 決定中斷頻率；uwTickFreq 讓 tick 單位永遠是 ms
+**中斷頻率 = 計數時脈 ÷ (LOAD + 1)；HAL 降頻時每次中斷加「經過的 ms 數」，tick 意義不變**
+
+**LOAD 和 1 kHz 的關係**
+- 計數器每秒數 72,000,000 下（72 MHz），一輪數 72,000 下（`LOAD` = 71,999）
+- 一秒數完 72,000,000 ÷ 72,000 = 1000 輪 → 一秒中斷 1000 次 = 1 kHz = 每 1 ms 一次
+- Hz = 每秒幾次；週期 = 1 ÷ 頻率
+
+| `LOAD` | 一輪多久 | 中斷頻率 |
+|---|---|---|
+| 71,999 | 1 ms | 1 kHz |
+| 719,999（需搭配 /8） | 10 ms | 100 Hz |
+
+**降頻後如果還是 `tick++`**
+- 每 10 ms 才加 1 → tick 不再是毫秒 → `now - last >= 500` 變成等 5 秒
+
+**HAL 的解法：`uwTick += uwTickFreq`**
+
+| 中斷頻率 | 每次經過 | `uwTickFreq` | 1 秒後 `uwTick` |
+|---|---|---|---|
+| 1 kHz | 1 ms | 1 | 1000 |
+| 100 Hz | 10 ms | 10 | 1000 |
+
+- `uwTickFreq` 的值是「每次中斷代表幾 ms」，不是 Hz
+- 比喻：每 1 ms 拿 1 元或每 10 ms 拿 10 元，一秒後都是 1000 元
+- 降頻目的：省電（中斷會把睡眠中的 CPU 叫醒）；代價：解析度變成 10 ms
+- 本課固定 1 kHz，`tick++` 即可
+
+### [問題] 2026-11-08 22:30 ❓ 未解決
+
+【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
+**同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**
+
+```c
+if ((GPIOC->IDR & GPIO_ODR_ODR13_Msk) != 0U)   // 錯：暫存器和遮罩不一致
+if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)   // 對
+```
+
+- `GPIO_ODR_ODR13_Msk` = `GPIO_IDR_IDR13_Msk` = `0x2000` → 程式碼能動，但讀的是腳位電位而非命令
+- 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集
+- 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找
+
+### [解法] 2026-11-08 22:31
+
+【解法】Non-blocking LED：用 BSP_SysTick_GetTick() 每 500 ms 切換
+**每圈讀一次時間，到了才 toggle 並更新上次時間；沒到就離開，主迴圈不被卡住**
+
+**為什麼**
+- `Delay()` 等待時 CPU 什麼都不能做；non-blocking 讓 LED、按鍵、UART 能在同一個主迴圈輪流執行
+- 這是下一步按鍵去彈跳的基礎：同樣是「每圈看時間，到了才做事」
+
+**程式碼**
+```c
+// main.c
+uint32_t led_last_toggle = BSP_SysTick_GetTick();
+for (;;)
+{
+    uint32_t now = BSP_SysTick_GetTick();
+    if ((now - led_last_toggle) >= 500U)
+    {
+        BSP_GPIO_Led_Toggle();
+        led_last_toggle += 500U;     // 不累積延遲；卡太久會連續補做
+    }
+    background_counter++;
+}
+
+// bsp_gpio.c：寫的是 ODR 就讀 ODR
+void BSP_GPIO_Led_Toggle(void)
+{
+    if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)
+    {
+        BSP_GPIO_Led_On();
+    }
+    else
+    {
+        BSP_GPIO_Led_Off();
+    }
+}
+```
+
+**驗證**
+
+| 項目 | 結果 |
+|---|---|
+| 邏輯分析儀 PC13 | 週期 999.849 ms，脈寬 499.924 ms，1.00015 Hz |
+| `background_counter` | 每 500 ms 增加約 81 萬 → 主迴圈未被卡住 |
+
+**為什麼是這個順序**
+- `BSP_SysTick_Init()` 在 `BSP_GPIO_Init()` 前後都可以：handler 只碰 tick
+- `led_last_toggle` 在進入迴圈前取一次時間，第一次 toggle 才是 500 ms 後
+
+**模組分工**
+- Toggle 放 `bsp_gpio`（知道 LED 在 PC13），`bsp_systick` 只管時間
+- `main.c` 不 include 任何暫存器定義 → debugger 停在 `main.c` 看不到 `SysTick` 巨集，是分層乾淨的證據
+
+**對照 HAL**
+
+| 自寫版 | HAL | 差異 |
+|---|---|---|
+| `static volatile uint32_t tick` | `__IO uint32_t uwTick`（無 static） | HAL 任何模組都能改 |
+| `tick++` | `uwTick += uwTickFreq` | HAL 可降頻省電，tick 單位仍是 ms |
+| 不提供 Delay | `HAL_Delay()` 等 N + 1 tick | 保證至少 N ms；`HAL_MAX_DELAY` 不加 1 避免溢位成 0 |
+| 一般函式 | `__weak` | HAL 可被替換成 TIM 時間基準（RTOS 拿走 SysTick 時） |
+
+### [筆記] 2026-11-08 23:05
+
+【筆記】按鍵彈跳實測與去彈跳時間的選擇
+**杜邦線碰觸 PB0：按下彈跳在 10 ms 內、放開未觀察到彈跳 → 取 20 ms，有兩倍餘裕且人感覺不到延遲**
+
+- 量法：邏輯分析儀接 PB0，下降沿觸發，取樣率調高後放大看邊緣
+- 實測：有時無彈跳，有時多跳幾次，整體都在 10 ms 內；上升沿未見彈跳
+- 一般輕觸按鍵：彈跳 1～10 ms，少數到 20 ms；放開也會彈跳，通常較輕微
+- 杜邦線額外問題：按住時手抖可能短暫斷開，去彈跳一併擋掉
+- 選 20 ms：大於實測最大值的兩倍，又遠低於人感覺「有延遲」的 50～100 ms

@@ -78,7 +78,7 @@ bool BSP_GPIO_Button_IsPressed(void)
 // ODR = 1（目前輸出高 = LED 暗）→ 點亮；ODR = 0 → 熄滅
 void BSP_GPIO_Led_Toggle(void)
 {
-	if ((GPIOC -> IDR & GPIO_ODR_ODR13_Msk) != 0U)
+	if ((GPIOC -> ODR & GPIO_ODR_ODR13_Msk) != 0U)
 	{
 		BSP_GPIO_Led_On();
 	}

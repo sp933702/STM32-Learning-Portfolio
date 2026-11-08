@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（45）
+## ❓ 未解決（46）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -610,6 +610,20 @@
   - 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組
   - 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險
 
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-08 22:30）
+
+  【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
+  **同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**
+  
+  ```c
+  if ((GPIOC->IDR & GPIO_ODR_ODR13_Msk) != 0U)   // 錯：暫存器和遮罩不一致
+  if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)   // 對
+  ```
+  
+  - `GPIO_ODR_ODR13_Msk` = `GPIO_IDR_IDR13_Msk` = `0x2000` → 程式碼能動，但讀的是腳位電位而非命令
+  - 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集
+  - 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找
+
 
 ## ✅ 已解決的問題與解法
 
@@ -1120,5 +1134,67 @@
   - 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM
   - `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取
   - 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫
+
+- **解法**（2026-11-08 22:31）：
+
+  【解法】Non-blocking LED：用 BSP_SysTick_GetTick() 每 500 ms 切換
+  **每圈讀一次時間，到了才 toggle 並更新上次時間；沒到就離開，主迴圈不被卡住**
+  
+  **為什麼**
+  - `Delay()` 等待時 CPU 什麼都不能做；non-blocking 讓 LED、按鍵、UART 能在同一個主迴圈輪流執行
+  - 這是下一步按鍵去彈跳的基礎：同樣是「每圈看時間，到了才做事」
+  
+  **程式碼**
+  ```c
+  // main.c
+  uint32_t led_last_toggle = BSP_SysTick_GetTick();
+  for (;;)
+  {
+      uint32_t now = BSP_SysTick_GetTick();
+      if ((now - led_last_toggle) >= 500U)
+      {
+          BSP_GPIO_Led_Toggle();
+          led_last_toggle += 500U;     // 不累積延遲；卡太久會連續補做
+      }
+      background_counter++;
+  }
+  
+  // bsp_gpio.c：寫的是 ODR 就讀 ODR
+  void BSP_GPIO_Led_Toggle(void)
+  {
+      if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)
+      {
+          BSP_GPIO_Led_On();
+      }
+      else
+      {
+          BSP_GPIO_Led_Off();
+      }
+  }
+  ```
+  
+  **驗證**
+  
+  | 項目 | 結果 |
+  |---|---|
+  | 邏輯分析儀 PC13 | 週期 999.849 ms，脈寬 499.924 ms，1.00015 Hz |
+  | `background_counter` | 每 500 ms 增加約 81 萬 → 主迴圈未被卡住 |
+  
+  **為什麼是這個順序**
+  - `BSP_SysTick_Init()` 在 `BSP_GPIO_Init()` 前後都可以：handler 只碰 tick
+  - `led_last_toggle` 在進入迴圈前取一次時間，第一次 toggle 才是 500 ms 後
+  
+  **模組分工**
+  - Toggle 放 `bsp_gpio`（知道 LED 在 PC13），`bsp_systick` 只管時間
+  - `main.c` 不 include 任何暫存器定義 → debugger 停在 `main.c` 看不到 `SysTick` 巨集，是分層乾淨的證據
+  
+  **對照 HAL**
+  
+  | 自寫版 | HAL | 差異 |
+  |---|---|---|
+  | `static volatile uint32_t tick` | `__IO uint32_t uwTick`（無 static） | HAL 任何模組都能改 |
+  | `tick++` | `uwTick += uwTickFreq` | HAL 可降頻省電，tick 單位仍是 ms |
+  | 不提供 Delay | `HAL_Delay()` 等 N + 1 tick | 保證至少 N ms；`HAL_MAX_DELAY` 不加 1 避免溢位成 0 |
+  | 一般函式 | `__weak` | HAL 可被替換成 TIM 時間基準（RTOS 拿走 SysTick 時） |
 
 
