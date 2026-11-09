@@ -923,6 +923,12 @@
           "end": "2026-11-09 00:56",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-09 21:26",
+          "end": "2026-11-09 23:09",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1141,6 +1147,48 @@
           "type": "筆記",
           "text": "【筆記】按鍵彈跳實測與去彈跳時間的選擇\n**杜邦線碰觸 PB0：按下彈跳在 10 ms 內、放開未觀察到彈跳 → 取 20 ms，有兩倍餘裕且人感覺不到延遲**\n\n- 量法：邏輯分析儀接 PB0，下降沿觸發，取樣率調高後放大看邊緣\n- 實測：有時無彈跳，有時多跳幾次，整體都在 10 ms 內；上升沿未見彈跳\n- 一般輕觸按鍵：彈跳 1～10 ms，少數到 20 ms；放開也會彈跳，通常較輕微\n- 杜邦線額外問題：按住時手抖可能短暫斷開，去彈跳一併擋掉\n- 選 20 ms：大於實測最大值的兩倍，又遠低於人感覺「有延遲」的 50～100 ms",
           "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:05",
+          "type": "筆記",
+          "text": "【筆記】狀態表怎麼讀：每一列是「離開」的條件\n**一列回答「我現在在這個狀態，遇到什麼情況要去哪」；沒有條件成立就留在原狀態**\n\n- 條件只用兩種資料：這一圈讀到什麼（按下／放開）、從開始驗證經過多久（`now - start`）\n- 一個狀態可以有多條規則\n- 常見錯誤：寫成「怎麼進入這個狀態」→ 方向反了\n- 狀態機只產生事件，不直接控制 LED；事件要做什麼由 `main` 決定\n\n| 狀態 | 條件 → 轉到哪 | 轉換時做什麼 |\n|---|---|---|\n| `LED_OFF` | 經過 ≥ 500 ms → `LED_ON` | 點亮、記時間 |\n| `LED_ON` | 經過 ≥ 500 ms → `LED_OFF` | 熄滅、記時間 |",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:05",
+          "type": "解法",
+          "text": "【解法】按鍵去彈跳狀態機設計：4 個狀態，確認按下時發事件\n**讀到變化先進「驗證中」，彈跳就退回並重新計時；連續穩定 20 ms 才確認；事件只在 PRESS_DEBOUNCE → PRESSED 發出**\n\n| 狀態 | 代表什麼 | 條件 → 轉到哪 | 轉換時做什麼 |\n|---|---|---|---|\n| `RELEASED` | 放開，已確認 | 按下 → `PRESS_DEBOUNCE` | `start = now` |\n| `PRESS_DEBOUNCE` | 按下，驗證中 | 放開 → `RELEASED` | — |\n| | | 按下且 `now - start >= 20` → `PRESSED` | 發出按下事件 |\n| `PRESSED` | 按下，已確認 | 放開 → `RELEASE_DEBOUNCE` | `start = now` |\n| `RELEASE_DEBOUNCE` | 放開，驗證中 | 按下 → `PRESSED` | — |\n| | | 放開且 `now - start >= 20` → `RELEASED` | — |\n\n- 上下兩半對稱；按住不放時停在 `PRESSED`，不會重複發事件\n- 彈跳一次就退回並重新計時 → 必須連續穩定 20 ms\n- 去彈跳 20 ms：實測杜邦線彈跳 < 10 ms，留兩倍餘裕\n- 事件在確認按下時發出（反應快）；確認放開時發出適合需要分辨短按／長按的場合\n\n**時間軸（前 6 ms 有彈跳）**\n\n| 時間 | 讀到 | 狀態 |\n|---|---|---|\n| 0 | 按下 | → `PRESS_DEBOUNCE`，start = 0 |\n| 1 | 放開 | → `RELEASED` |\n| 2～6 | 跳動 | 來回，每次重設 start，最後 start = 6 |\n| 26 | 按下 | 26 − 6 = 20 → `PRESSED`，發事件 |",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:05",
+          "type": "筆記",
+          "text": "【筆記】事件 vs 狀態：WasPressed() 要讀取即清除\n**「現在是否按著」是狀態，「剛剛按了一下」是事件；事件被讀到時要清除，一次按下只被看到一次**\n\n| | 狀態 | 事件 |\n|---|---|---|\n| 意思 | 現在是不是按著 | 剛剛發生了一次按下 |\n| 持續 | 按住多久就維持多久 | 只發生一次 |\n| 例子 | `BSP_GPIO_Button_IsPressed()` | `Button_Debounce_WasPressed()` |\n\n- `main` 每秒問約 160 萬次；不清除 → 按一次後每圈都回答「有」→ 速度每秒切換 160 萬次\n- 讀取即清除（read-and-clear）：回傳 `true` 的同時把旗標清 0，即「消費」事件",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:10",
+          "type": "筆記",
+          "text": "【筆記】enum：有名字的整數常數，搭配 switch 寫狀態機\n**變數只會是幾個固定值之一時用 enum；值自動從 0 編號，debugger 直接顯示名稱**\n\n```c\ntypedef enum\n{\n    BUTTON_STATE_RELEASED,          // 0\n    BUTTON_STATE_PRESS_DEBOUNCE,    // 1\n    BUTTON_STATE_PRESSED,           // 2\n    BUTTON_STATE_RELEASE_DEBOUNCE   // 3\n} button_state_t;\n\nstatic button_state_t state = BUTTON_STATE_RELEASED;\n```\n\n| 寫法 | 範例 | 缺點 |\n|---|---|---|\n| 數字 | `state = 2;` | 看不出意思 |\n| `#define` | `#define PRESSED 2` | 彼此無關聯，可能重複；debugger 只顯示 2 |\n| `enum` | `state = BUTTON_STATE_PRESSED;` | — 可讀、debugger 顯示名稱、`switch` 漏 case 有警告 |\n\n- `typedef ... button_state_t;`：替型別取名，`_t` 是型別慣例\n- 加 `BUTTON_STATE_` 前綴：C 的 enum 名稱是全域的，避免撞名\n- 只在模組內用的 enum 放 `.c`，不放 `.h`\n- `switch` 每個 `case` 結尾要 `break`，否則會繼續執行下一個 case\n- `default`：防禦未預期的值，回到安全狀態",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:10",
+          "type": "筆記",
+          "text": "【筆記】為什麼事件不清除，速度會亂掉\n**主迴圈一秒約 160 萬圈，每圈都問 WasPressed()；不清除的話每圈都回答「有」，速度每圈翻一次**\n\n| 主迴圈 | 回答 | `led_period` |\n|---|---|---|\n| 第 1 圈 | 有 | 500 → 100 |\n| 第 2 圈 | 有（未清除） | 100 → 500 |\n| 第 3 圈 | 有 | 500 → 100 |\n\n- 結果：按一下後速度取決於剛好停在哪一圈，等於亂數\n- 清除後：只有第 1 圈回答「有」，速度只切換一次\n- `.h` 介面用到 `uint32_t`、`bool` → 要 include `<stdint.h>`、`<stdbool.h>`",
+          "resolved": null
+        },
+        {
+          "time": "2026-11-09 22:57",
+          "type": "問題",
+          "text": "【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對\n**讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**\n\n```c\nbool Button_Debounce_WasPressed(void)\n{\n    bool event = press_event;   // 先存清除前的值\n    press_event = false;        // 消費事件\n    return event;               // 回傳原本的值\n}\n```\n\n| 寫法 | 結果 |\n|---|---|\n| 只 `return press_event;` | 不清除 → 每圈都回答「有」，速度亂翻 |\n| 先 `press_event = false;` 再 `return press_event;` | 永遠回傳 false，收不到事件 |\n| 先存、再清、再回傳 | 一次按下只被看到一次 |\n\n- 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉",
+          "resolved": false
+        },
+        {
+          "time": "2026-11-09 22:57",
+          "type": "問題",
+          "text": "【問題】以為 press_event 要加 volatile\n**判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**\n\n| 變數 | 寫入 | 讀取 | `volatile` |\n|---|---|---|---|\n| `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |\n| `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |\n\n- 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷\n- 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯\n- 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途\n- 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要",
+          "resolved": false
         }
       ]
     },

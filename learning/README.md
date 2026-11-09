@@ -1,6 +1,6 @@
 # STM32 學習進度
 
-2 個月衝刺：3 / 29 完成（10%）　最後更新：2026-11-09 00:56
+2 個月衝刺：3 / 29 完成（10%）　最後更新：2026-11-09 23:09
 
 - [全部問題整理（複習用）](QUESTIONS.md)
 
@@ -11,7 +11,7 @@
 | SPRINT-W01-S01 | C 語言驗收 | 已完成 | [5 則](notes/SPRINT-W01-S01.md) |
 | SPRINT-W01-S02 | 時脈系統（暫存器） | 已完成 | [65 則](notes/SPRINT-W01-S02.md) |
 | SPRINT-W01-S03 | GPIO（暫存器重做） | 已完成 | [49 則](notes/SPRINT-W01-S03.md) |
-| SPRINT-W01-S04 | SysTick 與 non-blocking（暫存器） | 進行中 | [36 則](notes/SPRINT-W01-S04.md) |
+| SPRINT-W01-S04 | SysTick 與 non-blocking（暫存器） | 進行中 | [43 則](notes/SPRINT-W01-S04.md) |
 | SPRINT-W01-S05 | Startup 與 Linker Script | 未開始 |  |
 | SPRINT-W02-S01 | EXTI + NVIC（暫存器） | 未開始 |  |
 | SPRINT-W02-S02 | Timer 週期中斷（暫存器） | 未開始 |  |

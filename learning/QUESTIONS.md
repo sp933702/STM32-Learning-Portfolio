@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（46）
+## ❓ 未解決（48）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -624,6 +624,43 @@
   - 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集
   - 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找
 
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-09 22:57）
+
+  【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對
+  **讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**
+  
+  ```c
+  bool Button_Debounce_WasPressed(void)
+  {
+      bool event = press_event;   // 先存清除前的值
+      press_event = false;        // 消費事件
+      return event;               // 回傳原本的值
+  }
+  ```
+  
+  | 寫法 | 結果 |
+  |---|---|
+  | 只 `return press_event;` | 不清除 → 每圈都回答「有」，速度亂翻 |
+  | 先 `press_event = false;` 再 `return press_event;` | 永遠回傳 false，收不到事件 |
+  | 先存、再清、再回傳 | 一次按下只被看到一次 |
+  
+  - 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉
+
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-09 22:57）
+
+  【問題】以為 press_event 要加 volatile
+  **判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**
+  
+  | 變數 | 寫入 | 讀取 | `volatile` |
+  |---|---|---|---|
+  | `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |
+  | `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |
+  
+  - 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷
+  - 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯
+  - 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途
+  - 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要
+
 
 ## ✅ 已解決的問題與解法
 
@@ -1196,5 +1233,33 @@
   | `tick++` | `uwTick += uwTickFreq` | HAL 可降頻省電，tick 單位仍是 ms |
   | 不提供 Delay | `HAL_Delay()` 等 N + 1 tick | 保證至少 N ms；`HAL_MAX_DELAY` 不加 1 避免溢位成 0 |
   | 一般函式 | `__weak` | HAL 可被替換成 TIM 時間基準（RTOS 拿走 SysTick 時） |
+
+- **解法**（2026-11-09 22:05）：
+
+  【解法】按鍵去彈跳狀態機設計：4 個狀態，確認按下時發事件
+  **讀到變化先進「驗證中」，彈跳就退回並重新計時；連續穩定 20 ms 才確認；事件只在 PRESS_DEBOUNCE → PRESSED 發出**
+  
+  | 狀態 | 代表什麼 | 條件 → 轉到哪 | 轉換時做什麼 |
+  |---|---|---|---|
+  | `RELEASED` | 放開，已確認 | 按下 → `PRESS_DEBOUNCE` | `start = now` |
+  | `PRESS_DEBOUNCE` | 按下，驗證中 | 放開 → `RELEASED` | — |
+  | | | 按下且 `now - start >= 20` → `PRESSED` | 發出按下事件 |
+  | `PRESSED` | 按下，已確認 | 放開 → `RELEASE_DEBOUNCE` | `start = now` |
+  | `RELEASE_DEBOUNCE` | 放開，驗證中 | 按下 → `PRESSED` | — |
+  | | | 放開且 `now - start >= 20` → `RELEASED` | — |
+  
+  - 上下兩半對稱；按住不放時停在 `PRESSED`，不會重複發事件
+  - 彈跳一次就退回並重新計時 → 必須連續穩定 20 ms
+  - 去彈跳 20 ms：實測杜邦線彈跳 < 10 ms，留兩倍餘裕
+  - 事件在確認按下時發出（反應快）；確認放開時發出適合需要分辨短按／長按的場合
+  
+  **時間軸（前 6 ms 有彈跳）**
+  
+  | 時間 | 讀到 | 狀態 |
+  |---|---|---|
+  | 0 | 按下 | → `PRESS_DEBOUNCE`，start = 0 |
+  | 1 | 放開 | → `RELEASED` |
+  | 2～6 | 跳動 | 來回，每次重設 start，最後 start = 6 |
+  | 26 | 按下 | 26 − 6 = 20 → `PRESSED`，發事件 |
 
 
