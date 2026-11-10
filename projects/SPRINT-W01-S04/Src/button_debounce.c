@@ -50,8 +50,7 @@ void Button_Debounce_Update(uint32_t now)
 
 	    case BUTTON_STATE_RELEASE_DEBOUNCE:
 	        // 按鍵為放開，判斷是否超過 debounce 設定時間
-	    	// 確定放開後，修改旗幟
-	    	if (!is_Pressed)
+	    	if (!is_pressed)
 	    	{
 	    		if (now - debounce_start >= BUTTON_DEBOUNCE_MS)
 	    		{
@@ -62,7 +61,7 @@ void Button_Debounce_Update(uint32_t now)
 	    			// press_event = false;
 	    		}
 	    	}
-	    	// 按鍵為按下，退回按鍵已暗下的狀態
+	    	// 按鍵為按下，退回按鍵已按下的狀態
 	    	else
 	    	{
 	    		state = BUTTON_STATE_PRESSED;
@@ -70,7 +69,7 @@ void Button_Debounce_Update(uint32_t now)
 	        break;
 
 	    case BUTTON_STATE_PRESSED:
-	    	if (!is_Pressed)
+	    	if (!is_pressed)
 			{
 				debounce_start = now;
 				state = BUTTON_STATE_RELEASE_DEBOUNCE;
@@ -80,7 +79,7 @@ void Button_Debounce_Update(uint32_t now)
 		case BUTTON_STATE_PRESS_DEBOUNCE:
 			// 按鍵為按下，判斷是否超過 debounce 設定時間
 			// 確定放開後，修改旗幟
-			if (is_Pressed)
+			if (is_pressed)
 			{
 				if (now - debounce_start >= BUTTON_DEBOUNCE_MS)
 				{

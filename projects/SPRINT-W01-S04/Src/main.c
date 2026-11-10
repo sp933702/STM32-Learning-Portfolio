@@ -21,6 +21,7 @@
 #include "clock_init.h"
 #include "bsp_gpio.h"
 #include "bsp_systick.h"
+#include "button_debounce.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -53,17 +54,46 @@ int main(void)
 	uint32_t led_last_toggle = BSP_SysTick_GetTick();
 	// 用來驗證 non-blocking 的紀錄
 	uint32_t background_counter = 0U;
+	// 這個變數只在環圈裡可用，所以可以直接宣告在迴圈中
+	// 因為用 bool 宣告，所以要用 false 才對
+	// bool pressed = 0U;
+	uint32_t led_period = 500U;
+	uint32_t press_count = 0U;
 	for(;;)
 	{
-		// 每 500 ms 切換一次 LED，不阻塞主迴圈
+		bool pressed = false;
+		// 每 led_period ms 切換一次 LED，不阻塞主迴圈
 		uint32_t now = BSP_SysTick_GetTick();
-		if (now - led_last_toggle >= 500U)
+		if ((now - led_last_toggle) >= led_period)
 		{
+			//切換 LED 燈開關
 			BSP_GPIO_Led_Toggle();
 			// 更新命令轉換時間
 			// 1. led_last_toggle = now & led_last_toggle += 500U 的差別在筆記中
-			led_last_toggle += 500U;
+			led_last_toggle += led_period;
 		}
+
+		// 更新狀態機
+		// 判斷按鈕是否暗下且已經去彈跳
+		// 達成上述條件，LED 明亮變換時間就在 500/100 ms 之間切換
+		Button_Debounce_Update(now);
+		pressed = Button_Debounce_WasPressed();
+		if (pressed)
+		{
+			if (led_period == 500U)
+			{
+				led_period = 100U;
+			}
+			else
+			{
+				led_period = 500U;
+			}
+			// 週期換了，從現在重新起算
+			// 這邊在學習時自己出現連續邏輯錯誤
+//			led_last_toggle = now;
+			press_count ++;
+		}
+
 		background_counter ++;
 	}
 }

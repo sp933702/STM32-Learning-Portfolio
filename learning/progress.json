@@ -929,6 +929,12 @@
           "end": "2026-11-09 23:09",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-10 22:34",
+          "end": "2026-11-10 23:07",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1189,6 +1195,18 @@
           "type": "問題",
           "text": "【問題】以為 press_event 要加 volatile\n**判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**\n\n| 變數 | 寫入 | 讀取 | `volatile` |\n|---|---|---|---|\n| `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |\n| `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |\n\n- 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷\n- 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯\n- 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途\n- 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要",
           "resolved": false
+        },
+        {
+          "time": "2026-11-10 23:06",
+          "type": "問題",
+          "text": "【問題】改變週期後 last += period 連續補做\n**週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**\n\n範例：上次 toggle 在 1000，於 1400 按下改成 100\n\n| 圈 | now − last | 動作 | last |\n|---|---|---|---|\n| 1 | 400 | toggle | 1100 |\n| 2 | 300 | toggle | 1200 |\n| 3 | 200 | toggle | 1300 |\n| 4 | 100 | toggle | 1400 |\n| 5 | 0 | — | 1400 |\n\n- 偶數次 → LED 回到按下前狀態；LED 看不出來，但若動作是送 UART 資料會連送 4 筆\n- 調換「判斷 LED」與「處理按鍵」的順序修不好：只是晚一圈開始補做\n- 根本原因：週期變了，`led_last_toggle` 還在舊週期的時間軸上\n- 解法：改週期時 `led_last_toggle = now;`，從現在重新起算",
+          "resolved": false
+        },
+        {
+          "time": "2026-11-10 23:06",
+          "type": "解法",
+          "text": "【解法】按鍵去彈跳狀態機：button_debounce 模組\n**每圈 main 傳入 now 讓狀態機前進；確認按下時發事件，WasPressed() 讀取即清除**\n\n**為什麼**\n- 機械接觸會在數 ms 內反覆跳動，不處理的話按一次會被判成多次\n- 寫成獨立模組：`main` 只問「剛剛有沒有按一下」，不管彈跳細節\n\n**介面（button_debounce.h）**\n```c\n#include <stdint.h>\n#include <stdbool.h>\nvoid Button_Debounce_Update(uint32_t now);   // 每圈呼叫一次\nbool Button_Debounce_WasPressed(void);       // 有事件回傳 true 並清除\n```\n\n**實作重點（button_debounce.c）**\n```c\n#define BUTTON_DEBOUNCE_MS   20U\n\ntypedef enum\n{\n    BUTTON_STATE_RELEASED,\n    BUTTON_STATE_RELEASE_DEBOUNCE,\n    BUTTON_STATE_PRESSED,\n    BUTTON_STATE_PRESS_DEBOUNCE\n} button_state_t;\n\nstatic button_state_t state = BUTTON_STATE_RELEASED;\nstatic uint32_t debounce_start = 0U;\nstatic bool press_event = false;            // 主迴圈寫、主迴圈讀 → 不需 volatile\n\nvoid Button_Debounce_Update(uint32_t now)\n{\n    bool is_pressed = BSP_GPIO_Button_IsPressed();   // 一圈只讀一次\n\n    switch (state)\n    {\n        case BUTTON_STATE_RELEASED:\n            if (is_pressed) { debounce_start = now; state = BUTTON_STATE_PRESS_DEBOUNCE; }\n            break;\n        case BUTTON_STATE_PRESS_DEBOUNCE:\n            if (!is_pressed) { state = BUTTON_STATE_RELEASED; }\n            else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)\n            { state = BUTTON_STATE_PRESSED; press_event = true; }\n            break;\n        case BUTTON_STATE_PRESSED:\n            if (!is_pressed) { debounce_start = now; state = BUTTON_STATE_RELEASE_DEBOUNCE; }\n            break;\n        case BUTTON_STATE_RELEASE_DEBOUNCE:\n            if (is_pressed) { state = BUTTON_STATE_PRESSED; }\n            else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)\n            { state = BUTTON_STATE_RELEASED; }\n            break;\n        default:\n            state = BUTTON_STATE_RELEASED;\n            break;\n    }\n}\n\nbool Button_Debounce_WasPressed(void)\n{\n    bool event = press_event;\n    press_event = false;\n    return event;\n}\n```\n\n**main.c 使用方式**\n```c\nuint32_t now = BSP_SysTick_GetTick();\nButton_Debounce_Update(now);\nif (Button_Debounce_WasPressed())\n{\n    led_period = (led_period == 500U) ? 100U : 500U;\n    led_last_toggle = now;              // 週期改變時重新起算，避免連續補做\n}\n```\n\n**驗證**\n\n| 項目 | 結果 |\n|---|---|\n| 按一下 | 速度切換一次 |\n| 按住不放 | 只切換一次 |\n| 連按 10 次 | `press_count` = 10 |\n\n**設計決定**\n- 4 個狀態：按下／放開 × 已確認／驗證中；彈跳就退回並重新計時\n- 去彈跳 20 ms：實測彈跳 < 10 ms\n- 確認按下時發事件：反應快；不需分辨短按／長按\n- `now` 由 `main` 傳入：少依賴 `bsp_systick`、各任務共用同一個時間、可餵假時間測試\n- 事件由消費者清除：狀態機自己清會在 `main` 忙碌時吃掉按鍵\n- 不碰暫存器 → 不用 `BSP_` 前綴；HAL 沒有對應的去彈跳函式，`HAL_GPIO_ReadPin()` 只對應 `BSP_GPIO_Button_IsPressed()`",
+          "resolved": null
         }
       ]
     },

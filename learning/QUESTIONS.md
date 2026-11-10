@@ -2,7 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（48）
+## ❓ 未解決（49）
 
 - **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
 
@@ -661,6 +661,26 @@
   - 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途
   - 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要
 
+- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-10 23:06）
+
+  【問題】改變週期後 last += period 連續補做
+  **週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**
+  
+  範例：上次 toggle 在 1000，於 1400 按下改成 100
+  
+  | 圈 | now − last | 動作 | last |
+  |---|---|---|---|
+  | 1 | 400 | toggle | 1100 |
+  | 2 | 300 | toggle | 1200 |
+  | 3 | 200 | toggle | 1300 |
+  | 4 | 100 | toggle | 1400 |
+  | 5 | 0 | — | 1400 |
+  
+  - 偶數次 → LED 回到按下前狀態；LED 看不出來，但若動作是送 UART 資料會連送 4 筆
+  - 調換「判斷 LED」與「處理按鍵」的順序修不好：只是晚一圈開始補做
+  - 根本原因：週期變了，`led_last_toggle` 還在舊週期的時間軸上
+  - 解法：改週期時 `led_last_toggle = now;`，從現在重新起算
+
 
 ## ✅ 已解決的問題與解法
 
@@ -1261,5 +1281,101 @@
   | 1 | 放開 | → `RELEASED` |
   | 2～6 | 跳動 | 來回，每次重設 start，最後 start = 6 |
   | 26 | 按下 | 26 − 6 = 20 → `PRESSED`，發事件 |
+
+- **解法**（2026-11-10 23:06）：
+
+  【解法】按鍵去彈跳狀態機：button_debounce 模組
+  **每圈 main 傳入 now 讓狀態機前進；確認按下時發事件，WasPressed() 讀取即清除**
+  
+  **為什麼**
+  - 機械接觸會在數 ms 內反覆跳動，不處理的話按一次會被判成多次
+  - 寫成獨立模組：`main` 只問「剛剛有沒有按一下」，不管彈跳細節
+  
+  **介面（button_debounce.h）**
+  ```c
+  #include <stdint.h>
+  #include <stdbool.h>
+  void Button_Debounce_Update(uint32_t now);   // 每圈呼叫一次
+  bool Button_Debounce_WasPressed(void);       // 有事件回傳 true 並清除
+  ```
+  
+  **實作重點（button_debounce.c）**
+  ```c
+  #define BUTTON_DEBOUNCE_MS   20U
+  
+  typedef enum
+  {
+      BUTTON_STATE_RELEASED,
+      BUTTON_STATE_RELEASE_DEBOUNCE,
+      BUTTON_STATE_PRESSED,
+      BUTTON_STATE_PRESS_DEBOUNCE
+  } button_state_t;
+  
+  static button_state_t state = BUTTON_STATE_RELEASED;
+  static uint32_t debounce_start = 0U;
+  static bool press_event = false;            // 主迴圈寫、主迴圈讀 → 不需 volatile
+  
+  void Button_Debounce_Update(uint32_t now)
+  {
+      bool is_pressed = BSP_GPIO_Button_IsPressed();   // 一圈只讀一次
+  
+      switch (state)
+      {
+          case BUTTON_STATE_RELEASED:
+              if (is_pressed) { debounce_start = now; state = BUTTON_STATE_PRESS_DEBOUNCE; }
+              break;
+          case BUTTON_STATE_PRESS_DEBOUNCE:
+              if (!is_pressed) { state = BUTTON_STATE_RELEASED; }
+              else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)
+              { state = BUTTON_STATE_PRESSED; press_event = true; }
+              break;
+          case BUTTON_STATE_PRESSED:
+              if (!is_pressed) { debounce_start = now; state = BUTTON_STATE_RELEASE_DEBOUNCE; }
+              break;
+          case BUTTON_STATE_RELEASE_DEBOUNCE:
+              if (is_pressed) { state = BUTTON_STATE_PRESSED; }
+              else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)
+              { state = BUTTON_STATE_RELEASED; }
+              break;
+          default:
+              state = BUTTON_STATE_RELEASED;
+              break;
+      }
+  }
+  
+  bool Button_Debounce_WasPressed(void)
+  {
+      bool event = press_event;
+      press_event = false;
+      return event;
+  }
+  ```
+  
+  **main.c 使用方式**
+  ```c
+  uint32_t now = BSP_SysTick_GetTick();
+  Button_Debounce_Update(now);
+  if (Button_Debounce_WasPressed())
+  {
+      led_period = (led_period == 500U) ? 100U : 500U;
+      led_last_toggle = now;              // 週期改變時重新起算，避免連續補做
+  }
+  ```
+  
+  **驗證**
+  
+  | 項目 | 結果 |
+  |---|---|
+  | 按一下 | 速度切換一次 |
+  | 按住不放 | 只切換一次 |
+  | 連按 10 次 | `press_count` = 10 |
+  
+  **設計決定**
+  - 4 個狀態：按下／放開 × 已確認／驗證中；彈跳就退回並重新計時
+  - 去彈跳 20 ms：實測彈跳 < 10 ms
+  - 確認按下時發事件：反應快；不需分辨短按／長按
+  - `now` 由 `main` 傳入：少依賴 `bsp_systick`、各任務共用同一個時間、可餵假時間測試
+  - 事件由消費者清除：狀態機自己清會在 `main` 忙碌時吃掉按鍵
+  - 不碰暫存器 → 不用 `BSP_` 前綴；HAL 沒有對應的去彈跳函式，`HAL_GPIO_ReadPin()` 只對應 `BSP_GPIO_Button_IsPressed()`
 
 
