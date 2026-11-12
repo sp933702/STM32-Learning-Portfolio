@@ -13,7 +13,7 @@
       "status": "已完成",
       "finished_at": "2026-10-15",
       "orig": "Pi Day1–4",
-      "period": "10-15～10-21",
+      "period": "",
       "sessions": [
         {
           "start": "2026-10-14 21:11",
@@ -62,7 +62,54 @@
           "id": "b0e025ff1c"
         }
       ],
-      "summary": null
+      "summary": null,
+      "stage": "基礎",
+      "kind": "concept",
+      "order": 10,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "位元操作：set、clear、toggle、檢查某個 bit",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m2",
+          "text": "多 bit 欄位先清除再寫入",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m3",
+          "text": "volatile 的三種使用情境",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m4",
+          "text": "const 指標的兩種寫法",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m5",
+          "text": "static 的三種用法",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m6",
+          "text": "struct 的 sizeof 與 padding",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m7",
+          "text": "大小端判斷",
+          "done": "2026-10-15"
+        },
+        {
+          "id": "m8",
+          "text": "函式指標陣列做命令表",
+          "done": "2026-10-15"
+        }
+      ]
     },
     {
       "id": "SPRINT-W01-S02",
@@ -76,7 +123,7 @@
       "status": "已完成",
       "finished_at": "2026-10-20",
       "orig": "W03-S01",
-      "period": "10-15～10-21",
+      "period": "",
       "sessions": [
         {
           "start": "2026-10-15 10:42",
@@ -606,6 +653,48 @@
           "resolved": null,
           "id": "984f37a4ec"
         }
+      ],
+      "stage": "基礎",
+      "kind": "register",
+      "order": 20,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "時脈樹：HSI、HSE、PLL、SYSCLK、HCLK、PCLK1、PCLK2 的關係",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m2",
+          "text": "開啟 HSE 並等待 HSERDY（含 timeout）",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m3",
+          "text": "為什麼先設 Flash latency 再升頻",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m4",
+          "text": "PLL 的設定與限制（PLLON = 0 時才能改）",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m5",
+          "text": "AHB／APB 分頻與 APB1 最高 36 MHz 的原因",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m6",
+          "text": "SW 切換系統時脈並用 SWS 確認",
+          "done": "2026-10-20"
+        },
+        {
+          "id": "m7",
+          "text": "讀改寫：先清除欄位再設定，並先算出預期值再用 debugger 比對",
+          "done": "2026-10-20"
+        }
       ]
     },
     {
@@ -620,7 +709,7 @@
       "status": "已完成",
       "finished_at": "2026-11-03",
       "orig": "W01-S03, W02-S01",
-      "period": "10-15～10-21",
+      "period": "",
       "sessions": [
         {
           "start": "2026-10-20 23:09",
@@ -993,6 +1082,43 @@
           "resolved": null,
           "id": "efc31948c6"
         }
+      ],
+      "stage": "基礎",
+      "kind": "register",
+      "order": 30,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "為什麼要先開周邊時脈（RCC_APB2ENR）",
+          "done": "2026-11-03"
+        },
+        {
+          "id": "m2",
+          "text": "CRL／CRH 的 CNF／MODE 4-bit 編碼",
+          "done": "2026-11-03"
+        },
+        {
+          "id": "m3",
+          "text": "BSRR／BRR 和讀改寫 ODR 的差異",
+          "done": "2026-11-03"
+        },
+        {
+          "id": "m4",
+          "text": "上拉輸入為什麼要寫 ODR = 1",
+          "done": "2026-11-03"
+        },
+        {
+          "id": "m5",
+          "text": "用 IDR 讀按鍵，並把 Active-Low 封裝在 BSP 裡",
+          "done": "2026-11-03"
+        },
+        {
+          "id": "m6",
+          "text": ".h／.c 的拆分與 BSP 介面設計",
+          "done": "2026-11-03"
+        }
       ]
     },
     {
@@ -1007,7 +1133,7 @@
       "status": "進行中",
       "finished_at": null,
       "orig": "W01-S05, W02-S03",
-      "period": "10-15～10-21",
+      "period": "",
       "sessions": [
         {
           "start": "2026-11-03 22:14",
@@ -1391,6 +1517,43 @@
           "resolved": null,
           "id": "f0de8b6da2"
         }
+      ],
+      "stage": "基礎",
+      "kind": "register",
+      "order": 40,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "SysTick 的 LOAD、VAL、CTRL 與設定順序",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "1 ms tick 與 GetTick()；tick 變數為什麼要 volatile",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "32-bit 溢位時 (now - last) 仍然正確的原因",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "non-blocking 的週期任務寫法",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "按鍵去彈跳狀態機：事件與狀態的差別",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "完成驗收與收尾總整理",
+          "done": null
+        }
       ]
     },
     {
@@ -1405,9 +1568,51 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W00-S03",
-      "period": "10-15～10-21",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "基礎",
+      "kind": "debug",
+      "order": 50,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "向量表的前兩項（初始 SP、Reset_Handler）與 BOOT 腳位的關係",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "Reset_Handler 做的事：複製 .data、清 .bss、進入 main()",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": ".text、.rodata、.data、.bss、heap、stack 各放在 Flash 或 RAM 的哪裡",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "讀 .ld 的 MEMORY 與 SECTIONS；從 .map 找出變數位址與 Flash／RAM 用量",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "有初值的全域變數、const、static 區域變數、一般區域變數分別放在哪裡",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "stack overflow 會發生什麼事",
+          "done": null
+        },
+        {
+          "id": "m7",
+          "text": "3 分鐘口述「上電到 main」",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W02-S01",
@@ -1421,25 +1626,112 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W02-S02",
-      "period": "10-22～10-28",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "中斷與通訊",
+      "kind": "register",
+      "order": 60,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "AFIO_EXTICR 選腳位；EXTI 的 IMR、RTSR、FTSR",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "PR 寫 1 清除，以及為什麼不能用讀改寫",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "NVIC：致能、優先權分組、搶佔優先權與子優先權",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "向量表和 handler 名稱的對應",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "ISR 該做與不該做的事",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "ISR 與主迴圈共享變數：volatile、臨界區（暫時關中斷）、非原子操作造成的競爭",
+          "done": null
+        },
+        {
+          "id": "m7",
+          "text": "中斷延遲與巢狀中斷的概念",
+          "done": null
+        },
+        {
+          "id": "m8",
+          "text": "按鍵用 EXTI 和用輪詢去彈跳的比較",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W02-S02",
       "plan": "SPRINT",
       "week": "W02",
       "topic": "TIM",
-      "title": "Timer 週期中斷（暫存器）",
-      "content": "72 MHz 下計算 PSC/ARR 得到 1 ms 與 500 ms；設定 DIER.UIE，ISR 清 SR.UIF",
-      "output": "bsp_tim.c、邏輯分析儀截圖",
-      "criteria": "能推導 APB1 ÷2 時 TIM 時脈為何仍是 72 MHz；邏輯分析儀量 GPIO 翻轉週期誤差 <1%",
+      "title": "Timer 週期中斷＋PWM 基礎（暫存器）",
+      "content": "72 MHz 下計算 PSC/ARR 得到 1 ms 與 500 ms；設定 DIER.UIE，ISR 清 SR.UIF。再用計時器的通道輸出 1 kHz PWM：CCMR 設 PWM mode 1、CCER 開輸出、CCR 設 duty，腳位設成複用推挽輸出",
+      "output": "bsp_tim.c、邏輯分析儀截圖（週期中斷與 PWM）",
+      "criteria": "能推導 APB1 ÷2 時 TIM 時脈為何仍是 72 MHz；邏輯分析儀量 GPIO 翻轉週期誤差 <1%；量到 duty 10/50/90% 正確，能說明頻率與 duty 怎麼由 PSC、ARR、CCR 決定",
       "status": "未開始",
       "finished_at": null,
       "orig": "W03-S01",
-      "period": "10-22～10-28",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "中斷與通訊",
+      "kind": "register",
+      "order": 70,
+      "priority": "core",
+      "optional_topics": [
+        "preload（ARPE、OCxPE）",
+        "輸入捕捉"
+      ],
+      "must": [
+        {
+          "id": "m1",
+          "text": "計時器的時脈來源：APB1 分頻不是 1 時，TIM 時脈為什麼是 PCLK1 的 2 倍",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "PSC、ARR 的計算（為什麼都要減 1）、更新事件、UIF 的清除",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "用邏輯分析儀驗證週期",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "PWM：CCMR 的 PWM mode 1、CCER、CCR 與 duty、頻率計算",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "PWM 輸出腳位設成複用推挽",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "SysTick 和通用計時器的差異，各自適合做什麼",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W02-S03",
@@ -1450,12 +1742,19 @@
       "content": "CCMR 設 PWM mode 1、CCER 開輸出、ARR/CCR 設頻率與 duty，開 ARPE/OCxPE 預載；腳位設 AF push-pull",
       "output": "1 kHz 可調 duty PWM、波形截圖",
       "criteria": "邏輯分析儀量 duty 10/50/90% 正確；能解釋 preload 為何能避免波形錯誤",
-      "status": "未開始",
+      "status": "暫緩",
       "finished_at": null,
       "orig": "W03-S02",
-      "period": "10-22～10-28",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "中斷與通訊",
+      "kind": "register",
+      "order": 75,
+      "priority": "merged",
+      "merged_into": "SPRINT-W02-S02",
+      "must": [],
+      "optional_topics": []
     },
     {
       "id": "SPRINT-W02-S04",
@@ -1469,57 +1768,207 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W04-S01, W04-S02, W05-S01",
-      "period": "10-22～10-28",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "中斷與通訊",
+      "kind": "register",
+      "order": 80,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "資料幀格式（起始、資料、同位、停止）；BRR 計算與鮑率誤差",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "TXE 與 TC 的差異；RXNE",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "ORE、FE、NE 錯誤旗標與清除順序",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "中斷接收加 ring buffer：head／tail 的設計、滿與空的判斷、哪些變數要 volatile",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "輪詢、中斷、DMA 三種收發方式的取捨",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "把 printf 接到 UART",
+          "done": null
+        },
+        {
+          "id": "m7",
+          "text": "用邏輯分析儀解碼驗證",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W02-S05",
       "plan": "SPRINT",
       "week": "W02",
       "topic": "CLI",
-      "title": "CLI 移植到暫存器驅動",
-      "content": "把原本 HAL 版 ring buffer 與命令解析器接到新 UART 驅動；解析器改為函式指標命令表",
+      "title": "CLI（從頭寫）",
+      "content": "從頭寫行緩衝與命令解析：處理退格與 CR/LF、把字串切成 argc/argv（不用動態配置）、用函式指標命令表分派指令；CLI 只透過 UART 驅動的介面收發，不直接碰暫存器",
       "output": "cli.c、cmd_table",
-      "criteria": "原有指令全部可用；新增一個指令只需在命令表加一行",
+      "criteria": "help、led、status 等指令可用；新增一個指令只需在命令表加一行；超長輸入、未知指令、參數錯誤都有回報",
       "status": "未開始",
       "finished_at": null,
       "orig": "W05-S02, W05-S03",
-      "period": "10-22～10-28",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "中斷與通訊",
+      "kind": "arch",
+      "order": 90,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "行緩衝與字元處理（退格、CR／LF）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "把字串切成 argc／argv，不用動態配置",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "函式指標命令表：新增指令只加一行",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "輸入驗證與錯誤回報（超長、未知指令、參數錯誤）",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "模組介面：CLI 不直接碰 UART 暫存器",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W03-S01",
       "plan": "SPRINT",
       "week": "W03",
       "topic": "DMA",
-      "title": "DMA（暫存器）",
-      "content": "DMA1 Channel4 做 USART1 TX（CPAR/CMAR/CNDTR/CCR）並用 TC 中斷；ADC1 暫存器設定（校準、SMPR、SQR）搭配 DMA Channel1 連續轉換",
-      "output": "bsp_dma.c、bsp_adc.c",
-      "criteria": "能從 RM0008 對照表找出周邊對應的 DMA 通道；DMA 傳送期間 LED 持續閃爍不受影響",
+      "title": "DMA（USART TX，暫存器）",
+      "content": "DMA1 Channel4 做 USART1 TX（CPAR/CMAR/CNDTR/CCR），開 USART_CR3 的 DMAT，用傳輸完成中斷收尾；和中斷方式比較",
+      "output": "bsp_dma.c",
+      "criteria": "能從 RM0008 對照表找出周邊對應的 DMA 通道；DMA 傳送期間 LED 持續閃爍不受影響；能說明傳送中的緩衝區為什麼不能是區域變數",
       "status": "未開始",
       "finished_at": null,
       "orig": "W07-S01, W07-S02",
-      "period": "10-29～11-04",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "DMA 與架構",
+      "kind": "register",
+      "order": 100,
+      "priority": "core",
+      "optional_topics": [
+        "ADC1 連續轉換＋DMA 循環模式"
+      ],
+      "must": [
+        {
+          "id": "m1",
+          "text": "DMA 解決什麼問題；從 RM0008 找出周邊對應的 DMA 通道",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "CPAR、CMAR、CNDTR、CCR：方向、位址遞增、資料寬度、循環模式",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "啟動順序、傳輸完成中斷、旗標清除",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "周邊端的 DMA 致能位（USART_CR3 的 DMAT）",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "傳送期間緩衝區必須一直有效（不能用區域變數）",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "DMA 和中斷方式的比較",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W03-S02",
       "plan": "SPRINT",
       "week": "W03",
       "topic": "架構",
-      "title": "Driver / BSP / App 分層",
-      "content": "建立正式專案 repo：bsp/（暫存器層）、drivers/（陀螺儀、Flash、螢幕）、app/、common/；裝置驅動只能透過 bsp 介面存取硬體",
-      "output": "專案骨架、架構圖",
-      "criteria": "drivers/ 內搜尋不到任何暫存器名稱；能說明換 MCU 時只需改哪一層",
+      "title": "分層＋錯誤碼＋timeout",
+      "content": "建立正式專案 repo：bsp/（暫存器層）、drivers/（陀螺儀、Flash、螢幕）、app/、common/；裝置驅動只能透過 bsp 介面存取硬體。定義 err_t（OK / TIMEOUT / NACK / BUSY / INVALID_ARG…）；所有等待旗標的迴圈改成以 tick 計時的 timeout（包含時脈初始化）",
+      "output": "專案骨架、架構圖、common/err.h",
+      "criteria": "drivers/ 內搜尋不到任何暫存器名稱；能說明換 MCU 時只需改哪一層；等待旗標都有以時間計的 timeout，逾時回傳錯誤碼",
       "status": "未開始",
       "finished_at": null,
       "orig": "W09-S01",
-      "period": "10-29～11-04",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "DMA 與架構",
+      "kind": "arch",
+      "order": 110,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "bsp、drivers、app、common 的相依方向；drivers 裡不出現暫存器名稱",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "介面設計：.h 只放呼叫者需要的東西",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "統一錯誤碼 err_t 與回傳慣例",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "用 tick 計時的 timeout，並處理時脈課留下的 TODO",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "32-bit 溢位時仍正確的 timeout 比較寫法",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "換 MCU 時要改哪一層",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W03-S03",
@@ -1530,12 +1979,68 @@
       "content": "定義 err_t（OK / TIMEOUT / NACK / BUSY / INVALID_ARG…）；所有等待旗標的迴圈都加 timeout（以 millis 計）",
       "output": "common/err.h",
       "criteria": "拔掉感測器排線時程式不卡死，CLI 印出錯誤碼字串",
-      "status": "未開始",
+      "status": "暫緩",
       "finished_at": null,
       "orig": "W09-S02",
-      "period": "10-29～11-04",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "DMA 與架構",
+      "kind": "arch",
+      "order": 115,
+      "priority": "merged",
+      "merged_into": "SPRINT-W03-S02",
+      "must": [],
+      "optional_topics": []
+    },
+    {
+      "id": "SPRINT-PREP-01",
+      "plan": "SPRINT",
+      "week": "準備",
+      "period": "",
+      "topic": "準備",
+      "title": "確認模組型號、電壓與接線",
+      "content": "確認 I²C 陀螺儀、SPI 螢幕、SPI Flash 三個模組的實際型號（看晶片絲印與賣場資料）、工作電壓與邏輯電位（3.3 V／5 V）、模組上是否已有上拉電阻；下載對應的 datasheet 放進「STM32 參考文件」；列出和 Blue Pill 的接線表，避開 SWD 腳位 PA13／PA14",
+      "output": "接線表、三份 datasheet",
+      "criteria": "三個模組的型號都有 datasheet 佐證；接線表列出每支腳位與電壓",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "DMA 與架構",
+      "kind": "prep",
+      "order": 120,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "三個模組的實際型號",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "工作電壓與邏輯電位（3.3 V／5 V）",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "模組上是否已有 I²C 上拉電阻",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "下載三份 datasheet",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "和 Blue Pill 的接線表（避開 PA13／PA14）",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W04-S01",
@@ -1549,9 +2054,51 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W08-S01",
-      "period": "11-05～11-11",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "I²C",
+      "kind": "register",
+      "order": 130,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "為什麼用開漏加上拉；上拉電阻和速度的關係",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "START、STOP、重複起始；位址加讀寫位元",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "ACK 與 NACK 各由誰送",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "時序規則：SCL 為高時 SDA 必須穩定",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "clock stretching；匯流排卡死的原因",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "用邏輯分析儀做 I²C 解碼",
+          "done": null
+        },
+        {
+          "id": "m7",
+          "text": "I²C、SPI、UART 的比較",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W04-S02",
@@ -1561,13 +2108,45 @@
       "title": "陀螺儀驅動（照 datasheet）",
       "content": "依 register map 實作初始化（解除睡眠、量程、取樣率/濾波）、連續讀取加速度/角速度/溫度、原始值換算 g 與 °/s、靜止零點校正",
       "output": "drivers/imu.c",
-      "criteria": "靜止時 Z 軸約 1 g；翻轉板子數值合理；驅動只呼叫 I²C 介面",
+      "criteria": "靜止時 Z 軸約 1 g；翻轉板子數值合理；驅動只呼叫 I²C 介面；拔掉感測器排線時程式不卡死，CLI 印出錯誤碼字串",
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-05～11-11",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "I²C",
+      "kind": "driver",
+      "order": 140,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "讀元件 datasheet 的 register map；用 WHO_AM_I 驗證通訊",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "初始化序列的每一項理由（解除睡眠、量程、取樣率、濾波）",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "多 byte 連續讀取；高低位元組的順序與有號數的組合",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "原始值換算成物理量；靜止零點校正",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "驅動只依賴 I²C 介面；裝置不回應時回傳錯誤碼",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W04-S03",
@@ -1581,9 +2160,46 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-05～11-11",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "I²C",
+      "kind": "register",
+      "order": 150,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "CR1、CR2、CCR、TRISE 的計算",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "事件順序：SB、ADDR（先讀 SR1 再讀 SR2 清除）、TXE、BTF、RXNE",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "讀 1 byte、2 byte、多 byte 的流程差異",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "AF、BERR、ARLO 的錯誤處理與 timeout",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "匯流排卡死時送 9 個 clock 復原",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "同一個陀螺儀驅動只換底層就能運作",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W05-S01",
@@ -1597,9 +2213,46 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W08-S02",
-      "period": "11-12～11-18",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "SPI",
+      "kind": "register",
+      "order": 160,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "四條線的角色；全雙工移位的原理（為什麼送一個 byte 才收得到一個 byte）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "CPOL、CPHA 四種模式與時序圖",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "CR1：主從、鮑率分頻、SSM／SSI、位元順序",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "TXE、RXNE、BSY 的使用時機",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "CS 用 GPIO 控制的時機",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "用邏輯分析儀做 SPI 解碼",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W05-S02",
@@ -1613,41 +2266,146 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-12～11-18",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "SPI",
+      "kind": "driver",
+      "order": 170,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "JEDEC ID；指令格式（指令、位址、資料）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "寫入前為什麼要抹除（位元只能從 1 變 0）；Sector 與 Page 的大小",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "Write Enable、狀態暫存器的 BUSY",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "Page Program 與跨頁處理",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "抹寫壽命的概念",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "寫入後讀回驗證",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W05-S03",
       "plan": "SPRINT",
       "week": "W05",
       "topic": "SPI",
-      "title": "SPI 螢幕驅動 + 共用匯流排",
-      "content": "依螢幕控制 IC datasheet 送初始化序列、畫點/字元/數字；Flash 與螢幕共用 SPI1、各自 CS，切換時重設 mode 與速度；以 DMA 傳整頁畫面",
-      "output": "drivers/display.c、刷新時間紀錄",
-      "criteria": "螢幕與 Flash 交替存取不互相干擾；記錄 DMA 與輪詢刷新整頁的時間差",
+      "title": "SPI 螢幕驅動＋共用匯流排",
+      "content": "依螢幕控制 IC datasheet 送初始化序列、畫點/字元/數字；Flash 與螢幕共用 SPI1、各自 CS，切換時重設 mode 與速度",
+      "output": "drivers/display.c",
+      "criteria": "螢幕能顯示字元與數字；螢幕與 Flash 交替存取不互相干擾",
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-12～11-18",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "SPI",
+      "kind": "driver",
+      "order": 180,
+      "priority": "core",
+      "optional_topics": [
+        "用 DMA 刷新整頁並量測時間"
+      ],
+      "must": [
+        {
+          "id": "m1",
+          "text": "讀控制 IC datasheet 的初始化序列；指令與資料的區分方式",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "畫面緩衝區與更新方式",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "用點陣字型顯示字元與數字",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "兩個裝置共用一組 SPI：各自的 CS、切換時的模式與速度",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W06-S01",
       "plan": "SPRINT",
       "week": "W06",
       "topic": "可靠度",
-      "title": "IWDG + Reset 原因",
-      "content": "IWDG（KR/PR/RLR）設約 1 s 逾時並在主迴圈餵狗；開機讀 RCC_CSR 判斷 POR/PIN/IWDG/軟體重置，印出後清除旗標",
-      "output": "bsp_wdg.c",
-      "criteria": "故意讓程式卡住會被重啟，開機訊息顯示 IWDG reset",
+      "title": "IWDG＋Reset 原因＋低功耗模式",
+      "content": "IWDG（KR/PR/RLR）設約 1 s 逾時並在主迴圈餵狗；開機讀 RCC_CSR 判斷 POR/PIN/IWDG/軟體重置，印出後清除旗標。整理 Sleep／Stop／Standby 的差異與喚醒來源，實作用 WFI 進入 Sleep 並由中斷喚醒",
+      "output": "bsp_wdg.c、低功耗模式比較表",
+      "criteria": "故意讓程式卡住會被重啟，開機訊息顯示 IWDG reset；能說明三種低功耗模式的差異、喚醒來源與喚醒後的時脈狀態；WFI 進入 Sleep 後能由中斷喚醒",
       "status": "未開始",
       "finished_at": null,
       "orig": "W10-S01, W10-S02",
-      "period": "11-19～11-25",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "可靠度與整合",
+      "kind": "register",
+      "order": 190,
+      "priority": "core",
+      "optional_topics": [
+        "Stop 模式與喚醒後重新設定時脈"
+      ],
+      "must": [
+        {
+          "id": "m1",
+          "text": "IWDG 的時脈來源（LSI）；KR、PR、RLR 與逾時時間的計算",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "餵狗位置的設計",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "IWDG 和 WWDG 的差異",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "讀 RCC_CSR 判斷重置來源並清除旗標",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "Sleep、Stop、Standby 的差異、各自的喚醒來源、喚醒後的時脈狀態",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "實作：用 WFI 進入 Sleep，由中斷喚醒",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W06-S02",
@@ -1661,9 +2419,41 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W10-S03",
-      "period": "11-19～11-25",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "可靠度與整合",
+      "kind": "debug",
+      "order": 200,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "進入例外時自動存入堆疊的暫存器",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "從堆疊裡的 PC 與 LR 找出出錯位置（用 .map 或 addr2line）",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "CFSR、HFSR、BFAR 的判讀",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "常見原因：空指標、陣列越界、stack overflow、除以零",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "寫一個可重複使用的 fault handler",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W06-S03",
@@ -1677,9 +2467,46 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-19～11-25",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "可靠度與整合",
+      "kind": "arch",
+      "order": 210,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "資料流：TIM 定時取樣 → 螢幕顯示 → 寫入 Flash",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "記錄格式：header、序號、CRC",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "CLI 指令：log start、log stop、log dump、log erase、status",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "斷電後資料仍在且 CRC 驗證通過",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "連續記錄 5 分鐘不當機",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "打上 Git tag v1.0",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W06-S04",
@@ -1687,15 +2514,48 @@
       "week": "W06",
       "topic": "求職",
       "title": "履歷初稿與開始投遞",
-      "content": "履歷專案欄寫成「做了什麼、用了什麼、量化結果」；依公司調整強調面向",
+      "content": "陀螺儀驅動完成後就寫第一版，之後每完成一個驅動更新一次。履歷專案欄寫成「做了什麼、用了什麼、量化結果」；依公司調整強調面向",
       "output": "履歷 v1",
       "criteria": "履歷完成並投出至少 5 家",
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "11-19～11-25",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "career",
+      "order": 300,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "專案欄用「做了什麼、用了什麼、量化結果」的寫法",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "技能欄只列講得出細節的項目",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "依應徵公司調整強調的面向",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "請 Claude 以面試官角度找出會被追問的地方",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "投出至少 5 家",
+          "done": null
+        }
+      ],
+      "start_after": "SPRINT-W04-S02"
     },
     {
       "id": "SPRINT-W07-S01",
@@ -1709,9 +2569,36 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W12-S01, W12-S02",
-      "period": "11-26～12-02",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "arch",
+      "order": 310,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "pyserial 收發與逾時處理",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "接收 dump 存成 CSV 並畫出曲線",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "自動化測試案例：正常指令、錯誤參數、超長字串、快速連發",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "一行指令跑完所有測試並輸出 PASS／FAIL 報告",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W07-S02",
@@ -1725,9 +2612,36 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W16-S01",
-      "period": "11-26～12-02",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "career",
+      "order": 320,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "README：功能、架構圖、接線圖、邏輯分析儀截圖、建置方式",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "問題與解法至少 3 則",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "1–2 分鐘的 Demo 影片",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "整理資料夾與 commit 歷史",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W07-S03",
@@ -1741,9 +2655,53 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "W11, W14",
-      "period": "11-26～12-02",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "concept",
+      "order": 330,
+      "priority": "core",
+      "optional_topics": [
+        "FreeRTOS 實作（見選修課）"
+      ],
+      "must": [
+        {
+          "id": "m1",
+          "text": "Task 的狀態與排程（搶佔、時間片）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "Queue 的用途",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "Mutex 和 Semaphore 的差異",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "優先權反轉與優先權繼承",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "ISR 裡能做什麼、不能做什麼",
+          "done": null
+        },
+        {
+          "id": "m6",
+          "text": "super loop 和 RTOS 的取捨",
+          "done": null
+        },
+        {
+          "id": "m7",
+          "text": "站在晶片廠的角度：register map 與 driver API 會怎麼設計",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W08-S01",
@@ -1751,15 +2709,47 @@
       "week": "W08",
       "topic": "面試",
       "title": "C 與嵌入式題庫",
-      "content": "C：指標、位元運算、關鍵字、記憶體配置；嵌入式：中斷、DMA、I²C/SPI/UART 比較、上電流程、看門狗、HardFault",
+      "content": "C：指標、位元運算、關鍵字、記憶體配置；C 手寫題：memcpy、strlen、位元反轉、鏈結串列反轉、巨集陷阱、大小端；嵌入式：中斷、DMA、I²C/SPI/UART 比較、上電流程、看門狗、HardFault；ADC 觀念：解析度、取樣時間、參考電壓。題目來源以每課複習時累積的面試卡為主",
       "output": "題庫筆記",
       "criteria": "30 題能不看資料口答",
       "status": "未開始",
       "finished_at": null,
       "orig": "W16-S02",
-      "period": "12-03～12-09",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "career",
+      "order": 340,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "C：指標、位元運算、關鍵字、記憶體配置",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "C 手寫題：memcpy、strlen、位元反轉、鏈結串列反轉、巨集陷阱、大小端",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "嵌入式：中斷、DMA、I²C／SPI／UART 比較、上電流程、看門狗、HardFault",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "ADC 觀念：解析度、取樣時間、參考電壓",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "30 題能不看資料口答",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W08-S02",
@@ -1773,9 +2763,31 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "12-03～12-09",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "career",
+      "order": 350,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "3 分鐘專案介紹稿",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "10 個追問的回答（最難的 bug、為何不用 HAL、如何移植、如何測試…）",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "錄音自評一次，3 分鐘內講完",
+          "done": null
+        }
+      ]
     },
     {
       "id": "SPRINT-W08-S03",
@@ -1789,9 +2801,290 @@
       "status": "未開始",
       "finished_at": null,
       "orig": "—",
-      "period": "12-03～12-09",
+      "period": "",
       "sessions": [],
-      "entries": []
+      "entries": [],
+      "stage": "求職線",
+      "kind": "career",
+      "order": 360,
+      "priority": "core",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "模擬面試（請人或用 Claude）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "每次面試後記錄被問的題目與改進點",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "依回饋修正履歷與作品",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-01",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "Bootloader",
+      "title": "Bootloader／IAP（選修）",
+      "content": "寫一個放在 Flash 前段的 bootloader：開機判斷是否進入更新模式，透過 UART 接收新韌體、用 Flash 程式設計手冊的流程抹除與寫入、驗證後跳到應用程式；應用程式改 linker script 的起始位址並重設向量表位址（SCB->VTOR）",
+      "output": "bootloader 專案、更新用的 Python 腳本",
+      "criteria": "不接 ST-LINK 也能透過 UART 更新應用程式；更新中斷電不會變磚",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "arch",
+      "order": 400,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "Flash 的解鎖、抹除、寫入流程",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "記憶體配置：bootloader 與應用程式各佔哪一段",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "跳轉到應用程式：設定 MSP、VTOR、跳到 Reset_Handler",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "傳輸協定與完整性檢查（CRC）",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "更新失敗時的復原設計",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-02",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "RTOS",
+      "title": "FreeRTOS 實作（選修）",
+      "content": "把姿態記錄器改成 2–3 個 task：取樣、顯示／記錄、CLI；用 queue 傳資料、mutex 保護共用的 SPI 匯流排",
+      "output": "FreeRTOS 版韌體",
+      "criteria": "三個 task 穩定運作；能說明每個 task 的優先權與 stack 大小怎麼決定",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "arch",
+      "order": 410,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "移植 FreeRTOS：SysTick、PendSV、SVC 的角色",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "task 的建立、優先權與 stack 大小",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "queue 在 task 之間傳資料",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "mutex 保護共用資源",
+          "done": null
+        },
+        {
+          "id": "m5",
+          "text": "ISR 與 task 的互動（FromISR 系列 API）",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-03",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "ADC",
+      "title": "ADC＋DMA 循環模式（選修）",
+      "content": "ADC1 暫存器設定（校準、SMPR、SQR），搭配 DMA1 Channel1 循環模式做連續轉換",
+      "output": "bsp_adc.c",
+      "criteria": "連續轉換的數值穩定更新；能說明取樣時間怎麼影響轉換時間",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "register",
+      "order": 420,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "ADC 校準與啟動流程",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "SMPR 取樣時間與 SQR 轉換序列",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "DMA 循環模式",
+          "done": null
+        },
+        {
+          "id": "m4",
+          "text": "解析度、參考電壓與數值換算",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-04",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "PWM",
+      "title": "PWM 進階：preload 與輸入捕捉（選修）",
+      "content": "開 ARPE／OCxPE 預載並說明作用；用輸入捕捉量測外部訊號的頻率與 duty",
+      "output": "波形截圖、量測結果",
+      "criteria": "能解釋 preload 為何能避免波形錯誤；輸入捕捉量到的頻率誤差 <1%",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "register",
+      "order": 430,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "ARPE、OCxPE 預載的作用",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "輸入捕捉的設定與計算",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "量測結果和邏輯分析儀比對",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-05",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "低功耗",
+      "title": "Stop 模式與喚醒（選修）",
+      "content": "進入 Stop 模式，用 EXTI 喚醒；喚醒後時脈回到 HSI，重新執行時脈初始化",
+      "output": "低功耗示範程式",
+      "criteria": "按鍵可以喚醒；喚醒後 UART 鮑率仍正確",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "register",
+      "order": 440,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "進入 Stop 模式的設定（PWR_CR、SLEEPDEEP）",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "EXTI 喚醒",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "喚醒後重新設定時脈",
+          "done": null
+        }
+      ]
+    },
+    {
+      "id": "SPRINT-OPT-06",
+      "plan": "SPRINT",
+      "week": "選修",
+      "period": "",
+      "topic": "SPI",
+      "title": "螢幕 DMA 刷新整頁（選修）",
+      "content": "用 SPI TX DMA 傳送整頁畫面緩衝區，和輪詢方式比較刷新時間",
+      "output": "刷新時間紀錄",
+      "criteria": "記錄 DMA 與輪詢刷新整頁的時間差",
+      "orig": null,
+      "status": "未開始",
+      "sessions": [],
+      "entries": [],
+      "summary": null,
+      "finished_at": null,
+      "stage": "選修",
+      "kind": "driver",
+      "order": 450,
+      "priority": "optional",
+      "optional_topics": [],
+      "must": [
+        {
+          "id": "m1",
+          "text": "SPI TX 搭配 DMA 的設定",
+          "done": null
+        },
+        {
+          "id": "m2",
+          "text": "傳輸完成後才能拉高 CS",
+          "done": null
+        },
+        {
+          "id": "m3",
+          "text": "量測並比較刷新時間",
+          "done": null
+        }
+      ]
     },
     {
       "id": "STM32-W00-S01",

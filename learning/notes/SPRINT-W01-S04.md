@@ -1,8 +1,7 @@
 # SPRINT-W01-S04：SysTick 與 non-blocking（暫存器）
 
 - 狀態：**進行中**
-- 週次：W01　主題：SysTick
-- 對應原任務（HAL 版）：W01-S05, W02-S03
+- 階段：基礎　主題：SysTick
 - 進行次數：10 次（最近一次：2026-11-12）
 - 程式碼：[projects/SPRINT-W01-S04](../../projects/SPRINT-W01-S04)
 
@@ -13,6 +12,15 @@
 ## 完成標準
 
 tick 計數變數為何要 volatile；32-bit 溢位時 (now - last) 仍正確的原因
+
+## 必學範圍
+
+- [ ] SysTick 的 LOAD、VAL、CTRL 與設定順序
+- [ ] 1 ms tick 與 GetTick()；tick 變數為什麼要 volatile
+- [ ] 32-bit 溢位時 (now - last) 仍然正確的原因
+- [ ] non-blocking 的週期任務寫法
+- [ ] 按鍵去彈跳狀態機：事件與狀態的差別
+- [ ] 完成驗收與收尾總整理
 
 ## 問題與筆記
 
@@ -33,7 +41,7 @@ tick 計數變數為何要 volatile；32-bit 溢位時 (now - last) 仍正確的
 - PM0056 名稱 `STK_CTRL`／`STK_LOAD`／`STK_VAL` ＝ CMSIS 的 `SysTick->CTRL`／`LOAD`／`VAL`（CMSIS 由 ARM 定義，各家共用）
 - 判斷查哪本：周邊是 ST 加的（GPIO、RCC）→ RM；所有 Cortex-M3 都有的（SysTick、NVIC）→ PM
 
-### [問題] 2026-11-04 16:29 ✅ 已解決
+### [問題] 2026-11-04 16:29
 
 【問題】把 SysTick 的 TICKINT 誤解成「初始化 tick」
 **TICKINT 決定數到 0 時要不要產生中斷，跟初始化無關**
@@ -111,7 +119,7 @@ tick 計數變數為何要 volatile；32-bit 溢位時 (now - last) 仍正確的
 - field ＝ 欄位，這裡指 `VAL` 的 CURRENT（bit 23:0）
 - 重設值：PM0056 寫 0，ARMv7-M 架構手冊寫 UNKNOWN；debugger 重新下載不一定斷電 → 不要依賴重設值
 
-### [問題] 2026-11-04 16:31 ✅ 已解決
+### [問題] 2026-11-04 16:31
 
 【問題】SysTick 時脈來源選 72 MHz 的理由講反了
 **72 MHz 的優點是解析度高，不是「低速用途也能用」；需要長週期時 /8 反而比較有利**
@@ -162,7 +170,7 @@ while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完�
 | 1.0 ms | 1 → 0，COUNTFLAG = 1 | — | — |
 | 1.0 ms 多一點 | 讀完後清 0 | 1 | 跳出 |
 
-### [問題] 2026-11-04 21:38 ✅ 已解決
+### [問題] 2026-11-04 21:38
 
 【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
 **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
@@ -176,7 +184,7 @@ while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完�
 - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
 - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
 
-### [問題] 2026-11-04 22:15 ✅ 已解決
+### [問題] 2026-11-04 22:15
 
 【問題】想把 SysTick_Handler 加上 static 來「不公開」
 **handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**
@@ -236,7 +244,7 @@ while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完�
 - 18 個時脈 ≈ 0.25 µs（72 MHz）＝ 中斷延遲：Cortex-M3 進中斷固定 12 個時脈（硬體推堆疊、查向量表）＋ 函式開頭指令
 - 驗證 tick：中斷點停住時 tick 會一次加 1；拿掉中斷點跑一陣子，數值持續增加（實測 4 → 8306）
 
-### [問題] 2026-11-04 22:46 ✅ 已解決
+### [問題] 2026-11-04 22:46
 
 【問題】以為 ~Msk 的值是 0
 **~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**
@@ -366,7 +374,7 @@ _Static_assert(SYSTICK_LOAD_VALUE <= SysTick_LOAD_RELOAD_Msk,
 - 危險之處：`-O0` 下缺 `volatile` 往往看起來正常，換成 Release 才出錯
 - 「快取」指放在 CPU 核心暫存器（R0～R12），不是周邊暫存器
 
-### [問題] 2026-11-05 21:38 ✅ 已解決
+### [問題] 2026-11-05 21:38
 
 【問題】延遲函式用 if，沒有等待
 **if 只判斷一次就往下走；要「一直等到條件不成立」必須用 while**
@@ -399,7 +407,7 @@ while ((tick - start) < ms) { }
 - 結論：誤差 0.015%，SysTick 設定正確
 - 工具：LA1010（KingstVIS），5 MSa/s 取樣，量測面板直接讀脈寬、週期、頻率
 
-### [問題] 2026-11-05 21:53 ✅ 已解決
+### [問題] 2026-11-05 21:53
 
 【問題】改了最佳化等級，LED 現象卻沒變
 **Clean／Build 只在電腦上產生 .elf，沒有按 Debug／Run 下載，晶片跑的還是舊程式**
@@ -473,7 +481,7 @@ uint32_t BSP_SysTick_GetTick(void) { return tick; }
 - `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取
 - 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫
 
-### [問題] 2026-11-07 18:03 ✅ 已解決
+### [問題] 2026-11-07 18:03
 
 【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
 **每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**
@@ -644,7 +652,7 @@ background_counter++;                  // 每圈都會執行
 - 降頻目的：省電（中斷會把睡眠中的 CPU 叫醒）；代價：解析度變成 10 ms
 - 本課固定 1 kHz，`tick++` 即可
 
-### [問題] 2026-11-08 22:30 ✅ 已解決
+### [問題] 2026-11-08 22:30
 
 【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
 **同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**
@@ -832,7 +840,7 @@ static button_state_t state = BUTTON_STATE_RELEASED;
 - 清除後：只有第 1 圈回答「有」，速度只切換一次
 - `.h` 介面用到 `uint32_t`、`bool` → 要 include `<stdint.h>`、`<stdbool.h>`
 
-### [問題] 2026-11-09 22:57 ✅ 已解決
+### [問題] 2026-11-09 22:57
 
 【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對
 **讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**
@@ -854,7 +862,7 @@ bool Button_Debounce_WasPressed(void)
 
 - 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉
 
-### [問題] 2026-11-09 22:57 ✅ 已解決
+### [問題] 2026-11-09 22:57
 
 【問題】以為 press_event 要加 volatile
 **判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**
@@ -869,7 +877,7 @@ bool Button_Debounce_WasPressed(void)
 - 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途
 - 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要
 
-### [問題] 2026-11-10 23:06 ✅ 已解決
+### [問題] 2026-11-10 23:06
 
 【問題】改變週期後 last += period 連續補做
 **週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**

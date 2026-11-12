@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STM32 學習進度（新版）</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --ink:#1d2330; --muted:#677084; --line:#e2e5eb;
+  --accent:#1f6feb; --accent-ink:#fff; --ok:#1a7f37; --warn:#b26a00; --bad:#c62828; --pause:#6e7781;
+  --chip:#eef1f5; --view:#7c4dcc; --q:#fff4e5; --n:#eef4ff; --s:#e9f7ee; --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1218; --panel:#171b23; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2a303c;
+  --accent:#4c8dff; --chip:#232936; --view:#9a6bff; --q:#3a2c14; --n:#1b2740; --s:#16301f;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:14px;padding:12px 0;flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:700}
+.bar{flex:1;min-width:160px;height:8px;background:var(--chip);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.prog{font-size:13px;color:var(--muted);white-space:nowrap}
+.git{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.git a{color:var(--accent)}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+button.view{background:var(--view);border-color:var(--view);color:#fff}
+button.small{padding:2px 8px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}
+nav{display:flex;gap:4px}
+nav button{border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;background:none;color:var(--muted)}
+nav button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:700}
+main{padding:16px 0 60px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.active{border:2px solid var(--accent)}
+.code{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.title{font-size:17px;font-weight:700}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:5px 12px}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+textarea,input[type=search],input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{min-height:90px;resize:vertical}
+.entry{border-radius:8px;padding:8px 12px;margin:8px 0;word-break:break-word}
+.md{line-height:1.6}
+.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md p{margin:4px 0}.md ul,.md ol{margin:4px 0;padding-left:22px}.md li{margin:2px 0}
+.md h3,.md h4,.md h5{margin:8px 0 4px;font-size:15px}
+.md code{font-family:var(--mono);font-size:12.5px;background:var(--chip);padding:1px 5px;border-radius:4px}
+.md pre{margin:6px 0;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:12.5px/1.45 var(--mono);white-space:pre}
+.md pre code{background:none;padding:0}
+.md blockquote{margin:6px 0;padding:2px 10px;border-left:3px solid var(--line);color:var(--muted)}
+.md table{border-collapse:collapse;margin:6px 0;font-size:13.5px}.md th,.md td{border:1px solid var(--line);padding:3px 8px;text-align:left}
+.entry.preview{background:var(--chip);border:1px dashed var(--line)}
+.md hr{border:none;border-top:1px solid var(--line);margin:8px 0}
+.entry.問題{background:var(--q)} .entry.筆記{background:var(--n)} .entry.解法{background:var(--s)}
+.entry.進度,.entry.待學{background:var(--chip)} .entry.待學{border-left:3px solid var(--view)} .entry.進度{border-left:3px solid var(--accent)}
+.entry.面試{background:var(--chip);border-left:3px solid var(--warn)}
+.entry.isopen{outline:2px solid var(--bad)}
+.entry textarea.edit{min-height:220px;font:13px/1.55 var(--mono);margin-top:6px}
+.batch{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0}
+.batch.off{opacity:.55}
+.batch .t{font-weight:600;word-break:break-word}
+.batch select{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 4px}
+.entry .meta{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);white-space:normal;margin-bottom:2px}
+.pill{display:inline-block;font-size:12px;padding:1px 9px;border-radius:99px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.已完成{background:var(--ok);color:#fff}.pill.進行中{background:var(--accent);color:#fff}
+.pill.卡關{background:var(--bad);color:#fff}.pill.暫緩{background:var(--pause);color:#fff}
+.week{margin:18px 0 6px;font-weight:700;color:var(--muted);font-size:14px}
+.task{border-bottom:1px solid var(--line);padding:10px 4px}
+.task:last-child{border-bottom:none}
+.task .head{display:flex;gap:10px;align-items:center;cursor:pointer}
+.task .head .t{flex:1}
+.detail{margin:10px 0 4px 4px;font-size:14px}
+.detail h4{margin:12px 0 2px;font-size:13px;color:var(--muted)}
+.detail p{margin:0;white-space:pre-wrap}
+.commits a{font-family:var(--mono);font-size:13px;color:var(--accent)}
+.muted{color:var(--muted);font-size:13px}
+.dash{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.dash .tile{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.dash .tile b{display:block;font-size:20px;line-height:1.3}
+.dash .tile span{font-size:12px;color:var(--muted)}
+.dash .tile.wide{flex:2;min-width:260px}
+.pill.opt{background:var(--view);color:#fff}
+.pill.due{background:var(--warn);color:#fff}
+.rev{display:flex;gap:8px;align-items:baseline;padding:4px 0}
+.must{margin:6px 0 10px}
+.must label{display:flex;gap:8px;align-items:baseline;padding:2px 0;cursor:pointer}
+.must label.done span{color:var(--muted)}
+.fincheck{font-size:14px;line-height:1.7;margin:8px 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px}
+.fincheck .no{color:var(--warn)}
+.task.merged .t{color:var(--muted)}
+.notice{font-size:13px;color:var(--muted);padding:8px 4px}
+.badge{font-size:11px;font-weight:700;background:var(--ok);color:#fff;border-radius:99px;padding:1px 8px;vertical-align:middle}
+#syncErr{display:none;background:var(--bad);color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px;line-height:1.6}
+#syncErr button{background:#fff;color:var(--bad);border-color:#fff}
+#fatal{position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:var(--bad);color:#fff;border-radius:10px;padding:12px 16px;white-space:pre-wrap;font-size:14px;line-height:1.6}
+.todo{display:flex;gap:8px;align-items:baseline;padding:4px 0;cursor:pointer}
+.todo.done span:first-of-type{text-decoration:line-through;color:var(--muted)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input{flex:1;min-width:200px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.on{display:flex}
+.modal .card{width:min(560px,100%);margin:0}
+.choice{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.choice label{display:flex;gap:8px;align-items:center;cursor:pointer}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;display:none;max-width:90vw;white-space:pre-wrap;z-index:30}
+#closed{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:40;text-align:center;padding:16px}
+#closed.on{display:flex}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:10px;margin-top:6px}
+.drop.over{border-color:var(--accent);background:var(--chip)}
+.files{font-family:var(--mono);font-size:13px;max-height:260px;overflow:auto;margin-top:6px}
+.files div{display:flex;gap:8px;align-items:center;padding:2px 0}
+.files a{cursor:pointer;color:var(--accent)}
+textarea.prompt{min-height:340px;font:13px/1.55 var(--mono)}
+.modal .card.wide{width:min(820px,100%);max-height:92vh;overflow:auto}
+pre.code-view{margin:10px 0 0;max-height:65vh;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 var(--mono);white-space:pre;tab-size:4}
+</style>
+<script>
+// 畫面防呆：主程式出錯（包含語法錯誤）時顯示訊息，不要只剩空白畫面
+window.addEventListener("error", function(ev){
+  var b = document.getElementById("fatal");
+  if (!b){ b = document.createElement("div"); b.id = "fatal"; (document.body || document.documentElement).appendChild(b); }
+  b.textContent = "App 畫面發生錯誤：" + (ev.message || "未知錯誤") + "（第 " + (ev.lineno || "?") + " 行）\n" +
+    "筆記資料沒有受影響。請先改用舊版 STM32Tracker.exe，並把這段訊息貼給 Claude。";
+});
+</script>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <h1>STM32 學習進度 <span class="badge" title="新版 App（tracker2）。舊版 STM32Tracker.exe 仍可使用，兩者共用同一份筆記，但不要同時開啟。">新版</span></h1>
+    <div class="bar"><i id="barFill" style="width:0"></i></div>
+    <span class="prog" id="progText"></span>
+    <div class="git" id="gitInfo"></div>
+    <button id="syncBtn" title="從 GitHub 取得最新進度並上傳本機變更">⟳ 同步</button>
+    <button id="quitBtn" title="結束背景程式（直接關閉分頁也會自動結束）">關閉 App</button>
+  </div>
+  <nav>
+    <button data-tab="tasks" class="on">任務</button>
+    <button data-tab="review">複習</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <div id="syncErr"></div>
+  <section id="activeBox"></section>
+  <section id="tab-tasks">
+    <div class="dash" id="dash"></div>
+    <div class="filters">
+      <div class="seg" id="planSeg">
+        <button data-plan="SPRINT" class="on">學習計畫</button>
+        <button data-plan="HAL" title="以前用 HAL 做的課題，已封存，只能查看">舊紀錄（HAL，唯讀）</button>
+      </div>
+    </div>
+    <div id="remindBox"></div>
+    <div id="todoBox"></div>
+    <div id="laterBox"></div>
+    <div class="card" id="taskList"></div>
+  </section>
+  <section id="tab-review" hidden>
+    <div class="filters">
+      <input type="search" id="q" placeholder="搜尋問題與筆記…">
+      <div class="seg" id="typeSeg">
+        <button data-type="" class="on">全部</button>
+        <button data-type="open">待解決</button>
+        <button data-type="問題">問題（踩過的錯）</button>
+        <button data-type="筆記">筆記</button>
+        <button data-type="解法">解法</button>
+        <button data-type="進度">進度</button>
+        <button data-type="待學">待學</button>
+        <button data-type="面試">面試</button>
+      </div>
+    </div>
+    <div id="reviewList"></div>
+  </section>
+</main>
+
+<div class="modal" id="finishModal"><div class="card">
+  <div class="title">結束本次課題</div>
+  <div class="code" id="finishCode"></div>
+  <div class="choice">
+    <label><input type="radio" name="fin" value="done" checked> 已完成這個課題（commit 並加上 tag）</label>
+    <label><input type="radio" name="fin" value="進行中"> 尚未完成，下次繼續（commit＋push，不打 tag）</label>
+    <label><input type="radio" name="fin" value="卡關"> 卡關，需要協助（產生求助提示詞）</label>
+  </div>
+  <div class="fincheck" id="finishCheck" style="display:none"></div>
+  <div class="muted" id="finishHint"></div>
+  <div id="finishTwo" style="display:none">
+    <textarea id="finWhere" style="min-height:64px" placeholder="做到哪：完成了哪些步驟（也可以直接貼上 Claude 給的【本次進度】，下面那格就不用填）"></textarea>
+    <textarea id="finNext" style="min-height:52px;margin-top:6px" placeholder="下次從哪開始：下一步要做什麼、還沒弄懂的地方"></textarea>
+  </div>
+  <textarea id="finishSummary"></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="finishCancel">取消</button>
+    <button class="primary" id="finishOk">結束並同步到 GitHub</button>
+  </div>
+</div></div>
+
+<div class="modal" id="addModal"><div class="card wide">
+  <div class="title">新增筆記</div>
+  <div class="code" id="addCode"></div>
+  <div class="muted" style="margin:4px 0 8px">不會開始課題，也不會改變課題狀態。可以把 Claude 的整段回覆一次貼上，App 會依開頭的【】自動拆開、分類並檢查重複。</div>
+  <textarea id="addText" style="min-height:260px" placeholder="例如複習結束時 Claude 給的【面試】卡，或補做的【解法】總整理"></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="addCancel">取消</button>
+    <button class="primary" id="addOk">儲存</button>
+  </div>
+</div></div>
+
+<div class="modal" id="batchModal"><div class="card wide">
+  <div class="title">一次儲存多則紀錄</div>
+  <div class="muted" id="batchHint" style="margin:4px 0 8px"></div>
+  <div id="batchList"></div>
+  <div class="row" style="margin-top:12px">
+    <button class="small" id="batchOne" title="不拆開，把貼上的全部內容存成一則">不要拆開，存成一則</button><span class="sp"></span>
+    <button id="batchCancel">取消</button>
+    <button class="primary" id="batchOk">儲存</button>
+  </div>
+</div></div>
+
+<div class="modal" id="restartModal"><div class="card">
+  <div class="title">清除重來？</div>
+  <div class="code" id="restartCode"></div>
+  <div id="restartBody" style="margin:10px 0;font-size:14px"></div>
+  <label class="row" style="margin:12px 0;cursor:pointer;gap:8px">
+    <input type="checkbox" id="restartCheck"> <span>我確定要清除這個課題的紀錄</span></label>
+  <div class="row"><span class="sp"></span>
+    <button id="restartCancel">取消</button>
+    <button class="danger" id="restartOk" disabled>清除並重新開始</button>
+  </div>
+</div></div>
+
+<div class="modal" id="codeModal"><div class="card" style="width:min(980px,100%)">
+  <div class="row"><div class="code" id="codeName"></div><span class="sp"></span><button id="codeClose">關閉</button></div>
+  <pre class="code-view" id="codeBody"></pre>
+</div></div>
+
+<div class="modal" id="promptModal"><div class="card wide">
+  <div class="title" id="promptTitle"></div>
+  <div class="muted" id="promptHint" style="margin:4px 0 8px"></div>
+  <textarea class="prompt" id="promptText" readonly></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="promptClose">關閉</button>
+    <button class="primary" id="promptCopy">複製提示詞</button>
+  </div>
+  <div id="reviewRec" style="display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+    <b>複習完了嗎？記錄這次的結果</b>
+    <div class="muted" style="margin:2px 0 6px">Claude 會在最後給總評。App 依結果安排下次複習日：順利就拉長間隔，部分卡住維持同樣的間隔，需要重看就明天再複習。</div>
+    <input type="text" id="reviewNote" placeholder="還不穩的地方（選填，下次複習會優先考）">
+    <div class="row" style="margin-top:8px"><button data-res="good">順利</button><button data-res="ok">部分卡住</button><button data-res="weak">需要重看</button>
+      <span class="muted">Claude 給的面試卡，到這一課的「＋ 新增筆記到這一課」貼上</span></div>
+  </div>
+</div></div>
+
+<div class="modal" id="stuckModal"><div class="card">
+  <div class="title">卡關求助</div>
+  <div class="code" id="stuckCode"></div>
+  <div class="muted" style="margin:6px 0">描述卡在哪裡：想做什麼、實際發生什麼、已經試過什麼、錯誤訊息。會記成一則「待解決」的問題，課題繼續進行中。</div>
+  <textarea id="stuckText" placeholder="例：設定 PLL×9 後程式卡在 while(!(RCC->CFGR & RCC_CFGR_SWS_PLL))，debugger 看到 CFGR 的 SWS 一直是 00…"></textarea>
+  <div class="row" style="margin-top:12px"><span class="sp"></span>
+    <button id="stuckCancel">取消</button>
+    <button class="primary" id="stuckOk">產生求助提示詞</button>
+  </div>
+</div></div>
+
+<div id="toast"></div>
+<div id="closed"><div><div class="title">App 已關閉</div>
+  <p class="muted">可以關閉這個視窗了。要繼續學習，請重新開啟 STM32Tracker.exe。</p></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// 簡易 Markdown：支援 **粗體**、`程式碼`、```程式碼區塊```、- / * / • 清單、1. 編號清單、### 標題、> 引言、| 表格 |、---
+// 先跳脫 HTML 再轉換，所以內容不會被當成 HTML 執行。
+function mdInline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+}
+// 表格列切欄位：\| 是文字的 |；`反引號程式碼` 裡的 | 也不當欄位分隔
+function splitCells(row){
+  let s = row.trim();
+  if (s.startsWith("|")) s = s.slice(1);
+  if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+  const out = []; let cur = "", code = false;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (c === "\\" && s[i + 1] === "|"){ cur += "|"; i++; continue; }
+    if (c === "`") code = !code;
+    if (c === "|" && !code){ out.push(cur.trim()); cur = ""; continue; }
+    cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+function md(text){
+  const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+  let html = "", i = 0;
+  const isUl = l => /^\s*([-*•])\s+/.test(l), isOl = l => /^\s*\d+[.)、]\s+/.test(l);
+  const isRow = l => /^\s*\|.*\|\s*$/.test(l);
+  while (i < lines.length){
+    const l = lines[i];
+    if (/^\s*```/.test(l)){                       // 程式碼區塊
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+      i++; html += `<pre><code>${esc(buf.join("\n"))}</code></pre>`; continue;
+    }
+    if (!l.trim()){ i++; continue; }
+    let m;
+    if ((m = l.match(/^\s*(#{1,6})\s+(.*)$/))){
+      const n = Math.min(5, Math.max(3, m[1].length + 2));
+      html += `<h${n}>${mdInline(m[2])}</h${n}>`; i++; continue;
+    }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)){ html += "<hr>"; i++; continue; }
+    if (/^\s*>/.test(l)){
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+      html += `<blockquote>${md(buf.join("\n"))}</blockquote>`; continue;
+    }
+    if (isRow(l)){                                // 表格
+      const rows = [];
+      while (i < lines.length && isRow(lines[i])) rows.push(lines[i++]);
+      const cells = splitCells;
+      const sep = rows.length > 1 && /^[\s|:-]+$/.test(rows[1]);
+      let t = "<table>";
+      rows.forEach((r, k) => { if (sep && k === 1) return;
+        const tag = sep && k === 0 ? "th" : "td";
+        t += "<tr>" + cells(r).map(c => `<${tag}>${mdInline(c)}</${tag}>`).join("") + "</tr>"; });
+      html += t + "</table>"; continue;
+    }
+    if (isUl(l) || isOl(l)){                      // 清單（以縮排做巢狀）
+      const ordered = isOl(l), items = [];
+      while (i < lines.length && lines[i].trim() && !/^\s*```/.test(lines[i])){
+        const cur = lines[i];
+        if ((ordered ? isOl(cur) : isUl(cur)) && cur.search(/\S/) <= l.search(/\S/)){
+          items.push([cur.replace(ordered ? /^\s*\d+[.)、]\s+/ : /^\s*[-*•]\s+/, "")]);
+        } else if (items.length && cur.search(/\S/) > l.search(/\S/)){
+          items[items.length - 1].push(cur);
+        } else break;
+        i++;
+      }
+      const tag = ordered ? "ol" : "ul";
+      const start = ordered ? parseInt(l.trim(), 10) : 1;
+      html += `<${tag}${start > 1 ? ` start="${start}"` : ""}>` + items.map(([first, ...rest]) => {
+        const sub = rest.length ? md(rest.map(r => r.replace(/^\s{1,4}/, "")).join("\n")) : "";
+        return `<li>${mdInline(first)}${sub}</li>`; }).join("") + `</${tag}>`;
+      continue;
+    }
+    const buf = [];                               // 一般段落：保留換行
+    while (i < lines.length && lines[i].trim() && !isUl(lines[i]) && !isOl(lines[i]) && !isRow(lines[i])
+           && !/^\s*(```|#{1,6}\s|>)/.test(lines[i])) buf.push(lines[i++]);
+    html += `<p>${buf.map(mdInline).join("<br>")}</p>`;
+  }
+  return html;
+}
+let S = {tasks:[], git:{}, todos:[], later:[], review:{}, nudges:[]}, showDoneTodo = false, showDoneLater = false, editing = null, plan = "SPRINT", typeFilter = "", entryType = "問題", open = new Set(), busy = false;
+
+async function api(path, body){
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.error || "發生錯誤");
+  return j;
+}
+function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
+async function act(path, body, quiet){
+  if (busy) return; busy = true;
+  try { const j = await api(path, body); if (!quiet) toast((j.messages||[]).join("\n")); await refresh();
+        if (j.prompt) showPrompt(j.prompt, j.prompt_kind, j.prompt_task); }
+  catch(e){ toast("⚠ " + e.message, 6000); }
+  finally { busy = false; }
+}
+async function refresh(){
+  const draft = $("#entryText")?.value;
+  const st = await api("/api/state");
+  if (st.syncing){ toast("正在從 GitHub 同步最新進度…", 60000); await new Promise(r => setTimeout(r, 800)); return refresh(); }
+  S = st;
+  if (S.sync_msg) toast(S.sync_msg);
+  render();
+  if (draft && $("#entryText")) { $("#entryText").value = draft; $("#entryText").oninput?.(); }
+}
+const activeTask = () => S.tasks.find(t => t.sessions?.length && !t.sessions.at(-1).end);
+
+function render(){
+  const fc = S.forecast || {tech_done:0, tech_total:0};
+  $("#barFill").style.width = (fc.tech_done*100/Math.max(1,fc.tech_total)) + "%";
+  $("#progText").textContent = `技術必修 ${fc.tech_done} / ${fc.tech_total}`;
+  const g = S.git;
+  $("#gitInfo").innerHTML = !g.is_repo ? "⚠ 尚未建立 Git repo（只存本機）"
+    : `<span>⎇ ${esc(g.branch)}</span>` + (g.web ? `<a href="${esc(g.web)}" target="_blank">GitHub</a>` : "<span>（未設定 remote）</span>")
+      + (g.dirty ? `<span title="有尚未 commit 的變更">●</span>` : "");
+  $("#syncBtn").disabled = !g.remote;
+  renderSyncError(); renderDash(); renderActive(); renderRemind(); renderTodos(); renderLater(); renderTasks(); renderReview();
+}
+
+// ---------- 進度儀表：不設每課次數，只依實際速度推算完成日
+function renderDash(){
+  const f = S.forecast; if (!f){ $("#dash").innerHTML = ""; return; }
+  const from = (f.avg_from || []).map(x => x.replace("SPRINT-", "")).join("、");
+  const eta = f.eta ? `<b>${esc(f.eta)}</b><span>預估技術主線完成日。剩 ${f.remaining} 課 × 最近平均每課 ${f.avg_days} 天（依 ${esc(from)} 推算，會隨實際速度更新）</span>`
+    : `<b>—</b><span>完成更多課題後才能推算完成日</span>`;
+  $("#dash").innerHTML = `
+    <div class="tile"><b>${f.tech_done} / ${f.tech_total}</b><span>技術必修</span></div>
+    <div class="tile"><b>${f.career_done} / ${f.career_total}</b><span>求職線（和技術課並行）</span></div>
+    <div class="tile"><b>${f.study_days_28} 天</b><span>最近 4 週的學習日</span></div>
+    <div class="tile wide">${eta}</div>`;
+}
+const studyDays = t => new Set([...(t.sessions||[]).map(s => (s.start||"").slice(0,10)), ...t.entries.map(e => e.time.slice(0,10))].filter(Boolean)).size;
+const readonly = t => t.plan === "HAL";
+// 必學範圍：勾選代表「能不看筆記口頭解釋」
+function mustHtml(t){
+  const must = t.must || []; if (!must.length && !(t.optional_topics||[]).length) return "";
+  const n = must.filter(m => m.done).length;
+  return `<h4>必學範圍（${n} / ${must.length}）<span class="muted" style="font-weight:400">　學到能不看筆記口頭解釋就勾選；不限幾次做完</span></h4>
+    <div class="must">${must.map(m => `<label class="${m.done ? "done" : ""}"><input type="checkbox" ${m.done ? "checked" : ""}
+      onchange="act('/api/must',{id:'${t.id}',mid:'${m.id}',done:this.checked},true)"><span>${esc(m.text)}</span></label>`).join("")}</div>
+    ${(t.optional_topics||[]).length ? `<div class="muted" style="margin-bottom:8px">選修主題（本課先不做）：${t.optional_topics.map(esc).join("、")}</div>` : ""}`;
+}
+
+// ---------- 提醒：到了複習日的課題、可以開始的求職課、還沒有總整理的課題
+const RESULT_TEXT = {good:"順利", ok:"部分卡住", weak:"需要重看"};
+const TECH_KINDS = ["register","driver","arch","debug","concept"];
+const rv = t => (S.review || {})[t.id];
+const hasWrapup = t => t.entries.some(e => e.text.split("\n")[0].includes("總整理"));
+let showAllDue = false;
+function renderRemind(){
+  const nud = S.nudges || [], starts = nud.filter(x => x.kind === "start"), back = nud.filter(x => x.kind === "backfill");
+  const due = S.tasks.filter(t => rv(t)?.due).sort((a, b) => rv(a).next.localeCompare(rv(b).next));
+  if (!due.length && !starts.length && !back.length){ $("#remindBox").innerHTML = ""; return; }
+  let html = starts.map(x => `<div class="rev"><span>➡ 「${esc(x.after_title)}」已完成，可以開始「${esc(x.title)}」了。求職線和技術課並行，不用等技術主線結束。</span>
+      <span class="sp"></span><button class="small primary" onclick="startTask('${x.task}')">開始</button></div>`).join("");
+  if (due.length){
+    const shown = showAllDue ? due : due.slice(0, 4);
+    html += `<div class="row"><b>待複習</b><span class="muted">${due.length} 課到了複習日。每課約 15 分鐘：按「複習」取得提示詞，口頭回答完再回來記錄結果。</span><span class="sp"></span>
+      ${due.length > 4 ? `<button class="small" onclick="showAllDue=!showAllDue;renderRemind()">${showAllDue ? "只顯示最早的 4 課" : "顯示全部"}</button>` : ""}</div>`
+      + shown.map(t => { const r = rv(t);
+        return `<div class="rev"><span class="code">${esc(t.id)}</span><span>${esc(t.title)}</span>
+          <span class="muted">第 ${r.count + 1} 次複習 · 複習日 ${esc(r.next)}${r.late ? `（已過 ${r.late} 天）` : "（今天）"}</span><span class="sp"></span>
+          <button class="small primary" onclick="showPromptFor('${t.id}','review')">複習</button></div>`; }).join("");
+  }
+  if (back.length) html += `<div class="row" style="margin-top:6px"><b>還沒有總整理</b><span class="muted">這幾課上課時沒有做收尾總整理，可以請 Claude 依當時的筆記補做：</span>
+      ${back.map(x => `<button class="small" onclick="showPromptFor('${x.task}','backfill')">${esc(x.title)}</button>`).join("")}</div>`;
+  $("#remindBox").innerHTML = `<div class="card" style="margin-bottom:12px">${html}</div>`;
+}
+function reviewHtml(t){
+  const r = rv(t), revs = t.reviews || [];
+  const canBack = TECH_KINDS.includes(t.kind) && t.entries.length && !hasWrapup(t);
+  if (!r && !revs.length && !canBack) return "";
+  return `<h4>複習${r ? `（下次：${esc(r.next)}${r.due ? "，已到複習日" : ""}）` : ""}</h4>
+    ${revs.map(x => `<div>${esc(x.date)}　${RESULT_TEXT[x.result] || ""}${x.note ? `　<span class="muted">還不穩：${esc(x.note)}</span>` : ""}</div>`).join("")
+      || (r ? `<div class="muted">還沒有複習紀錄。</div>` : "")}
+    <div class="row" style="margin:6px 0">
+      ${r ? `<button class="small" onclick="showPromptFor('${t.id}','review')">複習（取得提示詞、記錄結果）</button>` : ""}
+      ${canBack ? `<button class="small" onclick="showPromptFor('${t.id}','backfill')">補做總整理提示詞</button>` : ""}
+      ${revs.length ? `<button class="small" onclick="if(confirm('撤銷最後一次複習紀錄？'))act('/api/review',{id:'${t.id}',undo:true})">撤銷最後一次紀錄</button>` : ""}
+    </div>`;
+}
+
+// ---------- 同步衝突警告
+function renderSyncError(){
+  const se = S.sync_error, box = $("#syncErr");
+  box.style.display = se ? "block" : "none";
+  if (!se) return;
+  box.innerHTML = `<b>⚠ 同步衝突（${esc(se.time)}）</b>：這台電腦和 GitHub 上的進度互相衝突，已自動還原到同步前的狀態。
+    你的筆記都還在這台電腦上，可以繼續使用和存檔，但在解決之前不會上傳到 GitHub。
+    <div class="row" style="margin-top:8px"><button class="small" onclick="copySyncHelp()">複製求助訊息（貼給 Claude）</button>
+    <button class="small" onclick="$('#syncBtn').click()">再試一次同步</button></div>`;
+}
+async function copySyncHelp(){
+  const text = "STM32 學習進度 App 出現同步衝突，請協助我解決。\n" +
+    "repo：" + (S.git.web || S.git.remote || "") + "\n發生時間：" + S.sync_error.time + "\n\ngit 的訊息：\n" + S.sync_error.detail;
+  try { await navigator.clipboard.writeText(text); toast("已複製，貼給 Claude 即可"); }
+  catch { toast("複製失敗，請到 tracker2/app.log 查看訊息"); }
+}
+
+// ---------- 待學清單：課堂中先記下、之後有空再學的延伸主題
+function renderLater(){
+  const all = S.later || [], todo = all.filter(x => !x.done), done = all.filter(x => x.done);
+  if (!all.length){ $("#laterBox").innerHTML = ""; return; }
+  const row = x => `<label class="todo ${x.done ? "done" : ""}"><input type="checkbox" ${x.done ? "checked" : ""}
+      onchange="act('/api/entry/update',{id:'${x.task}',eid:'${x.eid}',done:this.checked},true)">
+      <span>${esc(x.text.replace(/^【待學】\s*/, ""))}</span><span class="muted">${esc(x.task)}</span></label>`;
+  $("#laterBox").innerHTML = `<div class="card" style="margin-bottom:12px">
+    <div class="row"><b>待學清單</b><span class="muted">${todo.length} 項還沒學${done.length ? `、${done.length} 項已學` : ""}。課堂中先記下的延伸主題，有空再挑來學。</span>
+      <span class="sp"></span>${done.length ? `<button class="small" onclick="showDoneLater=!showDoneLater;renderLater()">${showDoneLater ? "隱藏已學" : "顯示已學"}</button>` : ""}</div>
+    ${todo.map(row).join("")}${showDoneLater ? done.map(row).join("") : ""}</div>`;
+}
+
+// ---------- 待辦 TODO：筆記裡寫了 TODO 的行，勾掉之前會帶進每一課的提示詞
+function renderTodos(){
+  const all = S.todos || [], todo = all.filter(x => !x.done), done = all.filter(x => x.done);
+  if (!all.length){ $("#todoBox").innerHTML = ""; return; }
+  const row = x => `<label class="todo ${x.done ? "done" : ""}"><input type="checkbox" ${x.done ? "checked" : ""}
+      onchange="act('/api/todo',{key:'${x.key}',done:this.checked},true)">
+      <span>${esc(x.text)}</span><span class="muted">${esc(x.task)}</span></label>`;
+  $("#todoBox").innerHTML = `<div class="card" style="margin-bottom:12px">
+    <div class="row"><b>待辦 TODO</b><span class="muted">${todo.length} 項未處理${done.length ? `、${done.length} 項已處理` : ""}。未處理的會帶進每一課的提示詞，做完請勾掉。</span>
+      <span class="sp"></span>${done.length ? `<button class="small" onclick="showDoneTodo=!showDoneTodo;renderTodos()">${showDoneTodo ? "隱藏已處理" : "顯示已處理"}</button>` : ""}</div>
+    ${todo.map(row).join("")}${showDoneTodo ? done.map(row).join("") : ""}</div>`;
+}
+
+const TYPES = ["問題","筆記","解法","進度","待學","面試"];
+// 待解決：真正還沒有答案的問題。【問題】預設是「踩過的錯」，不算待解決。
+const isOpen = e => e.type === "問題" && !e.resolved && (("open" in e) ? !!e.open : /^【(卡關|待解決)】/.test(e.text));
+function entryHtml(t, e, withTask){
+  const ids = `'${t.id}','${e.id}'`;
+  if (editing === t.id + "|" + e.id) return `<div class="entry ${e.type}"><div class="meta"><b>編輯</b><span>${esc(e.time)}</span>
+      <select class="etype">${TYPES.map(x => `<option ${x === e.type ? "selected" : ""}>${x}</option>`).join("")}</select>
+      <span class="sp"></span><button class="small" onclick="editing=null;render()">取消</button>
+      <button class="small primary" onclick="saveEdit(this,${ids})">儲存</button></div>
+      <textarea class="edit">${esc(e.text)}</textarea></div>`;
+  if (readonly(t)) return `<div class="entry ${e.type}"><div class="meta"><b>${e.type}</b><span>${esc(e.time)}</span>
+    ${withTask ? `<span class="code">${esc(t.id)}</span><span>${esc(t.title)}</span>` : ""}</div><div class="md">${md(e.text)}</div></div>`;
+  const flag = e.type === "問題" ? `<label class="muted" title="還沒有答案的問題才勾選。勾選後會帶進提示詞，並列在「待解決」。"><input type="checkbox" ${isOpen(e) ? "checked" : ""}
+        onchange="act('/api/entry/update',{id:'${t.id}',eid:'${e.id}',open:this.checked},true)"> 待解決</label>`
+    : e.type === "待學" ? `<label class="muted"><input type="checkbox" ${e.resolved ? "checked" : ""}
+        onchange="act('/api/entry/update',{id:'${t.id}',eid:'${e.id}',done:this.checked},true)"> 已學</label>` : "";
+  return `<div class="entry ${e.type} ${isOpen(e) ? "isopen" : ""}"><div class="meta"><b>${e.type}</b><span>${esc(e.time)}</span>
+    ${e.edited ? `<span title="最後編輯：${esc(e.edited)}">已編輯</span>` : ""}
+    ${withTask ? `<span class="code">${esc(t.id)}</span><span>${esc(t.title)}</span>` : ""}
+    <span class="sp"></span>${flag}
+    <button class="small" onclick="editing='${t.id}|${e.id}';render()">編輯</button>
+    <button class="small" onclick="delEntry(${ids})">刪除</button></div><div class="md">${md(e.text)}</div></div>`;
+}
+function delEntry(id, eid){ if (confirm("確定刪除這則紀錄？")) act("/api/entry/delete", {id, eid}, true); }
+async function saveEdit(btn, id, eid){
+  const box = btn.closest(".entry"), text = box.querySelector("textarea").value.trim();
+  if (!text){ toast("內容不能是空的；要移除請按刪除"); return; }
+  editing = null;
+  await act("/api/entry/update", {id, eid, text, type: box.querySelector(".etype").value}, true);
+}
+
+// ---------- 一次貼上多則：先讓 App 拆開並檢查重複，確認後再存
+let batch = null;
+async function smartSave(t, box){
+  const ta = box || $("#entryText"), v = ta.value.trim(); if (!v || busy) return;
+  const fallback = box ? "筆記" : entryType;
+  let j;
+  try { j = await api("/api/entry/preview", {id:t.id, type:fallback, text:v}); }
+  catch(e){ toast("⚠ " + e.message, 6000); return; }
+  const items = j.items;
+  if (items.length === 1 && !items[0].dup){            // 只有一則而且沒有重複：直接存
+    ta.value = ""; ta.oninput?.(); if (box) $("#addModal").classList.remove("on");
+    act("/api/entry", {id:t.id, type:items[0].type, text:items[0].text});
+    return;
+  }
+  batch = {id:t.id, raw:v, items, ta, fallback};
+  renderBatch(); $("#batchModal").classList.add("on");
+}
+function renderBatch(){
+  const n = batch.items.filter(x => x.mode !== "skip").length, dups = batch.items.filter(x => x.dup).length;
+  $("#batchHint").textContent = `拆成 ${batch.items.length} 則` + (dups ? `，其中 ${dups} 則和已經存過的標題相同` : "") + "。類型依開頭的【】自動判斷，可以在這裡修改。";
+  $("#batchList").innerHTML = batch.items.map((x, k) => `<div class="batch ${x.mode === "skip" ? "off" : ""}">
+    <div class="row"><select onchange="batch.items[${k}].type=this.value">${TYPES.map(y => `<option ${y === x.type ? "selected" : ""}>${y}</option>`).join("")}</select>
+      <span class="t">${esc(x.title)}</span><span class="sp"></span><span class="muted">${x.text.length} 字</span>
+      <select onchange="batch.items[${k}].mode=this.value;renderBatch()">
+        ${x.dup ? `<option value="replace" ${x.mode === "replace" ? "selected" : ""}>取代舊的</option>` : ""}
+        <option value="add" ${x.mode === "add" ? "selected" : ""}>${x.dup ? "另存一則" : "儲存"}</option>
+        <option value="skip" ${x.mode === "skip" ? "selected" : ""}>略過</option></select></div>
+    ${x.dup ? `<div class="muted">已經有同標題的紀錄（${esc(x.dup.time)}）${x.dup.same ? "，內容完全相同" : "，內容不同"}</div>` : ""}
+    ${!x.tagged && batch.items.some(y => y.tagged) ? `<div class="muted">這一段沒有【】開頭，看起來是說明文字，預設不存</div>` : ""}
+  </div>`).join("");
+  $("#batchOk").textContent = `儲存 ${n} 則`; $("#batchOk").disabled = !n;
+}
+function closeBatch(clear){ $("#batchModal").classList.remove("on");
+  const ta = batch?.ta;
+  if (clear && ta && ta.isConnected){ ta.value = ""; ta.oninput?.(); if (ta.id === "addText") $("#addModal").classList.remove("on"); }
+  batch = null; }
+$("#batchCancel").onclick = () => closeBatch(false);
+$("#batchOk").onclick = async () => {
+  const b = batch; closeBatch(true);
+  await act("/api/entry/batch", {id:b.id, items:b.items.map(x => ({type:x.type, text:x.text, mode:x.mode, dup_eid:x.dup?.eid}))});
+};
+$("#batchOne").onclick = async () => {
+  const b = batch; closeBatch(true);
+  await act("/api/entry/batch", {id:b.id, items:[{text:b.raw, type:b.items.find(x => x.tagged)?.type || b.fallback, mode:"add"}]});
+};
+// 不開始課題，直接把筆記存到某一課（複習後的面試卡、補做的總整理）
+let addId = null;
+function openAdd(id){ addId = id; const t = S.tasks.find(x => x.id === id);
+  $("#addCode").textContent = `${id}　${t.title}`; $("#addModal").classList.add("on"); $("#addText").focus(); }
+$("#addCancel").onclick = () => $("#addModal").classList.remove("on");
+$("#addOk").onclick = () => smartSave(S.tasks.find(x => x.id === addId), $("#addText"));
+
+function renderActive(){
+  const t = activeTask(), box = $("#activeBox"), draft = $("#entryText")?.value || "";
+  if (!t){ box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="card active">
+    <div class="row"><div><div class="code">${esc(t.id)}　${esc(t.stage || t.week)}　${esc(t.topic)}${t.priority === "optional" ? "　選修" : ""}</div>
+      <div class="title">${esc(t.title)}</div></div><span class="sp"></span>
+      <div class="row"><button onclick="showPromptFor('${t.id}','start')" title="還沒有筆記時是新課題提示詞；已經有筆記時是接續提示詞（換新對話才需要貼）">📋 取得提示詞</button>
+      <button onclick="openStuck('${t.id}')">🆘 求助提示詞</button></div></div>
+    <details style="margin:8px 0"><summary class="muted">任務內容與完成標準</summary>
+      <div class="detail"><h4>內容</h4><p>${esc(t.content)}</p>${t.output ? `<h4>產出物</h4><p>${esc(t.output)}</p>` : ""}<h4>完成標準</h4><p>${esc(t.criteria)}</p></div></details>
+    <details ${ (t.must||[]).some(m => !m.done) ? "open" : "" } style="margin:8px 0"><summary class="muted">必學範圍 ${(t.must||[]).filter(m => m.done).length} / ${(t.must||[]).length}　·　已用 ${studyDays(t)} 個學習日</summary>
+      <div class="detail">${mustHtml(t)}</div></details>
+    <div class="row" style="margin-bottom:6px"><div class="seg" id="entrySeg">
+      ${["問題","筆記","解法"].map(x=>`<button data-et="${x}" class="${x===entryType?"on":""}">${x}</button>`).join("")}</div>
+      <span class="muted">開頭有【筆記】【問題】【解法】【待解決】【本次進度】【待學】【面試】會自動分類，沒有才用左邊選的類型。Ctrl + Enter 儲存</span></div>
+    <textarea id="entryText" placeholder="可以把 Claude 的整段回覆一次貼上，App 會自動拆成多則並檢查重複。（支援 Markdown：- 清單、1. 編號、**粗體**、表格）"></textarea>
+    <div id="entryPreview" class="entry preview" style="display:none"><div class="meta"><b>預覽</b></div><div class="md"></div></div>
+    <div class="row" style="margin-top:8px"><button class="primary" id="saveEntry">儲存紀錄</button><span class="sp"></span>
+      <button class="danger" onclick="restartTask('${t.id}')" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）">清除重來</button>
+      <button onclick="act('/api/leave',{id:'${t.id}'})" title="結束這次但不 commit、不改變課題狀態；誤按開始時用這個">暫時離開</button>
+      <button class="primary" onclick="openFinish('${t.id}')">結束本次課題</button></div>
+    ${codeHtml(t, "a")}
+    <div>${t.entries.slice().reverse().map(e => entryHtml(t, e)).join("")}</div>
+  </div>`;
+  $("#entrySeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; entryType = b.dataset.et;
+    document.querySelectorAll("#entrySeg button").forEach(x => x.classList.toggle("on", x === b)); };
+  const save = () => smartSave(t);
+  $("#saveEntry").onclick = save;
+  const ta = $("#entryText"), pv = $("#entryPreview");
+  ta.value = draft;
+  const preview = () => { const v = ta.value;
+    pv.style.display = v.trim() ? "block" : "none"; pv.querySelector(".md").innerHTML = md(v); };
+  ta.oninput = preview; preview();
+  ta.onkeydown = ev => {
+    if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); save(); return; }
+    if (ev.key === "Tab") {                       // Tab 縮排 / Shift+Tab 取消縮排（做巢狀清單用）
+      ev.preventDefault();
+      const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value;
+      const ls = v.lastIndexOf("\n", a - 1) + 1;
+      if (!ev.shiftKey) { ta.setRangeText("  ", ls, ls, "preserve"); ta.setSelectionRange(a + 2, b + 2); }
+      else { const n = v.slice(ls, ls + 2) === "  " ? 2 : v[ls] === " " ? 1 : 0;
+        if (n) { ta.setRangeText("", ls, ls + n, "preserve"); ta.setSelectionRange(Math.max(ls, a - n), Math.max(ls, b - n)); } }
+      preview();
+    }
+  };
+  loadFiles(t.id, "a");
+}
+
+function renderTasks(){
+  const act_ = activeTask(), arch = plan === "HAL";
+  let list = S.tasks.filter(t => t.plan === plan);
+  if (!arch) list = list.slice().sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9));
+  let html = arch ? `<div class="notice">這是以前用 HAL 做的課題，已經封存，只能查看，不能再開始或修改。新的學習都在「學習計畫」。</div>` : "", last = null;
+  for (const t of list){
+    const group = arch ? t.week : (t.stage || t.week);
+    if (group !== last){ last = group;
+      const g = list.filter(x => (arch ? x.week : (x.stage || x.week)) === group && x.priority !== "merged");
+      html += `<div class="week">${esc(group)}${arch ? "" : `<span class="muted" style="font-weight:400">　${g.filter(x => x.status === "已完成").length} / ${g.length}</span>`}</div>`; }
+    const isActive = act_ && act_.id === t.id, isOpen = open.has(t.id), merged = t.priority === "merged";
+    const must = t.must || [], days = studyDays(t), r = arch ? null : rv(t);
+    const info = [t.entries.length ? `${t.entries.length} 則紀錄` : "", must.length ? `必學 ${must.filter(m => m.done).length} / ${must.length}` : "", days ? `${days} 個學習日` : "",
+      r && !r.due ? `下次複習 ${r.next.slice(5)}` : ""].filter(Boolean).join(" · ");
+    const btn = arch || merged ? `<button class="small view" onclick="event.stopPropagation();toggle('${t.id}')">${isOpen ? "收合" : "查看"}</button>`
+      : isActive ? `<span class="muted">進行中…</span>`
+      : t.status === "已完成" ? (r ? `<button class="small ${r.due ? "primary" : ""}" title="產生口頭測驗的提示詞，複習完在同一個視窗記錄結果" onclick="event.stopPropagation();showPromptFor('${t.id}','review')">複習</button>` : "")
+        + `<button class="small view" title="只看問題、筆記與解法，不會開始課題、也不會 commit" onclick="event.stopPropagation();toggle('${t.id}')">${isOpen ? "收合" : "查看"}</button>`
+      : `<button class="small primary" onclick="event.stopPropagation();startTask('${t.id}')">${t.sessions?.length?"繼續":"開始"}</button>`;
+    html += `<div class="task ${merged ? "merged" : ""}"><div class="head" onclick="toggle('${t.id}')">
+      <span class="code" style="width:132px">${esc(t.id)}</span>
+      <span class="t">${esc(t.title)}${info ? ` <span class="muted">· ${info}</span>` : ""}</span>
+      ${t.priority === "optional" ? `<span class="pill opt">選修</span>` : ""}
+      ${r?.due ? `<span class="pill due" title="到了複習日">待複習</span>` : ""}
+      ${merged ? `<span class="muted">已併入 ${esc((t.merged_into || "").replace("SPRINT-", ""))}</span>` : `<span class="pill ${esc(t.status)}">${esc(t.status)}</span>`}
+      ${!arch && !merged && (t.sessions?.length || t.entries.length) ? `<button class="small danger" title="清除這個課題的進行紀錄與筆記，從頭再做一次（程式碼保留）" onclick="event.stopPropagation();restartTask('${t.id}')">清除重來</button>` : ""}
+      ${btn}
+    </div>${isOpen ? detailHtml(t) : ""}</div>`;
+  }
+  $("#taskList").innerHTML = html || `<div class="empty">沒有任務</div>`;
+  for (const id of open){ loadCommits(id); loadFiles(id, "d"); }
+}
+function detailHtml(t){
+  return `<div class="detail">
+    <h4>內容</h4><p>${esc(t.content)}</p>
+    ${t.output?`<h4>產出物</h4><p>${esc(t.output)}</p>`:""}
+    <h4>完成標準</h4><p>${esc(t.criteria)}</p>
+    ${t.priority === "merged" ? `<p class="muted">這個課題的內容已經併入 ${esc(t.merged_into || "")}，不用另外做。</p>` : ""}
+    ${readonly(t) || t.priority === "merged" ? "" : mustHtml(t) + reviewHtml(t)}
+    ${t.summary?`<h4>總結</h4><p>${esc(t.summary)}</p>`:""}
+    ${readonly(t) || t.priority === "merged" ? `<h4>狀態</h4><p>${esc(t.status)}</p>` : `
+    ${t.status === "已完成" && !(activeTask() && activeTask().id === t.id) ? `<div style="margin:8px 0"><button class="small" onclick="startTask('${t.id}')">重新開啟這個課題（繼續做）</button></div>` : ""}
+    <h4>狀態</h4><select onchange="act('/api/status',{id:'${t.id}',status:this.value})">
+      ${["未開始","進行中","已完成","卡關","暫緩"].map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select>`}
+    <h4>相關 commit（訊息中含 ${esc(t.id)}）</h4><div class="commits" id="c-${t.id}"><span class="muted">讀取中…</span></div>
+    ${codeHtml(t, "d")}
+    ${readonly(t) || t.priority === "merged" || activeTask()?.id === t.id ? "" : `<div style="margin:10px 0 2px"><button class="small" onclick="openAdd('${t.id}')">＋ 新增筆記到這一課</button>
+      <span class="muted">不用重新開始課題。複習後的面試卡、補做的總整理從這裡貼上。</span></div>`}
+    ${t.entries.length?`<h4>問題與筆記</h4>${t.entries.map(e => entryHtml(t, e)).join("")}`:""}
+  </div>`;
+}
+async function loadCommits(id){
+  const el = document.getElementById("c-"+id); if (!el) return;
+  try {
+    const {commits} = await api("/api/commits?id="+encodeURIComponent(id));
+    el.innerHTML = commits.length ? commits.map(c => {
+      const h = S.git.web ? `<a href="${esc(S.git.web)}/commit/${c.hash}" target="_blank">${c.short}</a>` : `<span class="code">${c.short}</span>`;
+      return `<div>${h} <span class="muted">${esc(c.date)}</span> ${esc(c.msg)}</div>`; }).join("")
+      : `<span class="muted">還沒有。寫程式 commit 時在訊息裡加上 ${esc(id)}，就會出現在這裡。</span>`;
+  } catch { el.innerHTML = `<span class="muted">無法讀取</span>`; }
+}
+// ---------- 程式碼
+function codeHtml(t, k){
+  const key = k + "-" + t.id;
+  return `<h4 class="muted" style="margin:14px 0 4px">程式碼（projects/${esc(t.id)}/）</h4>
+  <div class="drop" data-id="${t.id}" data-key="${key}" ondragover="dragOver(event)" ondragleave="this.classList.remove('over')" ondrop="dropFiles(event)">
+    <div class="row">
+      <span><button class="small" onclick="this.nextElementSibling.click()">上傳檔案</button><input type="file" multiple hidden onchange="pick(this,'${t.id}','${key}')"></span>
+      <span><button class="small" onclick="this.nextElementSibling.click()">上傳整個資料夾</button><input type="file" webkitdirectory hidden onchange="pick(this,'${t.id}','${key}')"></span>
+      <button class="small" onclick="act('/api/open-folder',{id:'${t.id}'})">開啟資料夾</button>
+      <span class="muted">或把檔案拖曳到這裡（Debug/、.o、.elf、.out、.exe 等編譯產物會自動略過）</span>
+    </div>
+    <div class="files" id="f-${key}"></div>
+  </div>`;
+}
+async function loadFiles(id, k){
+  const el = document.getElementById(`f-${k}-${id}`); if (!el) return;
+  try {
+    const {files, dir} = await api("/api/files?id=" + encodeURIComponent(id));
+    const gh = S.git.web ? `${S.git.web}/tree/${encodeURIComponent(S.git.branch)}/${dir}` : null;
+    el.innerHTML = files.length
+      ? (gh ? `<div class="muted">共 ${files.length} 個檔案　<a href="${esc(gh)}" target="_blank">在 GitHub 查看</a>（push 後）</div>` : `<div class="muted">共 ${files.length} 個檔案</div>`)
+        + files.map(f => `<div><a onclick="viewFile('${id}','${esc(f.path).replace(/'/g,"&#39;")}')">${esc(f.path)}</a>
+          <span class="muted">${f.size < 1024 ? f.size + " B" : (f.size/1024).toFixed(1) + " KB"}</span><span class="sp"></span>
+          <button class="small" onclick="delFile('${id}','${esc(f.path).replace(/'/g,"&#39;")}')">刪除</button></div>`).join("")
+      : `<div class="muted">尚無程式碼。完成課題時，這個資料夾會和筆記一起 commit。</div>`;
+  } catch { el.innerHTML = `<span class="muted">無法讀取檔案列表</span>`; }
+}
+const SKIP_DIR = new Set(["Debug","Release",".metadata","__pycache__",".git"]);
+const SKIP_EXT = /\.(o|d|su|elf|hex|bin|map|list|cyclo|out|exe|obj)$/i;
+async function uploadList(id, key, items){
+  items = items.filter(({path}) => { const p = path.split("/"); return !p.slice(0,-1).some(x => SKIP_DIR.has(x)) && !SKIP_EXT.test(p.at(-1)); });
+  if (!items.length){ toast("沒有可上傳的檔案"); return; }
+  let ok = 0, fail = [];
+  for (let i = 0; i < items.length; i++){
+    toast(`上傳中 ${i+1} / ${items.length}：${items[i].path}`, 60000);
+    try {
+      const r = await fetch(`/api/upload?id=${encodeURIComponent(id)}&path=${encodeURIComponent(items[i].path)}`, {method:"POST", body:items[i].file});
+      const j = await r.json(); if (!r.ok || !j.ok) throw new Error(j.error); ok++;
+    } catch(e){ fail.push(items[i].path + "：" + e.message); }
+  }
+  toast(`已上傳 ${ok} 個檔案` + (fail.length ? `\n失敗 ${fail.length} 個：\n` + fail.slice(0,5).join("\n") : ""), 6000);
+  await refresh();
+}
+function pick(input, id, key){
+  const items = [...input.files].map(f => ({file:f, path:(f.webkitRelativePath || f.name)}));
+  input.value = ""; uploadList(id, key, items);
+}
+function dragOver(ev){ ev.preventDefault(); ev.currentTarget.classList.add("over"); }
+async function dropFiles(ev){
+  ev.preventDefault(); const box = ev.currentTarget; box.classList.remove("over");
+  const entries = [...ev.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  const out = [];
+  async function walk(entry, prefix){
+    if (entry.isFile){ const f = await new Promise((res, rej) => entry.file(res, rej)); out.push({file:f, path:prefix + f.name}); }
+    else if (entry.isDirectory){
+      if (SKIP_DIR.has(entry.name)) return;
+      const reader = entry.createReader(); let batch;
+      do { batch = await new Promise((res, rej) => reader.readEntries(res, rej)); for (const e of batch) await walk(e, prefix + entry.name + "/"); } while (batch.length);
+    }
+  }
+  for (const e of entries) await walk(e, "");
+  uploadList(box.dataset.id, box.dataset.key, out);
+}
+async function viewFile(id, path){
+  try {
+    const {text} = await api(`/api/file?id=${encodeURIComponent(id)}&path=${encodeURIComponent(path)}`);
+    $("#codeName").textContent = `${id} / ${path}`;
+    $("#codeBody").textContent = text === null ? "（二進位檔，無法預覽）" : text;
+    $("#codeModal").classList.add("on");
+  } catch(e){ toast("⚠ " + e.message); }
+}
+function delFile(id, path){ if (confirm(`刪除 ${path}？`)) act("/api/file/delete", {id, path}, true); }
+$("#codeClose").onclick = () => $("#codeModal").classList.remove("on");
+
+function toggle(id){ open.has(id) ? open.delete(id) : open.add(id); renderTasks(); }
+let restartId = null;
+function restartTask(id){            // 第一步：打開確認視窗
+  const t = S.tasks.find(x => x.id === id), cur = activeTask();
+  restartId = id;
+  $("#restartCode").textContent = `${id}　${t.title}`;
+  $("#restartBody").innerHTML = `
+    <div><b>會清除</b>：進行紀錄 ${t.sessions.length} 次、問題與筆記 ${t.entries.length} 則${t.summary ? "、總結" : ""}</div>
+    <div><b>不會刪除</b>：projects/${esc(id)}/ 裡的程式碼</div>
+    <div class="muted" style="margin-top:6px">GitHub 上已經 commit 的紀錄不會被刪除，需要時可以從 Git 歷史找回。</div>
+    ${cur && cur.id !== id ? `<div class="muted" style="margin-top:6px">⚠ ${esc(cur.id)} 正在進行中，會先暫停它。</div>` : ""}`;
+  $("#restartCheck").checked = false; $("#restartOk").disabled = true;
+  $("#restartModal").classList.add("on");
+}
+$("#restartCheck").onchange = ev => $("#restartOk").disabled = !ev.target.checked;   // 第二步：勾選才能按
+$("#restartCancel").onclick = () => $("#restartModal").classList.remove("on");
+$("#restartOk").onclick = () => {
+  if (!$("#restartCheck").checked) return;
+  $("#restartModal").classList.remove("on");
+  act("/api/restart", {id:restartId}); window.scrollTo({top:0, behavior:"smooth"});
+};
+function startTask(id){
+  const cur = activeTask();
+  if (cur && !confirm(`${cur.id} 正在進行中，要暫停它並開始 ${id} 嗎？`)) return;
+  act("/api/start", {id}); window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function renderReview(){
+  const q = $("#q").value.trim().toLowerCase(); let rows = [];
+  for (const t of S.tasks) t.entries.forEach((e,i) => rows.push({t,e,i}));
+  rows = rows.filter(({t,e}) => {
+    if (typeFilter === "open" && !isOpen(e)) return false;
+    if (typeFilter && typeFilter !== "open" && e.type !== typeFilter) return false;
+    return !q || (e.text + t.id + t.title).toLowerCase().includes(q);
+  }).sort((a,b) => b.e.time.localeCompare(a.e.time));
+  $("#reviewList").innerHTML = rows.length ? `<div class="muted" style="margin-bottom:6px">共 ${rows.length} 則</div>` + rows.map(({t,e})=>entryHtml(t,e,true)).join("")
+    : `<div class="card empty">沒有符合的紀錄</div>`;
+}
+
+let finishId = null;
+const FIN_TEXT = {
+  done: ["本次總結（選填）：學到什麼、完成標準怎麼驗收的。", "會寫進課題的「總結」。下面的檢查只是提醒，缺項仍然可以完成。"],
+  "進行中": ["", "會記成一則【本次進度】，下次換新對話時的接續提示詞會帶上它。"],
+  "卡關": ["卡在哪裡（必填）：想做什麼、實際發生什麼、試過什麼、錯誤訊息。", "會記成一則「待解決」的問題，並產生求助提示詞。"]};
+function finChoice(){ const v = document.querySelector("input[name=fin]:checked").value;
+  $("#finishSummary").placeholder = FIN_TEXT[v][0]; $("#finishHint").textContent = FIN_TEXT[v][1];
+  $("#finishTwo").style.display = v === "進行中" ? "block" : "none";
+  $("#finishSummary").style.display = v === "進行中" ? "none" : "block";
+  $("#finishCheck").style.display = v === "done" ? "block" : "none";
+  return v; }
+document.querySelectorAll("input[name=fin]").forEach(r => r.onchange = finChoice);
+// 按「已完成」前的檢查清單（只提醒，不擋）
+async function finishChecklist(id){
+  const t = S.tasks.find(x => x.id === id), must = t.must || [], n = must.filter(m => m.done).length;
+  const wrap = t.entries.some(e => e.text.split("\n")[0].includes("總整理")), openN = t.entries.filter(isOpen).length;
+  const needCode = !["career", "concept", "prep"].includes(t.kind);
+  let files = 0; try { files = (await api("/api/files?id=" + encodeURIComponent(id))).files.length; } catch {}
+  const row = (ok, text) => `<div class="${ok ? "" : "no"}">${ok ? "✔" : "⚠"} ${text}</div>`;
+  $("#finishCheck").innerHTML = `<b>完成前檢查</b>`
+    + (must.length ? row(n === must.length, `必學範圍：已勾 ${n} / ${must.length}` + (n < must.length ? "（還沒勾的：" + must.filter(m => !m.done).map(m => esc(m.text)).join("；") + "）" : "")) : "")
+    + row(wrap, wrap ? "已經有收尾總整理的筆記" : "還沒有標題含「總整理」的筆記（驗收通過後請 Claude 做收尾總整理）")
+    + (needCode ? row(files > 0, files > 0 ? `程式碼已放進 projects/${esc(id)}/（${files} 個檔案）` : "課題資料夾裡還沒有程式碼") : "")
+    + row(openN === 0, openN ? `還有 ${openN} 則待解決的問題` : "沒有待解決的問題")
+    + `<div class="muted">完成標準：${esc(t.criteria || "")}</div>`;
+}
+function openFinish(id){ finishId = id; $("#finishCode").textContent = id; $("#finishSummary").value = ""; $("#finWhere").value = ""; $("#finNext").value = "";
+  $("#finishCheck").innerHTML = ""; finChoice(); finishChecklist(id); $("#finishModal").classList.add("on"); }
+$("#finishCancel").onclick = () => $("#finishModal").classList.remove("on");
+$("#finishOk").onclick = async () => {
+  const v = finChoice();
+  let summary = $("#finishSummary").value;
+  if (v === "進行中"){
+    const a = $("#finWhere").value.trim(), b = $("#finNext").value.trim();
+    summary = a.startsWith("【本次進度】") ? [a, b].filter(Boolean).join("\n") : [a && "做到哪：" + a, b && "下次從哪開始：" + b].filter(Boolean).join("\n");
+  }
+  if (v === "卡關" && !summary.trim()){ toast("請描述卡在哪裡"); $("#finishSummary").focus(); return; }
+  $("#finishModal").classList.remove("on"); toast("正在 commit 並同步到 GitHub…", 20000);
+  await act("/api/finish", {id:finishId, done:v==="done", status:v==="done"?null:v, summary});
+};
+// ---------- 提示詞
+const PROMPT_TEXT = {
+  new: ["新課題提示詞", "第一次開始這一課時用。複製後貼到 Claude（建議在「STM32學習」專案裡開新對話），Claude 會依完成標準一步一步帶你。"],
+  continue: ["接續提示詞（換新對話時用）", "同一個對話隔天繼續時不用再貼，直接接著聊就好。只有開新對話時才貼這份：它會帶上你的上次進度和已經記下的筆記標題。"],
+  stuck: ["求助提示詞", "複製後貼到 Claude。已附上課題資訊、筆記標題與程式碼；如果有錯誤訊息截圖或波形，也一起貼上。"],
+  review: ["複習提示詞（口頭測驗，約 15 分鐘）", "複製後貼到 Claude 的新對話。Claude 會當面試官一次問一題，請不看筆記回答。結束後回到這個視窗（關掉了就再按一次「複習」）記錄結果。"],
+  backfill: ["補做總整理提示詞", "這一課還沒有收尾總整理。複製後貼到 Claude 的新對話，Claude 會依你當時的筆記整理出一則【解法】總整理和面試卡；整理好之後，到這一課的「＋ 新增筆記到這一課」貼上。"]};
+let promptTask = null;
+function showPrompt(text, kind, tid){
+  const [title, hint] = PROMPT_TEXT[kind] || PROMPT_TEXT.new;
+  promptTask = tid || null; $("#reviewNote").value = "";
+  $("#reviewRec").style.display = kind === "review" && tid ? "block" : "none";
+  $("#promptTitle").textContent = title; $("#promptHint").textContent = hint;
+  $("#promptText").value = text; $("#promptModal").classList.add("on"); $("#promptText").scrollTop = 0;
+}
+async function showPromptFor(id, kind, stuck){
+  try { const q = `id=${encodeURIComponent(id)}&kind=${kind}` + (stuck ? `&stuck=${encodeURIComponent(stuck)}` : "");
+    const j = await api("/api/prompt?" + q); showPrompt(j.prompt, j.kind || kind, id); }
+  catch(e){ toast("⚠ " + e.message); }
+}
+$("#promptClose").onclick = () => $("#promptModal").classList.remove("on");
+$("#reviewRec").onclick = ev => { const b = ev.target.closest("button[data-res]"); if (!b || !promptTask) return;
+  $("#promptModal").classList.remove("on");
+  act("/api/review", {id:promptTask, result:b.dataset.res, note:$("#reviewNote").value}); };
+$("#promptCopy").onclick = async () => {
+  const ta = $("#promptText");
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch { ta.select(); document.execCommand("copy"); }
+  toast("已複製，貼到 Claude 即可");
+};
+let stuckId = null;
+function openStuck(id){ stuckId = id; $("#stuckCode").textContent = id; $("#stuckText").value = $("#entryText")?.value || ""; $("#stuckModal").classList.add("on"); $("#stuckText").focus(); }
+$("#stuckCancel").onclick = () => $("#stuckModal").classList.remove("on");
+$("#stuckOk").onclick = async () => {
+  const v = $("#stuckText").value.trim(); if (!v){ toast("請描述卡在哪裡"); return; }
+  $("#stuckModal").classList.remove("on");
+  if ($("#entryText") && $("#entryText").value.trim() === v) $("#entryText").value = "";
+  await act("/api/entry", {id:stuckId, type:"問題", text:"【卡關】" + v}, true);
+  showPromptFor(stuckId, "stuck", v);
+};
+
+$("#syncBtn").onclick = () => { toast("同步中…", 20000); act("/api/sync", {}); };
+document.querySelector("nav").onclick = ev => { const b = ev.target.closest("button"); if (!b) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  $("#tab-tasks").hidden = b.dataset.tab !== "tasks"; $("#tab-review").hidden = b.dataset.tab !== "review"; };
+$("#planSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; plan = b.dataset.plan;
+  document.querySelectorAll("#planSeg button").forEach(x => x.classList.toggle("on", x === b)); renderTasks(); };
+$("#typeSeg").onclick = ev => { const b = ev.target.closest("button"); if (!b) return; typeFilter = b.dataset.type;
+  document.querySelectorAll("#typeSeg button").forEach(x => x.classList.toggle("on", x === b)); renderReview(); };
+$("#q").oninput = renderReview;
+// ---------- 背景程式存活回報：所有分頁關閉後 App 會自動結束
+const CID = Math.random().toString(36).slice(2);
+let pingFail = 0;
+async function ping(){
+  try { await fetch("/api/ping?c=" + CID, {cache:"no-store"}); pingFail = 0; }
+  catch { if (++pingFail >= 2) $("#closed").classList.add("on"); }
+}
+ping(); setInterval(ping, 5000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
+window.addEventListener("pagehide", () => navigator.sendBeacon("/api/bye?c=" + CID));
+window.addEventListener("pageshow", ev => { if (ev.persisted) ping(); });
+$("#quitBtn").onclick = async () => {
+  if (busy){ toast("正在同步，請稍候再關閉"); return; }
+  try { await api("/api/quit", {}); } catch {}
+  $("#closed").classList.add("on");
+  setTimeout(() => window.close(), 300);   // App 視窗直接關閉
+};
+// 外部連結（GitHub）交給預設瀏覽器開，保留你的登入狀態
+document.addEventListener("click", ev => {
+  const a = ev.target.closest('a[target="_blank"]'); if (!a) return;
+  ev.preventDefault(); api("/api/open-url", {url:a.href}).catch(() => window.open(a.href));
+});
+refresh().catch(e => toast("⚠ 無法連線到 App：" + e.message, 8000));
+</script>
+</body>
+</html>
