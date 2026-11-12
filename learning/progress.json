@@ -1608,11 +1608,18 @@
       "content": "用 debugger 從 Reset_Handler 單步：複製 .data、清 .bss、SystemInit、進 main；讀 .ld 的 MEMORY/SECTIONS；在 .map 找出某全域變數位址與 Flash/RAM 用量",
       "output": "筆記：上電到 main() 流程圖",
       "criteria": "能 3 分鐘口述「上電到 main」；能指出有初值的全域變數在 Flash 與 RAM 各放哪裡",
-      "status": "未開始",
+      "status": "進行中",
       "finished_at": null,
       "orig": "W00-S03",
       "period": "",
-      "sessions": [],
+      "sessions": [
+        {
+          "start": "2026-11-13 00:28",
+          "end": "2026-11-13 00:28",
+          "prev_status": "未開始",
+          "prev_finished": null
+        }
+      ],
       "entries": [],
       "stage": "基礎",
       "kind": "debug",
@@ -1655,7 +1662,8 @@
           "text": "3 分鐘口述「上電到 main」",
           "done": null
         }
-      ]
+      ],
+      "summary": null
     },
     {
       "id": "SPRINT-W02-S01",
@@ -3945,5 +3953,6 @@
       "sessions": [],
       "entries": []
     }
-  ]
+  ],
+  "todo_done": {}
 }
