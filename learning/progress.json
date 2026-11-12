@@ -1062,6 +1062,12 @@
           "end": "2026-11-10 23:07",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-12 21:29",
+          "end": "2026-11-12 21:32",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
