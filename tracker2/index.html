@@ -500,7 +500,7 @@ function renderTodos(){
   if (!all.length){ $("#todoBox").innerHTML = ""; return; }
   const row = x => `<label class="todo ${x.done ? "done" : ""}"><input type="checkbox" ${x.done ? "checked" : ""}
       onchange="act('/api/todo',{key:'${x.key}',done:this.checked},true)">
-      <span>${esc(x.text)}</span><span class="muted">${esc(x.task)}</span></label>`;
+      <span>${esc(x.text)}</span><span class="muted">${esc(x.task)}${x.note ? "　筆記「" + esc(x.note) + "」" : ""}</span></label>`;
   $("#todoBox").innerHTML = `<div class="card" style="margin-bottom:12px">
     <div class="row"><b>待辦 TODO</b><span class="muted">${todo.length} 項未處理${done.length ? `、${done.length} 項已處理` : ""}。未處理的會帶進每一課的提示詞，做完請勾掉。</span>
       <span class="sp"></span>${done.length ? `<button class="small" onclick="showDoneTodo=!showDoneTodo;renderTodos()">${showDoneTodo ? "隱藏已處理" : "顯示已處理"}</button>` : ""}</div>

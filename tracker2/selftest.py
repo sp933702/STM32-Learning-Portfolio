@@ -338,7 +338,29 @@ def _():
     text = app.build_prompt(db, last["id"], "new")
     for x in opened:
         assert x["text"] in text, f"TODO「{x['text'][:30]}」沒有出現在提示詞"
+        assert x.get("note") and f"的筆記「{x['note']}」" in text, "TODO 沒有帶上出處的筆記標題"
     return f"{len(opened)} 項未處理"
+
+
+@check("新課題提示詞：上一課、已完成的課題、其他課待解決的問題")
+def _():
+    app = load_app()
+    mk = lambda i, status, **kw: dict({"id": f"T{i}", "plan": "SPRINT", "title": f"課題{i}", "status": status, "kind": "concept",
+                                       "stage": "基礎", "priority": "core", "order": i * 10, "content": "內容", "criteria": "標準",
+                                       "sessions": [{"start": "2026-01-01 10:00", "end": "2026-01-01 11:00"}] if status != "未開始" else [],
+                                       "entries": [], "must": [{"id": "m1", "text": "某個必學項目", "done": None}]}, **kw)
+    note = lambda typ, text, **kw: dict({"id": text[:8], "type": typ, "text": text, "time": "2026-01-01 10:30", "resolved": None}, **kw)
+    t3 = mk(3, "已完成", entries=[note("筆記", "【筆記】第三課的筆記"), note("問題", "【待解決】為什麼會這樣？", open=True, resolved=False)])
+    # 檔案裡的順序故意和學習順序不同：應該依 order 找上一課
+    db = {"tasks": [mk(4, "未開始"), t3, mk(1, "已完成"), mk(2, "已完成"), mk(9, "暫緩", priority="merged")]}
+    text = app.build_prompt(db, "T4", "new")
+    assert "## 上一課：T3「課題3」（已完成）" in text, "上一課應該依學習順序（order）決定"
+    done = text[text.index("### 到目前為止已完成的課題"):].split("\n## ")[0]
+    assert [x for x in ("T1「", "T2「", "T3「") if x in done] == ["T1「", "T2「", "T3「"], "已完成的課題清單應該包含上一課"
+    assert "就是上一課" in done and "更早已完成" not in text
+    assert "## 之前的課還沒解決的問題" in text and "為什麼會這樣？" in text, "其他課待解決的問題沒有帶進新課題的提示詞"
+    t3["entries"][1]["open"] = False
+    assert "## 之前的課還沒解決的問題" not in app.build_prompt(db, "T4", "new"), "已經解決的問題不應該再帶"
 
 
 @check("貼上的文字拆成多則")

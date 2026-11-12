@@ -771,6 +771,7 @@ def all_todos(db, plan="SPRINT"):
                     continue
                 seen.add(key)
                 res.append({"key": key, "text": text, "task": t["id"], "title": t["title"],
+                            "note": HEAD_RE.sub("", _entry_title(e), count=1).strip(),
                             "done": key in done, "done_at": done.get(key)})
     return res
 
@@ -787,12 +788,27 @@ def _todo_block(db, t):
     if not items:
         return []
     return ["", "## 還沒處理的 TODO（之前的課留下的，看本課是否適合處理）"] + \
-           [f"- {x['text']}（來自 {x['task']}「{x['title']}」）" for x in items]
+           [f"- {x['text']}（來自 {x['task']}「{x['title']}」的筆記「{x['note']}」）" for x in items]
+
+
+def _open_elsewhere_block(db, t):
+    """其他課題裡還沒有答案的問題：換課之後也要繼續帶著，直到解決。"""
+    items = [(x, e) for x in plan_tasks(db, t.get("plan")) if x["id"] != t["id"] for e in x.get("entries", []) if is_open(e)]
+    if not items:
+        return []
+    return ["", "## 之前的課還沒解決的問題（還沒有答案；本課碰到相關內容時幫我一起弄懂）"] + \
+           [f"- （{x['id']}「{x['title']}」）{_clip(e['text'], 400)}" for x, e in items]
+
+
+def plan_tasks(db, plan):
+    """同一個計畫的課題，依學習順序（order）排列；沒有 order 的維持檔案裡的順序。"""
+    same = [x for x in db["tasks"] if x.get("plan") == plan]
+    return [x for _, x in sorted(enumerate(same), key=lambda p: (p[1].get("order", p[0]) if plan == "SPRINT" else p[0], p[0]))]
 
 
 def _previous_block(db, t, brief=False):
     """上一課的重點：讓 Claude 知道我上一課學到哪。"""
-    same = [x for x in db["tasks"] if x.get("plan") == t.get("plan")]
+    same = plan_tasks(db, t.get("plan"))
     idx = next((i for i, x in enumerate(same) if x["id"] == t["id"]), 0)
     before = same[:idx]
     prev = next((x for x in reversed(before) if x.get("sessions") or x.get("entries")), None)
@@ -812,9 +828,11 @@ def _previous_block(db, t, brief=False):
             lines += ["", f"### 上一課學過的主題（只列筆記標題，共 {len(ents)} 則"
                       + (f"，列最新 {PREV_TITLES} 則" if len(ents) > PREV_TITLES else "") + "）"]
             lines += [_title_line(e) for e in shown]
-    done = [x for x in before if x["status"] == "已完成" and x["id"] != prev["id"]]
+    done = [x for x in before if x["status"] == "已完成"]
     if done:
-        lines += ["", "### 更早已完成的課題"] + [f"- {x['id']}「{x['title']}」" for x in done]
+        lines += ["", f"### 到目前為止已完成的課題（依學習順序，共 {len(done)} 課）"]
+        lines += [f"- {x['id']}「{x['title']}」" + ("（就是上一課，筆記標題列在上面）" if x["id"] == prev["id"] and not brief
+                                                 else "（就是上一課）" if x["id"] == prev["id"] else "") for x in done]
     return lines
 
 
@@ -882,7 +900,7 @@ def header_api(tid):
 
 def _api_block(db, t):
     """已經寫好的模組介面：本課專案有標頭檔就用本課的，否則用最近一個有專案的課題。"""
-    same = [x for x in db["tasks"] if x.get("plan") == t.get("plan")]
+    same = plan_tasks(db, t.get("plan"))
     idx = next((i for i, x in enumerate(same) if x["id"] == t["id"]), 0)
     for cand in [t] + list(reversed(same[:idx])):
         api = header_api(cand["id"])
@@ -1010,7 +1028,7 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
                  "## 本課題"] + _task_block(t) + _must_block(t) + _code_list_block(tid)
         if task_kind(t) != "career":
             lines += _api_block(db, t)
-        lines += _previous_block(db, t) + _todo_block(db, t)
+        lines += _previous_block(db, t) + _todo_block(db, t) + _open_elsewhere_block(db, t)
         lines += _rules(t, "teach_new")
         lines += ["", "準備好了就開始。" if simple else "準備好了就從「先接續」開始。"]
     elif kind == "continue":
@@ -1023,7 +1041,7 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
         lines += _blockers_block(t) + _own_notes_block(t) + _code_list_block(tid)
         if task_kind(t) != "career":
             lines += _api_block(db, t)
-        lines += _previous_block(db, t, brief=True) + _todo_block(db, t)
+        lines += _previous_block(db, t, brief=True) + _todo_block(db, t) + _open_elsewhere_block(db, t)
         lines += _rules(t, "teach_continue")
         lines += ["", "準備好了就先確認我現在做到哪。"]
     elif kind == "review":
