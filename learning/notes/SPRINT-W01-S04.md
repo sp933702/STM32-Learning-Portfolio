@@ -1,8 +1,10 @@
 # SPRINT-W01-S04：SysTick 與 non-blocking（暫存器）
 
-- 狀態：**進行中**
+- 狀態：**已完成**
 - 階段：基礎　主題：SysTick
-- 進行次數：10 次（最近一次：2026-11-12）
+- 進行次數：11 次（最近一次：2026-11-12）
+- 完成日期：2026-11-13
+- 複習：0 次，下次 2026-11-14
 - 程式碼：[projects/SPRINT-W01-S04](../../projects/SPRINT-W01-S04)
 
 ## 任務內容
@@ -15,12 +17,12 @@ tick 計數變數為何要 volatile；32-bit 溢位時 (now - last) 仍正確的
 
 ## 必學範圍
 
-- [ ] SysTick 的 LOAD、VAL、CTRL 與設定順序
-- [ ] 1 ms tick 與 GetTick()；tick 變數為什麼要 volatile
-- [ ] 32-bit 溢位時 (now - last) 仍然正確的原因
-- [ ] non-blocking 的週期任務寫法
-- [ ] 按鍵去彈跳狀態機：事件與狀態的差別
-- [ ] 完成驗收與收尾總整理
+- [x] SysTick 的 LOAD、VAL、CTRL 與設定順序
+- [x] 1 ms tick 與 GetTick()；tick 變數為什麼要 volatile
+- [x] 32-bit 溢位時 (now - last) 仍然正確的原因
+- [x] non-blocking 的週期任務寫法
+- [x] 按鍵去彈跳狀態機：事件與狀態的差別
+- [x] 完成驗收與收尾總整理
 
 ## 問題與筆記
 
@@ -992,3 +994,254 @@ if (Button_Debounce_WasPressed())
 - `now` 由 `main` 傳入：少依賴 `bsp_systick`、各任務共用同一個時間、可餵假時間測試
 - 事件由消費者清除：狀態機自己清會在 `main` 忙碌時吃掉按鍵
 - 不碰暫存器 → 不用 `BSP_` 前綴；HAL 沒有對應的去彈跳函式，`HAL_GPIO_ReadPin()` 只對應 `BSP_GPIO_Button_IsPressed()`
+
+### [筆記] 2026-11-13 00:08
+
+【筆記】uint32_t 減法跨溢位仍正確：時鐘繞圈
+**無號數減出負數時硬體自動加一圈（2³²），所以 now - last 永遠是實際經過的時間，前提是不超過一圈（49.7 天）**
+
+範例：`last` = `0xFFFFFF00`，溢位後 `now` = `0x00000064`
+```
+now - last = now + (~last + 1)
+           = 0x64 + (0xFF + 1)
+           = 0x164 = 356 ms
+```
+- 實際經過：255（到 `0xFFFFFFFF`）+ 1（到 0）+ 100 = 356 ms，一致
+- 比喻：23 點出門、2 點回家，2 − 23 = −21，加一圈 24 → 3 小時
+- `uint32_t` 是有 2³² 格的時鐘；1 ms 一格 → 一圈 ≈ 49.7 天
+- 有號數不行：C 的有號溢位是未定義行為，且跨 bit 31 正負號翻轉
+- CPU 用 `bcc`（無號數小於就跳）比較 `(now - last) < ms`
+
+### [問題] 2026-11-13 00:08
+
+【問題】以為 now >= last + period 溢位時只是「不 toggle」
+**last + period 溢位成小數字時，now 還是超大值 → 每圈都成立 → 瘋狂 toggle；tick 溢位後又一直不成立 → 卡住**
+
+實驗：tick 初值 `0xFFFFF830`（溢位前 2000 ms），寫法 `if (now >= led_last_toggle + led_period)`
+
+| 時間 | 狀況 | LED |
+|---|---|---|
+| 0～1.5 s | `last + 500` 未溢位 | 正常 |
+| 1.5 s | `last` = `0xFFFFFE0C`，`last + 500` 溢位成 0 | 開始 toggle |
+| 1.5～2.0 s | `now` 超大、`last` 每圈 +500 往上爬 | 瘋狂 toggle |
+| 2.0 s 後 | tick 溢位，`now` 很小、`last` 已達數億 | 卡住數天 |
+
+- 預測錯在哪：只算出 `last + 500` = `0xF4`，沒考慮當時 `now` 還是 `0xFFFFFxxx`
+- 正確寫法：一律用 `(now - last) >= period`，只做「後減前」，不做「加了再比」
+
+### [解法] 2026-11-13 00:08
+
+【解法】tick 溢位實驗：讓 tick 從溢位前 2 秒開始
+**把 tick 初值設成 0xFFFFF830，2 秒後就溢位；用邏輯分析儀比較兩種寫法**
+
+- 方法：`static volatile uint32_t tick = 0xFFFFF830U;`（實驗完改回 `0U`）
+- 為什麼需要：1 ms 一格，自然溢位要等 49.7 天
+
+| 寫法 | 2 秒附近 | 結論 |
+|---|---|---|
+| `(now - last) >= period` | 波形無異常，按鍵正常 | 正確 |
+| `now >= last + period` | 1.5～2.0 s 瘋狂 toggle，之後卡住 | 錯誤 |
+
+- Debugger 確認：tick 從 `0xFFFFxxxx` 跳到小數值
+- 去彈跳模組同樣用 `(now - debounce_start)`，跨溢位一樣正確
+
+### [筆記] 2026-11-13 00:12
+
+【筆記】完成標準：32-bit 溢位時 (now - last) 仍正確（面試版）
+**減法是在時鐘上算兩點距離，跨溢位仍正確；加法再比較是比絕對位置，溢位後基準就錯了**
+
+- 減法：`now - last` = 從 last 走到 now 經過幾格，模 2³² 運算保證跨 0 仍正確，限制是間隔 < 49.7 天
+- 加法：`now >= last + period` 比的是位置大小；繞圈時鐘上「誰比較大」沒有意義，`last + period` 溢位成小數字 → 判斷瞬間成立
+- 實測：tick 初值 `0xFFFFF830`；加法寫法 1.5～2.0 s 瘋狂 toggle、溢位後卡住；減法寫法正常
+- tick 要用無號數：C 的有號數溢位是未定義行為
+
+**30 秒回答**
+> tick 是 `uint32_t`，約 49.7 天溢位。判斷要寫 `now - last >= period`。無號數減法是模 2³² 運算，像在時鐘上算距離，繞回 0 後減出來仍是實際經過時間，只要間隔不超過一圈。`now >= last + period` 比的是絕對位置，`last + period` 一溢位就變小，判斷瞬間成立。我把 tick 初值設在溢位前 2 秒實測過，加法寫法溢位前 0.5 秒開始亂閃、之後卡住，減法寫法正常。
+
+### [解法] 2026-11-13 00:21
+
+【解法】SPRINT-W01-S04 總整理：從頭到尾每一步
+**SysTick 每 1 ms 中斷讓 volatile tick 加 1；主迴圈每圈取一次 now，LED 與去彈跳狀態機都用 (now - last) 判斷時間，互不阻塞且跨溢位正確**
+
+## 整體流程
+`Clock_Init()（72 MHz）→ BSP_SysTick_Init()（LOAD → 優先權 → VAL → CTRL）→ BSP_GPIO_Init() → 主迴圈：取 now → 按鍵狀態機 → LED 週期判斷`
+
+## 設定 SysTick 產生 1 ms 中斷（bsp_systick.c）
+
+**為什麼要做**
+- 不用 HAL 就沒有 `HAL_GetTick()`，non-blocking 程式全靠這個 1 ms 時間基準
+- `LOAD` 算錯 → tick 不是 1 ms，所有時間都跟著錯
+- handler 名字拼錯或加 `static` → 中斷一來掉進 weak 的 `Default_Handler` 無窮迴圈
+
+**設了什麼、代表什麼**
+
+| 暫存器 | 欄位（bit） | 設定值 | 代表什麼 | 為什麼選這個值 |
+|---|---|---|---|---|
+| `SysTick->LOAD` | RELOAD（23:0） | `0x1193F`（71999） | 每輪 72,000 個時脈 = 1 ms | `SYSCLK_FREQ_HZ / 1000 - 1`；從 N−1 數到 0 共 N 個時脈 |
+| `SCB->SHP[11]` | SysTick 優先權（31:24 高 4 bit） | `0xF0`（15） | 最低優先權 | tick 晚幾 µs 無妨，讓路給其他中斷 |
+| `SysTick->VAL` | CURRENT（23:0） | 寫 `0` | 歸 0、清 COUNTFLAG | 不受殘留值影響，第一輪就是完整 1 ms |
+| `SysTick->CTRL` | CLKSOURCE（2） | `1` | 處理器時脈 72 MHz | 解析度 13.9 ns；1 ms 兩種來源都放得下 |
+| `SysTick->CTRL` | TICKINT（1） | `1` | 數到 0 觸發中斷 | 自動每 1 ms 進 `SysTick_Handler` |
+| `SysTick->CTRL` | ENABLE（0） | `1` | 開始計數 | 最後才打開 |
+
+- `_Static_assert(SYSTICK_LOAD_VALUE <= SysTick_LOAD_RELOAD_Msk, ...)`：超過 24 bit 直接編譯失敗
+
+**為什麼排在這裡**
+- 在 `Clock_Init()` 之後：`LOAD` 依 72 MHz 計算，先設的話 tick 會變成 1/9 ms
+- 在 `CTRL` 打開前寫好 `LOAD`、優先權、`VAL`：先開的話第一輪長度與中斷時間點失控
+
+## BSP_SysTick_GetTick() 與 volatile
+
+**為什麼要做**
+- tick 在中斷寫、主迴圈讀；編譯器不知道中斷會改它，`-O2` 時可能只讀一次甚至刪掉讀取
+
+**設了什麼、代表什麼**
+
+| 項目 | 寫法 | 代表什麼 |
+|---|---|---|
+| 計數變數 | `static volatile uint32_t tick` | `static`：外部只能透過 GetTick 讀；`volatile`：每次都重讀 SRAM |
+| handler | `void SysTick_Handler(void) { tick++; }` | 不加 static，名字對應向量表 |
+| 讀取 | `uint32_t BSP_SysTick_GetTick(void)` | 回傳開機後經過的 ms |
+
+**實驗**
+
+| `volatile` | 最佳化 | 結果 |
+|---|---|---|
+| 無 | `-O2` | 延遲迴圈編譯成 `b.n 8000210`（跳回自己），卡死 |
+| 有 | `-O2` | 每圈 `ldr r3, [r2]` 從 `0x2000001c` 重讀，正常 |
+
+**為什麼排在這裡**：tick 已確認準確，才能驗證讀取它的方式；之後 LED 與按鍵都靠它
+
+## Non-blocking LED（main.c、bsp_gpio.c）
+
+**為什麼要做**
+- 阻塞延遲期間 CPU 什麼都不能做；改成「每圈看一下時間，到了才做」
+
+**設了什麼、代表什麼**
+
+| 項目 | 寫法 | 代表什麼 |
+|---|---|---|
+| 判斷 | `if ((now - led_last_toggle) >= led_period)` | 無號數減法，跨溢位正確 |
+| 更新 | `led_last_toggle += led_period;` | 長期不漂移 |
+| 改週期 | `led_last_toggle = now;` | 從現在重新起算，避免連續補做 |
+| Toggle | 讀 `GPIOC->ODR` 的 `GPIO_ODR_ODR13_Msk`，再呼叫 On／Off（BSRR） | 寫的是 ODR 就讀 ODR |
+
+- 實測：週期 999.849 ms；`background_counter` 每 500 ms 增加約 81 萬 → 主迴圈未被卡住
+- 誤差約 150 ppm 來自石英與邏輯分析儀時基，不是 tick 量化
+
+**為什麼排在這裡**：最簡單的「時間到才做事」，先練熟寫法再做有狀態的按鍵
+
+## 按鍵去彈跳狀態機（button_debounce.c）
+
+**為什麼要做**
+- 機械接觸彈跳（實測杜邦線 < 10 ms）會讓一次按下被判成多次
+
+**設了什麼、代表什麼**
+
+| 狀態 | 條件 → 轉到哪 | 轉換時做什麼 |
+|---|---|---|
+| `RELEASED` | 按下 → `PRESS_DEBOUNCE` | `debounce_start = now` |
+| `PRESS_DEBOUNCE` | 放開 → `RELEASED` | — |
+| | 按下且 `now - debounce_start >= 20` → `PRESSED` | `press_event = true` |
+| `PRESSED` | 放開 → `RELEASE_DEBOUNCE` | `debounce_start = now` |
+| `RELEASE_DEBOUNCE` | 按下 → `PRESSED` | — |
+| | 放開且 `now - debounce_start >= 20` → `RELEASED` | — |
+
+- 介面：`Button_Debounce_Update(now)` 每圈呼叫；`Button_Debounce_WasPressed()` 讀取即清除
+- `now` 由 main 傳入：不依賴 bsp_systick、各任務共用同一時間、可餵假時間測試
+- `press_event` 主迴圈寫、主迴圈讀 → 不需 `volatile`
+- 實測：PB0 下降沿到事件 20.79 ms；到第一個快閃邊緣 119.3 ms／119.5 ms；連按 10 次 `press_count` = 10
+
+**為什麼排在這裡**：需要 GetTick 判斷穩定時間，也需要 non-blocking 讓 LED 等待時按鍵仍能處理
+
+## 整合與溢位驗證
+
+**為什麼要做**：tick 約 49.7 天溢位，要證明所有時間判斷跨溢位仍正確
+
+| 寫法 | tick 初值 `0xFFFFF830` 的結果 |
+|---|---|
+| `(now - last) >= period` | 2 秒附近波形正常，按鍵正常 |
+| `now >= last + period` | 1.5～2.0 s 瘋狂 toggle，溢位後卡住 |
+
+**為什麼排在最後**：LED 與按鍵都整合好，一次實驗驗證兩者
+
+## 最終暫存器值總表
+
+| 暫存器 | 預期值 | Debugger 實測 | 一致 |
+|---|---|---|---|
+| `SysTick->LOAD` | `0x0001193F` | 71999（`0x1193F`） | 是 |
+| `SysTick->CTRL` | `0x00000007`（停在 handler 時 `0x00010007`） | `0x10007`（停在 handler） | 是 |
+| `SysTick->VAL` | 0～`0x1193F` 間變動 | 停在 `tick++` 時 71981 → 中斷延遲 18 個時脈 | 是 |
+| `SCB->SHP[11]` | `0xF0` | `0xF0`（debugger 有號顯示 −16） | 是 |
+
+## 我這堂課踩過的錯
+- 把 TICKINT 理解成初始化 tick → 【問題】把 SysTick 的 TICKINT 誤解成「初始化 tick」
+- 選 72 MHz 的理由講反 → 【問題】SysTick 時脈來源選 72 MHz 的理由講反了
+- 在 stm32f103xb.h 找 SysTick 巨集 → 【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
+- tick 做成 0／1 旗標而非計數器：要 `tick++` 累積 ms
+- 想用 static 隱藏 handler → 【問題】想把 SysTick_Handler 加上 static 來「不公開」
+- `VAL = ~Msk` 以為是 0 → 【問題】以為 ~Msk 的值是 0
+- 延遲用 if 沒有等待 → 【問題】延遲函式用 if，沒有等待
+- 改最佳化沒下載 → 【問題】改了最佳化等級，LED 現象卻沒變
+- main 直接讀 `GPIOC->IDR` 並 include 裝置標頭檔 → 違反【筆記】BSP 介面設計原則
+- Toggle 放進 SysTick 模組 → 【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
+- ODR 遮罩配 IDR 暫存器 → 【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
+- 狀態表寫成「進入條件」 → 【筆記】狀態表怎麼讀：每一列是「離開」的條件
+- WasPressed 沒清除 → 【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對
+- press_event 以為要 volatile → 【問題】以為 press_event 要加 volatile
+- 改週期後連續補做 → 【問題】改變週期後 last += period 連續補做
+- 加法比較溢位預測錯 → 【問題】以為 now >= last + period 溢位時只是「不 toggle」
+
+## 對照 HAL
+
+**SysTick 設定**
+
+```c
+// CMSIS core_cm3.h：SysTick_Config()（HAL_InitTick() 內部呼叫）
+if ((ticks - 1UL) > SysTick_LOAD_RELOAD_Msk) { return (1UL); }
+SysTick->LOAD  = (uint32_t)(ticks - 1UL);
+NVIC_SetPriority (SysTick_IRQn, (1UL << __NVIC_PRIO_BITS) - 1UL);
+SysTick->VAL   = 0UL;
+SysTick->CTRL  = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+```
+```c
+// 自寫 bsp_systick.c：BSP_SysTick_Init()
+_Static_assert(SYSTICK_LOAD_VALUE <= SysTick_LOAD_RELOAD_Msk, "SysTick LOAD 超過 24 bit");
+SysTick->LOAD = SYSTICK_LOAD_VALUE;
+NVIC_SetPriority(SysTick_IRQn, 15U);
+SysTick->VAL  = 0U;
+SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+```
+- 順序相同；HAL 執行時檢查範圍，自寫版編譯時檢查（LOAD 由巨集決定）
+- HAL 設兩次（`HAL_Init()` 8 MHz、`HAL_RCC_ClockConfig()` 結尾 72 MHz），因為切時脈的逾時判斷要用 tick；自寫 `Clock_Init()` 用迴圈次數逾時，只設一次
+
+**tick 與延遲**
+
+```c
+// stm32f1xx_hal.c
+__IO uint32_t uwTick;
+__weak void HAL_IncTick(void)      { uwTick += uwTickFreq; }
+__weak uint32_t HAL_GetTick(void)  { return uwTick; }
+__weak void HAL_Delay(uint32_t Delay)
+{
+  uint32_t tickstart = HAL_GetTick();
+  uint32_t wait = Delay;
+  if (wait < HAL_MAX_DELAY) { wait += (uint32_t)(uwTickFreq); }
+  while ((HAL_GetTick() - tickstart) < wait) { }
+}
+```
+```c
+// 自寫 bsp_systick.c
+static volatile uint32_t tick = 0U;
+void SysTick_Handler(void)          { tick++; }
+uint32_t BSP_SysTick_GetTick(void)  { return tick; }
+// 不提供 Delay：main 以 (now - last) >= period 做 non-blocking
+```
+- `uwTick` 無 static，任何模組都能改；自寫版只能讀
+- `uwTickFreq`：HAL 可降頻省電，tick 單位仍是 ms
+- `HAL_Delay` 多等 1 tick 保證至少 N ms；`HAL_MAX_DELAY` 不加 1 避免溢位成 0
+- `__weak`：用 RTOS 時可改用 TIM 當時間基準，HAL 原始碼不必改
+- 去彈跳：HAL 無對應功能；`HAL_GPIO_ReadPin()` 只對應 `BSP_GPIO_Button_IsPressed()`
+
+## 面試版 30 秒說明
+> 我只用 CMSIS 標頭檔設定 SysTick：LOAD 填 72 MHz 除以 1000 減 1，用 _Static_assert 確認不超過 24 bit；優先權設最低，VAL 清 0，最後 CTRL 選處理器時脈、開中斷、啟動。中斷裡讓 static volatile 的 tick 加 1，外部只能透過 GetTick 讀。volatile 我實測過，-O2 拿掉它延遲迴圈會變成無窮迴圈。主迴圈每圈取一次 now，LED 和按鍵去彈跳狀態機都用 now 減 last 判斷，無號數減法跨過 49.7 天的溢位仍正確，我把 tick 初值設在溢位前 2 秒驗證過。去彈跳用四個狀態，連續穩定 20 ms 才發事件，事件由使用者讀取時清除；邏輯分析儀量到從按下到反應 20.8 ms。

@@ -90,7 +90,7 @@ int main(void)
 			}
 			// 週期換了，從現在重新起算
 			// 這邊在學習時自己出現連續邏輯錯誤
-//			led_last_toggle = now;
+			led_last_toggle = now;
 			press_count ++;
 		}
 

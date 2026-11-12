@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（48）
+## 踩過的錯（49）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -68,8 +68,9 @@
 - WasPressed() 只回傳沒清除；先清除再回傳也不對
 - 以為 press_event 要加 volatile
 - 改變週期後 last += period 連續補做
+- 以為 now >= last + period 溢位時只是「不 toggle」
 
-## 解法（25）
+## 解法（27）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -107,4 +108,6 @@
 - Non-blocking LED：用 BSP_SysTick_GetTick() 每 500 ms 切換
 - 按鍵去彈跳狀態機設計：4 個狀態，確認按下時發事件
 - 按鍵去彈跳狀態機：button_debounce 模組
+- tick 溢位實驗：讓 tick 從溢位前 2 秒開始
+- SPRINT-W01-S04 總整理：從頭到尾每一步
 
