@@ -12,3 +12,5 @@ tracker/.app_port
 tracker/app.log
 *.out
 projects/**/*.exe
+tracker2/.app_port
+tracker2/app.log

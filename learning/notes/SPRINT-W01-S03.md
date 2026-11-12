@@ -58,7 +58,7 @@
 - 暫存器標頭放 .c 不放 .h：使用者只需要知道函式介面，不用看到暫存器（隱藏實作）
 - 資料夾分工：自己的檔案放 `Inc/`、`Src/`；廠商檔案放 `Inc/CMSIS/`，不要混放
 
-### [問題] 2026-10-21 21:42 ❓ 未解決
+### [問題] 2026-10-21 21:42 ✅ 已解決
 
 【問題】main.c 出現 'CLOCK_OK' undeclared
 **錯誤碼定義在 clock_init.c，main.c 看不到**
@@ -67,7 +67,7 @@
 - 解法：呼叫者會用到的常數（錯誤碼）搬到 `clock_init.h`
 - 判斷原則：問自己「呼叫這個函式的人需要知道它嗎？」需要 → .h；不需要 → .c
 
-### [問題] 2026-10-21 21:43 ❓ 未解決
+### [問題] 2026-10-21 21:43 ✅ 已解決
 
 【問題】Build 成功，但編輯器顯示 Unresolved inclusion: "clock_init.h"
 **真正原因：新程式存到了 S02 專案的 main.c**
@@ -136,7 +136,7 @@
   - 和 S02 的原則相同：只動自己的欄位
 - 預期結果：bit 3、bit 4 為 1 → `0x0000_0018`
 
-### [問題] 2026-10-21 22:15 ❓ 未解決
+### [問題] 2026-10-21 22:15 ✅ 已解決
 
 【問題】開 GPIO 時脈時誤用 APB2RSTR 的 mask
 **ENR = 時脈致能；RSTR = 周邊重置，兩者 bit 位置相同但意義完全不同**
@@ -182,36 +182,6 @@ else
 
 ### [解法] 2026-10-21 22:48
 
-【筆記】HAL 開時脈巨集 __HAL_RCC_GPIOC_CLK_ENABLE() 拆解
-**設好 bit 後讀回一次，用讀取動作當作延遲**
-
-```c
-#define __HAL_RCC_GPIOC_CLK_ENABLE()   do { \
-        __IO uint32_t tmpreg; \
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \
-        /* Delay after an RCC peripheral clock enabling */ \
-        tmpreg = READ_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \
-        UNUSED(tmpreg); \
-    } while(0U)
-```
-
-| 程式 | 作用 |
-|---|---|
-| `SET_BIT(REG, BIT)` | 開時脈，展開後就是「REG 或等於 BIT」 |
-| `tmpreg = READ_BIT(...)` | 讀回同一暫存器：CPU 必須等前一筆寫入完成才能讀，形成延遲 |
-| `__IO uint32_t tmpreg` | `__IO` = `volatile`，防止編譯器把沒人用的讀取刪掉 |
-| `UNUSED(tmpreg)` | `(void)tmpreg`，消除 set but not used 的 warning |
-| `do { } while(0U)` | 把多行巨集包成「一個敘述」 |
-
-- 為什麼要延遲：開時脈的寫入經過匯流排要幾個週期才生效，馬上設定周邊可能被忽略
-- 讀回的「值」不重要，「讀」這個動作才重要（不是二次確認）
-- 正式記載於 ST Errata Sheet（Delay after an RCC peripheral clock enabling）
-- 自己的寫法：`(void)RCC->APB2ENR;`（Step 5 決定是否加入 bsp_gpio.c）
-- 定義位置：`SET_BIT`、`READ_BIT` 在 `stm32f1xx.h`；`__IO` 在 `core_cm3.h`；`UNUSED` 是 HAL 專用（`stm32f1xx_hal_def.h`）
-- volatile 的「暫存器」要分清楚：CPU 暫存器（R0～R12）vs 周邊暫存器（RCC->APB2ENR）
-
-### [解法] 2026-10-21 22:48
-
 【解法】單一 bit 與多 bit 欄位的寫法選擇
 **單一 bit 不需要先清再設**
 
@@ -236,49 +206,6 @@ REG = (REG & ~FIELD_Msk) | FIELD_VALUE;
 - `a = a | b` 縮寫成 `a |= b`：暫存器名稱只寫一次，避免左右寫成不同暫存器
 - 同一行的 mask 名稱要統一（都用 `_Msk`）
 - 驗證：APB2ENR 前 `0x0` → 後 `0x18`（`0b11000`，bit 3、bit 4 = 1）
-
-### [筆記] 2026-10-22 21:59
-
-【筆記】F1 GPIO 的 CNF/MODE 4-bit 編碼
-**每個腳位用 4 bit 設定：高 2 bit 是 CNF，低 2 bit 是 MODE**
-
-| 暫存器 | 節號（中／英） | offset | 復位值 | 管哪些腳位 |
-|---|---|---|---|---|
-| GPIOx_CRL | 8.2.1／9.2.1 | 0x00 | 0x4444_4444 | pin 0～7 |
-| GPIOx_CRH | 8.2.2／9.2.2 | 0x04 | 0x4444_4444 | pin 8～15 |
-
-- L／H = Low／High，指「低編號 8 隻腳／高編號 8 隻腳」，跟速度無關
-- 32 bit ÷ 4 bit = 8 個腳位，所以 16 隻腳要兩個暫存器
-- 欄位名稱的數字 = 腳位編號（MODE13、CNF13 = pin 13）；暫存器是 GPIOA～E 共用格式
-- 起始 bit：CRL 為 y × 4，CRH 為 (y − 8) × 4 → PC13 在 CRH 的 bit [23:20]
-
-**MODE（低 2 bit）：決定輸入或輸出，輸出時決定最大速度（表18）**
-
-| MODE | 意義 |
-|---|---|
-| 00 | 輸入模式（復位值） |
-| 01 | 輸出，最大 10 MHz |
-| 10 | 輸出，最大 2 MHz |
-| 11 | 輸出，最大 50 MHz |
-
-**CNF（高 2 bit）：意義依 MODE 而不同（表17）**
-
-| CNF | 輸入模式（MODE = 00） | 輸出模式（MODE 不為 00） |
-|---|---|---|
-| 00 | 類比輸入 | 通用推挽 |
-| 01 | 浮空輸入（復位值） | 通用開漏 |
-| 10 | 上拉／下拉輸入 | 複用推挽 |
-| 11 | 保留 | 複用開漏 |
-
-**常用組合**
-
-| 用途 | CNF | MODE | 4-bit |
-|---|---|---|---|
-| 復位值：浮空輸入 | 01 | 00 | 0100 = 0x4 |
-| PC13 通用推挽輸出 2 MHz | 00 | 10 | 0010 = 0x2 |
-| PB0 上拉輸入（Step 4） | 10 | 00 | 1000 = 0x8 |
-
-- 復位值 0x4444_4444 = 每個腳位都是 0100 → 開機全部是浮空輸入
 
 ### [筆記] 2026-10-22 22:01
 
@@ -321,7 +248,7 @@ REG = (REG & ~FIELD_Msk) | FIELD_VALUE;
 - 開機預設浮空輸入：腳位不輸出電壓，不會和外部電路衝突，最安全
 - 按鍵 PB0 按下接 GND → 要用上拉，放開時才會穩定讀到 1
 
-### [問題] 2026-10-22 22:03 ❓ 未解決
+### [問題] 2026-10-22 22:03 ✅ 已解決
 
 【問題】GPIO 設定的兩個誤解
 **L／H 不是速度；LED 一設成輸出就會亮**
@@ -424,7 +351,7 @@ BSRR 是「命令」暫存器：寫入的瞬間，硬體依照你寫的 1 去設
 - Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset
 - 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR
 
-### [問題] 2026-10-22 22:52 ❓ 未解決
+### [問題] 2026-10-22 22:52 ✅ 已解決
 
 【問題】LED 亮／暗用錯 Set／Reset
 **直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**
@@ -459,60 +386,6 @@ BSRR 寫法：`GPIOC->BSRR = GPIO_BSRR_BR13_Msk;`
 - 原因 1：只有一次寫入，沒有讀出步驟 → 原子操作，不會被打斷
 - 原因 2：寫 0 的 bit 沒效果 → 只影響 PC13，PC14 等其他腳位維持原樣
 - 注意：`=` 寫進 BSRR，不是把 ODR 整個換掉；硬體只處理寫 1 的 bit
-
-### [解法] 2026-10-24 21:54
-
-【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證
-**命令暫存器用 = 直接寫入**
-
-```c
-GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗
-GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮
-GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗
-GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
-```
-
-| 步驟 | 寫入 | ODR | LED |
-|---|---|---|---|
-| ① | BSRR BS13 | 0x2000 | 暗 |
-| ② | BSRR BR13 | 0x0000 | 亮 |
-| ③ | BSRR BS13 | 0x2000 | 暗 |
-| ④ | BRR BR13 | 0x0000 | 亮 |
-
-- 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義
-- Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
-- 8192 = 0x2000 = 只有 bit 13 為 1
-
-### [筆記] 2026-10-24 22:24
-
-【筆記】上拉輸入為什麼要寫 ODR = 1
-**CNF = 10 只代表「上拉或下拉」，由 ODR 的 bit 決定是哪一個**
-
-| 模式 | CNF | MODE | 4-bit | PxODR |
-|---|---|---|---|---|
-| 上拉輸入 | 10 | 00 | 1000 | 1 |
-| 下拉輸入 | 10 | 00 | 1000 | 0 |
-
-- 輸出模式：ODR bit = 腳位輸出的電位
-- 輸入模式（CNF = 10）：ODR bit = 選擇上拉（1）或下拉（0）
-- PxODR 的 x 是 port 字母（PBODR = GPIOB 的 ODR），不是腳位編號
-- 設定方式：`GPIOB->BSRR = GPIO_BSRR_BS0_Msk;`（用 BSRR，不必讀改寫 ODR）
-
-**電路（按鍵接 PB0 與 GND）**
-
-| 按鍵狀態 | PB0 接到 | IDR bit 0 |
-|---|---|---|
-| 放開 | 經上拉電阻（約 40 kΩ）接 VDD | 1 |
-| 按下 | 經按鍵直接接 GND | 0 |
-
-- 按下時讀到 0 → 按鍵也是 Active-Low
-- 電阻的作用：決定放開時的電位，並在按下時限制電流（否則 VDD 直接短路到 GND）
-
-**忘記寫 ODR = 1 的後果**
-
-- ODR 復位值是 0 → 變成下拉輸入
-- 放開讀到 0、按下也讀到 0 → 按鍵完全沒有作用
-- 程式和 CRL 看起來都正確，很難發現
 
 ### [筆記] 2026-10-24 22:25
 
@@ -559,7 +432,7 @@ GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
 - 放開讀到 0、按下也讀到 0 → 按鍵完全沒有作用
 - 程式和 CRL 看起來都正確，很難發現
 
-### [問題] 2026-10-27 22:54 ❓ 未解決
+### [問題] 2026-10-27 22:54 ✅ 已解決
 
 【問題】讀按鍵時沒有 mask，LED 恆暗
 **IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**
@@ -742,7 +615,7 @@ GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
 | RCC->CFGR | 0x001D040A | SW = SWS = 10（PLL）、×9、APB1 ÷2 |
 | clock_state | 0 | CLOCK_OK |
 
-### [問題] 2026-10-28 22:25 ❓ 未解決
+### [問題] 2026-10-28 22:25 ✅ 已解決
 
 【問題】PB0 誤寫成 CRH
 **pin 0～7 用 CRL，pin 8～15 用 CRH**
@@ -791,7 +664,7 @@ GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
 - 改進方向：PC13 也可以先用 BSRR 的 BS13 設成 1（LED 暗），再切成輸出，避免一切換成輸出 LED 就亮
 - 按鍵和 LED 都是 Active-Low：按下讀到 0，寫 0 點亮
 
-### [問題] 2026-10-28 22:25 ❓ 未解決
+### [問題] 2026-10-28 22:25 ✅ 已解決
 
 【問題】複習時兩個觀念的修正
 **沒開時脈是「寫入被忽略」；浮空輸入是「放開時亂跳」**
@@ -804,7 +677,7 @@ GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
 - 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開
 - 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動
 
-### [問題] 2026-10-29 22:25 ❓ 未解決
+### [問題] 2026-10-29 22:25 ✅ 已解決
 
 【問題】main.c 寫成 #include "bsp_gpio.c"，連結時 multiple definition
 **.c 交給編譯器編譯，只 include .h**
@@ -866,7 +739,7 @@ void BSP_GPIO_Led_Off(void);
 | 腳位、Active-Low、暫存器設定的理由 | .c |
 | 改名的理由、學習備忘 | App 筆記（或加上「備忘：」區分） |
 
-### [問題] 2026-10-29 22:26 ❓ 未解決
+### [問題] 2026-10-29 22:26 ✅ 已解決
 
 【問題】按鍵函式把 Active-Low 洩漏給 main
 **回傳腳位電位時，按下反而是 false**
@@ -981,7 +854,7 @@ if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET)
 - 實務：BSP 內部可以呼叫 HAL，對上層提供有意義的介面（Driver／BSP／App 分層）
 - CubeMX 讓 LED 初始化後暗：GPIO 設定的 output level 改成 High
 
-### [問題] 2026-11-02 22:05 ❓ 未解決
+### [問題] 2026-11-02 22:05 ✅ 已解決
 
 【問題】讀 HAL 原始碼時的四個誤解
 **欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**
@@ -1076,7 +949,7 @@ BSP_GPIO_Init()
   ↓
 迴圈：BSP_GPIO_Button_IsPressed() 讀 GPIOB->IDR → BSP_GPIO_Led_On／Off() 寫 GPIOC->BSRR
 
-### [問題] 2026-11-03 00:05 ❓ 未解決
+### [問題] 2026-11-03 00:05 ✅ 已解決
 
 【問題】驗收時的觀念修正：CNF/MODE 與通用／複用
 **L／H 是腳位分組；CNF 高位決定誰控制腳位**

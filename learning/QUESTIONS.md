@@ -2,684 +2,7 @@
 
 未解決的問題排在最前面。
 
-## ❓ 未解決（49）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 10:51）
-
-  【卡關】RM0008是甚麼? 我要如何取得?
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 13:23）
-
-  標題： RM0008 是什麼？要查哪份文件？
-  
-  解法：
-  1. RM0008：ST 官方的 F101/102/103/105/107 參考手冊，查周邊功能與暫存器的 bit 定義。
-  2. Datasheet：查腳位、電氣特性、Flash 大小與頻率上限。
-  3. PM0056：查 Cortex-M3 核心，例如 NVIC、SysTick、HardFault。
-  建議用英文版，中文翻譯版較舊，章節編號可能不同。
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 13:24）
-
-  標題： STM32F103C8 屬於哪種容量等級？
-  
-  解法：
-  
-  型號最後的 8 代表 Flash 為 64 KB，屬於 Medium-density（中容量）。
-  
-  容量等級：小容量 16～32 KB、中容量 64～128 KB、大容量 256～512 KB。
-  
-  F101/102/103 共用同一張時脈樹圖；F105/107（互聯型）的圖不同。
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 15:01）
-
-  【問題】為什麼開啟 HSE 後一定要等 HSERDY？
-  - 石英剛通電要一段時間才會穩定振盪，頻率和波形都不穩
-  - 沒等就切過去：時脈不對，周邊頻率錯，嚴重時 MCU 直接當機
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 15:01）
-
-  【解法】石英壞了，等待迴圈會卡死
-  - `while ((RCC->CR & RCC_CR_HSERDY) == 0);` 若 HSERDY 永遠是 0 → 無窮迴圈，程式卡死，後面都不會執行
-  - 解法：加 **timeout** 計數器，輪詢 N 次還沒就緒就跳出
-  - 跳出後**不能**繼續設 PLL，要回傳錯誤（之後 W03 會做統一錯誤碼）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 15:02）
-
-  【問題】F103C8 要定義哪個巨集？
-  - `STM32F103xB`：中容量系列（C8 64 KB、CB 128 KB）共用同一個
-  - 設定位置：Project → Properties → C/C++ Build → Settings → MCU GCC Compiler → Preprocessor
-  - 定義後 `stm32f1xx.h` 才會載入對應的 `stm32f103xb.h`
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 21:15）
-
-  【問題】CubeIDE 2.x 找不到 New → STM32 Project
-  
-  - 原因：CubeIDE 2.0 起把 CubeMX 從 IDE 拆出去，舊入口被移除（網路教學多半是舊版畫面）
-  - 解法：**File → STM32 Project Create/Import** → 選 **Empty Project**
-  - 選項：語言 **C**、Binary Type **Executable**
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 21:18）
-
-  【問題】建立專案出現 Project location is not empty repository
-  **建立專案時出現「Project location is not empty repository」，Next 無法按**
-  
-  - 原因：取消勾選 Use default location 後，Location 要填**專案本身的資料夾**，我填成上一層 `projects\`，裡面已有 `SPRINT-W01-S01`
-  - 解法：路徑後面補上專案名稱
-    - 錯：`...\STM32-Learning-Portfolio\projects\`
-    - 對：`...\STM32-Learning-Portfolio\projects\SPRINT-W01-S02`
-  - 資料夾不存在也沒關係，CubeIDE 會自動建立
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 21:20）
-
-  【問題】Build 成功，但狀態列顯示 Unresolved inclusion
-  **Build 0 errors，但狀態列顯示 `Unresolved inclusion: <stm32f1xx>`**
-  
-  - 原因：不是編譯錯誤，是 CubeIDE 的程式碼索引（Indexer）還沒更新
-  - 影響：編輯器出現波浪線、自動完成可能失效
-  - 解法：專案右鍵 → **Index → Rebuild**
-  - 寫法慣例：
-    - 自己專案的標頭檔用雙引號 `#include "stm32f1xx.h"`
-    - 系統／編譯器內建的用角括號 `#include <stdint.h>`
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 21:21）
-
-  【問題】手冊 HSEON 是 bit 16，標頭檔卻寫 bit 0？
-  
-  - 原因：看錯成 `HSION`，兩者只差一個字母
-  
-  | 名稱 | 意思 | 位置 |
-  |---|---|---|
-  | HS**I**ON | Internal 內部 8 MHz RC | bit 0 |
-  | HS**E**ON | External 外部石英 | bit 16 |
-  
-  - 驗證：搜尋 `RCC_CR_HSEON_Pos` → `16U`
-  - 拿手冊和標頭檔互相核對是好習慣（IC bring-up 常要抓兩者不一致）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 22:04）
-
-  【問題】位元運算沒加括號，等待迴圈一次都不執行
-  **`while(RCC->CR >> RCC_CR_HSERDY_Pos & 1U != 1U)` 迴圈一次都不執行**
-  
-  - 可以編譯、不會報錯，但石英壞了也會回傳「成功」（最危險的錯誤）
-  - 原因：運算子優先順序
-  
-  | 優先順序 | 運算子 |
-  |---|---|
-  | 高 | `>>` 移位 |
-  | 中 | `!=` 相等比較 |
-  | 低 | `&` 位元 AND |
-  
-  - 編譯器實際理解成：`(CR >> Pos) & (1U != 1U)` → `x & 0` → 永遠是 0
-  - 口訣：`&`、`|`、`^` 的優先順序比 `==`、`!=` **低**（C 語言公認的設計缺陷）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 22:05）
-
-  【問題】MCU 上 printf 的輸出去哪了？
-  **在 MCU 上呼叫 printf，字會印到哪裡？**
-  
-  - MCU 沒有螢幕或終端機，`printf` 最後呼叫 `syscalls.c` 的 `_write()`
-  - `_write()` 再交給 `__io_putchar()`，預設沒有接到任何硬體 → 看不到輸出
-  - 要真的印到電腦：把 `__io_putchar` / `_write` 接到 UART（W02 USART 會做）
-  - 其他問題：
-    - 會連結大量 C 函式庫程式碼，程式變大
-    - 沒有 `\n` 時內容常卡在緩衝區，不會立即送出
-  - 目前做法：用 debugger 看變數與暫存器（中斷點 + Variables + SFRs）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-15 22:11）
-
-  【問題】ST-LINK 顯示 No device found on target
-  **Debug 失敗：`Error in initializing ST-LINK device. Reason: No device found on target.`**
-  
-  - 意思：電腦找得到 ST-LINK，但 ST-LINK 透過 SWD 找不到 MCU
-  - STM32CubeProgrammer 也連不上 → 問題在**硬體連線**，不是程式或專案設定
-  - 本次原因：**麵包板接觸不良**，改用雙母杜邦線直接連接就成功
-  - 麵包板簧片會氧化、鬆脫，SWD 這類高速訊號特別容易受影響
-  - 燒錄／debug 失敗時，第一步先排除麵包板
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-17 18:30）
-
-  【問題】依目前值判斷要不要設定，結果設定被跳過
-  **`if ((FLASH->ACR & 0x30U) != 0x30U)` 裡的設定完全沒有執行**
-  
-  - 復位值 `0x30` 代入：`(0x30 & 0x30) = 0x30` → `0x30 != 0x30` → **不成立**，區塊被跳過
-  - 誤會：把「Prefetch 已開啟」當成「Flash 已設定好」
-    - 復位值 `0x30` = `0011 0000` → bit 2:0 = `000` → LATENCY 是 **0 WS**，不是 2 WS
-  - 後果：LATENCY 維持 0 WS，之後升到 72 MHz 就會讀錯指令 → 程式亂跑或 HardFault
-  - 解法：**不要依目前值決定要不要設定，直接設定**（重複寫入同一個值沒有副作用）
-  - 注意：括號內運算的值（48）≠ 整個條件的結果（0，不成立）
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-17 18:30）
-
-  【問題】! 和 ~ 搞混，清除欄位時清掉整個暫存器
-  **`FLASH->ACR &= (!FLASH_ACR_LATENCY_Msk);` 把整個暫存器清成 0**
-  
-  | 運算子 | 名稱 | `0x7` 的結果 |
-  |---|---|---|
-  | `!` | 邏輯 NOT | `0`（結果只有 0 或 1） |
-  | `~` | 位元 NOT | `0xFFFFFFF8`（每個 bit 反轉） |
-  
-  - `&= !Msk` = `&= 0` → **32 個 bit 全部清成 0**，連 PRFTBE 也被關掉
-  - 正確清除欄位：`&= ~Msk` → 只清掉遮罩那幾個 bit，其他保持原樣
-  - `~0x7UL` 是 32 bit：`0xFFFFFFF8`（不是 `0xFFF8`），少了高位的 1 會誤清 bit 16～31
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-17 22:44）
-
-  【問題】把其他型號才有的周邊列成 C8 的
-  **列出的 TIM5～8、USART4～5、ADC3、GPIOF～G，F103C8 其實沒有**
-  
-  - 原因：看的是 RM0008 的通用時脈圖，涵蓋整個 F10x 系列（含大容量型號）
-  - F103C8（中容量）實際的周邊：
-  
-  | 匯流排 | 周邊 |
-  |---|---|
-  | APB2（72 MHz） | GPIOA～D、AFIO、ADC1～2、TIM1、SPI1、USART1 |
-  | APB1（36 MHz） | TIM2～4、USART2～3、SPI2、I²C1～2、USB、CAN、WWDG、PWR、BKP |
-  
-  - 原則：
-    - **RM0008** 查周邊怎麼運作、暫存器定義（整個系列共用）
-    - **Datasheet** 查這顆晶片**實際有哪些**周邊、腳位、頻率上限
-  - 面試時說錯自己晶片的周邊，很容易被追問
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 22:12）
-
-  【問題】PLLSRC 誤選成 RCC_CFGR_SW_HSE
-  **「PLL 輸入選 HSE」誤用 `RCC_CFGR_SW_HSE`**
-  
-  - 時脈樹上有**兩個**梯形選擇器，用途不同：
-  
-  | 選擇器 | 位置 | 決定什麼 | 巨集 |
-  |---|---|---|---|
-  | PLLSRC | PLL **前面** | PLL 的輸入來源 | `RCC_CFGR_PLLSRC_Msk` |
-  | SW | SYSCLK **前面** | 系統時脈的來源 | `RCC_CFGR_SW_HSI / HSE / PLL` |
-  
-  - `RCC_CFGR_SW_HSE` = 把 SYSCLK 直接切到 HSE，跟 PLL 無關
-  - 找巨集前先回到時脈樹確認：要設定的是**哪一個**選擇器
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 22:12）
-
-  【問題】設定 bit 為 1 誤用 &
-  **要把 PLLSRC 設成 1，誤以為要用 `&`**
-  
-  | 目的 | 寫法 | 效果 |
-  |---|---|---|
-  | 設成 1 | `REG \|= Msk` | 只有遮罩的 bit 變 1，其他不變 |
-  | 清成 0 | `REG &= ~Msk` | 只有遮罩的 bit 變 0，其他不變 |
-  | 檢查 | `(REG & Msk) != 0U` | 讀取，不修改暫存器 |
-  
-  - 錯誤寫法 `REG &= Msk`：**除了遮罩的 bit，其他全部被清成 0**
-  - 口訣：`|=` 設定、`&= ~` 清除、`&` 檢查
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 22:13）
-
-  【問題】CFGR 預期值算錯：SW/SWS 與 PLLMUL 左移
-  **CFGR 預期值算成 `0x003D040A`，正確是 `0x001D0400`**
-  
-  - 錯誤 1：SW / SWS 填成 `10`（PLL）
-    - 步驟 4 **還沒切換**系統時脈，SYSCLK 仍是開機預設的 HSI
-    - SW / SWS 對照：`00` = HSI、`01` = HSE、`10` = PLL → 現在應為 `00`
-    - `10` 是步驟 5 完成後才會出現的值
-  - 錯誤 2：PLLMUL `0111 << 18` 算成 `0x003C0000`
-    - `0x3C` = `0011 1100` → 等於 bit 18～21 全為 1（把 `0111` 當成 `1111`）
-    - 正確：bit 18、19、20 = 1，bit 21 = 0 → **`0x001C0000`**
-  - 換算技巧：先寫出 32 bit 二進位，從右邊每 4 個一組，再逐組換十六進位，不要心算移位
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 23:16）
-
-  【問題】迴圈內歸零，timeout 永遠不會觸發
-  **`count = 0U;` 寫在 while 迴圈裡，timeout 永遠不會觸發**
-  
-  - 錯誤寫法：每圈先 `count = 0U` 再 `count++` → 每圈結束 count 都是 1，永遠到不了 5000
-  - 後果：等待條件不成立時程式永遠卡死，timeout 形同虛設
-  - 解法：
-    - `count = 0U;` 放在迴圈**前面**
-    - 第二個等待迴圈之前要**重新歸零**（第一個迴圈結束時 count 約 209）
-  - 檢查方法：在腦中跑三圈，寫出每圈結束時變數的值
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 23:16）
-
-  【問題】等待 PLLRDY 卻讀錯暫存器
-  **`while ((RCC->CFGR & RCC_CR_PLLRDY_Msk) == 0U)` 永遠等不到**
-  
-  - PLLRDY 在 **RCC_CR** 的 bit 25，不是 RCC_CFGR
-  - CFGR 的 bit 25 是 **MCO** 欄位的一部分，目前為 0 → 條件永遠成立
-  - 加上 ㊲ 的歸零 bug → 程式永遠卡在這個迴圈
-  - 巨集名稱已經寫明暫存器：`RCC_CR_PLLRDY_Msk` 要配 `RCC->CR`
-  - 習慣：每寫一個位元運算，確認「**哪個暫存器的哪個 bit**」，巨集前綴要跟暫存器一致
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 23:16）
-
-  【問題】新增的錯誤碼與既有錯誤碼同值
-  **新增 `CLOCK_SWITCH_ERROR 1U`，跟 `CLOCK_ERROR_HSE 1U` 重複**
-  
-  - 同一個函式回傳 1 時，分不出是 HSE 失敗還是切換失敗
-  - `CLOCK_SWITCH_OK` 與 `CLOCK_OK` 重複，成功只需要一個
-  - 正確做法：在原本那組錯誤碼後面**接著編號**
-  
-  | 名稱 | 值 |
-  |---|---|
-  | `CLOCK_OK` | 0 |
-  | `CLOCK_ERROR_HSE` | 1 |
-  | `CLOCK_ERROR_PLL` | 2 |
-  | `CLOCK_ERROR_SWITCH` | 3 |
-  
-  - 原則：同一函式的錯誤碼放在同一組、數值不重複
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-19 23:17）
-
-  【問題】等待 SWS 時比較值沒有考慮 bit 位置
-  **`while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != 2U)` 切換成功也會 timeout**
-  
-  - SWS 在 **bit 3:2**，`& Msk` 後數值**仍在原位置、沒有右移**
-  - SWS = `10` → `0000 1000` = **`0x8`**，永遠不等於 2
-  - 後果：明明切換成功，卻跑到 timeout，回傳「切換失敗」
-  - 解法：用巨集比較，位置已算好
-    - `while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL)`
-  - 同類錯誤：㉞ 的 PLLMUL 左移；**比較欄位值時一律用巨集，不要自己寫數字**
-  - 也不能寫 `== 0U`：SWS 為 `01`（HSE）時同樣不是 0，要比對的是「**等於 PLL**」
-
-- **SPRINT-W01-S02** 時脈系統（暫存器）（2026-10-20 22:48）
-
-  【問題】SW 寫成 RCC->CR：沒切換卻回報成功
-  **SW 寫成 `RCC->CR`，`clock_init()` 回傳 `CLOCK_OK`，但 SYSCLK 其實沒切換**
-  
-  - 錯誤寫法：`RCC->CR = (RCC->CR & ~(SW_Msk | SWS_Msk)) | (SW_PLL | SWS_PLL);`
-  - 實際效果（巨集的值被套到 CR）：
-    - `& ~0xF` → 清掉 CR 的 bit 0～3（HSION、HSIRDY、保留位、HSITRIM 最低位）
-    - `| 0xA` → bit 3 被設成 1 → **改到 HSITRIM**，HSI 頻率偏移
-    - SW 完全沒有被設定 → SYSCLK 仍是 HSI 8 MHz
-  - 等待迴圈讀 `RCC->CR & 0xC`：剛好讀到被設成 1 的 bit 3 → `0x8` = `RCC_CFGR_SWS_PLL` → **第一圈就判定成功**
-  - 這是第二次寫錯暫存器（第一次是 ㊳ 的 PLLRDY）
-  - 另一個錯誤：寫入了唯讀的 SWS
-  - 防止方法：**巨集前綴必須和暫存器一致**
-    - `RCC->CFGR` ↔ `RCC_CFGR_xxx`
-    - `RCC->CR` ↔ `RCC_CR_xxx`
-    - `FLASH->ACR` ↔ `FLASH_ACR_xxx`
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-21 21:42）
-
-  【問題】main.c 出現 'CLOCK_OK' undeclared
-  **錯誤碼定義在 clock_init.c，main.c 看不到**
-  
-  - 原因：`#define` 只在定義它的檔案內有效，`main.c` 只 include 了 `clock_init.h`
-  - 解法：呼叫者會用到的常數（錯誤碼）搬到 `clock_init.h`
-  - 判斷原則：問自己「呼叫這個函式的人需要知道它嗎？」需要 → .h；不需要 → .c
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-21 21:43）
-
-  【問題】Build 成功，但編輯器顯示 Unresolved inclusion: "clock_init.h"
-  **真正原因：新程式存到了 S02 專案的 main.c**
-  
-  | 專案 | 當時的 main.c | 結果 |
-  |---|---|---|
-  | S02 | 新版（include `clock_init.h`） | S02 沒有 `clock_init.h` → Unresolved inclusion |
-  | S03 | 舊版（時鐘程式還寫在 main.c） | Build 通過，但其實沒用到 `clock_init.c` |
-  
-  - 檢查：看視窗**標題列**路徑，例如 `workspace - SPRINT-W01-S03/Src/main.c`
-  - 預防：不用的專案右鍵 → **Close Project**；開檔一律從 Project Explorer 對應專案展開
-  - 還原：S02 已 commit，用 Git 取回 HEAD 版本
-  - 和 S02 那則「Index → Rebuild」不同：那次是索引沒更新，這次是真的改錯檔案
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-21 22:15）
-
-  【問題】開 GPIO 時脈時誤用 APB2RSTR 的 mask
-  **ENR = 時脈致能；RSTR = 周邊重置，兩者 bit 位置相同但意義完全不同**
-  
-  | 暫存器 | 節號（中／英） | offset | 寫 1 的意義 |
-  |---|---|---|---|
-  | RCC_APB2RSTR | 6.3.4／7.3.4 | 0x0C | 周邊維持在重置狀態，直到軟體寫 0 |
-  | RCC_APB2ENR | 6.3.7／7.3.7 | 0x18 | 開啟周邊時脈 |
-  
-  - 我的錯誤：寫成 `RCC_APB2RSTR_IOPBRST_Msk`，第二次又寫成 `RCC_APB3ENR_IOPAEN`
-  - 正確：`RCC_APB2ENR_IOPBEN_Msk`（bit 3）、`RCC_APB2ENR_IOPCEN_Msk`（bit 4）
-  - 命名規則：周邊_暫存器_bit名稱_Msk，前半段要和寫入的暫存器一致
-  - F1 只有 APB1、APB2，沒有 APB3；IOPB 是 port B，IOPA 是 port A
-  - 數值相同還是要用對名稱：程式碼是寫給人讀的，看到 RSTR 會誤以為在重置周邊
-  - 如果真的 `|=` 到 RCC->APB2RSTR：重置的是 **port B**（不是 A），而且會一直卡在重置狀態，GPIOB 的設定全部無效，PB0 永遠讀不到
-  - RSTR 正確用法：先寫 1 再寫 0，讓周邊回到復位值（驅動程式重新初始化時使用）
-  - 驗證名稱：打錯會出現 undeclared；也可以按 F3 跳進 `stm32f103xb.h` 確認
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-22 22:03）
-
-  【問題】GPIO 設定的兩個誤解
-  **L／H 不是速度；LED 一設成輸出就會亮**
-  
-  | 誤解 | 正確 |
-  |---|---|
-  | CRL 的 L 代表低速，PC13 不需要高速所以用 CRL | L／H 代表 pin 0～7／pin 8～15；PC13 是 pin 13 → CRH；速度由 MODE 決定 |
-  | PC13 設成輸出後 LED 是暗的 | ODR 復位值 0 → 輸出 0 → Active-Low LED 亮 |
-  
-  - 找不到「PC13」：暫存器圖是 GPIOx 共用格式，要看欄位名稱的數字（MODE13、CNF13）
-  - 預測腳位行為時，要同時考慮「設定（CRH）」和「資料（ODR）」兩個暫存器
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-22 22:52）
-
-  【問題】LED 亮／暗用錯 Set／Reset
-  **直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**
-  
-  - 錯誤答案：亮 → BS13；暗 → BS13（還把 BSRR 打成 BSR）
-  - 正確答案：亮 → 清除 bit 13（BSRR bit 29 或 BRR bit 13）；暗 → 設定 bit 13（BSRR bit 13）
-  - 原因：電路是 3.3V → LED → PC13，腳位接地（0）才有電流
-  - 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）
-  - 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-27 22:54）
-
-  【問題】讀按鍵時沒有 mask，LED 恆暗
-  **IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**
-  
-  - 錯誤寫法：`if (GPIOB->IDR != 0U)`
-  - 正確寫法：`if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)`
-  - 現象：不論按下或放開，LED 都是暗的
-  - Debugger 讀到 `GPIOB->IDR` = 0xFFF3、0xFFF1：bit 0 都是 1（兩次都是放開）；差在 bit 1，PB1 浮空輸入讀值亂跳
-  - 原因：其他腳位不一定是 0（浮空亂跳、JTAG 腳位預設帶上拉），整個 IDR 永遠不等於 0
-  - PB2 = BOOT1，板上接 GND，所以 bit 2 恆為 0
-  
-  **判斷單一 bit：一律和 0U 比較**
-  
-  | 運算 | 結果 |
-  |---|---|
-  | `IDR & GPIO_IDR_IDR0_Msk` | 0 或 0x0001 |
-  | `IDR & GPIO_IDR_IDR13_Msk` | 0 或 0x2000（不是 1） |
-  
-  - `&` 之後 bit 留在原位置，不會移到 bit 0
-  - 寫 `== 1U` 只對 pin 0 有效，換腳位就錯 → 用 `== 0U` 或 `!= 0U`
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-28 22:25）
-
-  【問題】PB0 誤寫成 CRH
-  **pin 0～7 用 CRL，pin 8～15 用 CRH**
-  
-  - PB0 是 pin 0 → GPIOB->CRL 的 bit [3:0]
-  - 判斷時只看腳位編號，不看 port 字母
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-28 22:25）
-
-  【問題】複習時兩個觀念的修正
-  **沒開時脈是「寫入被忽略」；浮空輸入是「放開時亂跳」**
-  
-  | 情境 | 我原本的想法 | 正確 |
-  |---|---|---|
-  | 開 GPIO 時脈（RCC->APB2ENR）放在設定 PC13 模式（GPIOC->CRH）之後 | 時脈不對，寫入的值不如預期 | 沒時脈時寫入直接被忽略，CRH 保持 0x4444_4444，PC13 從頭到尾都不是輸出，LED 完全不受控制 |
-  | PB0 的 CNF0 設成 01（浮空輸入） | 按了沒反應 | 按下穩定讀到 0；放開時沒有電阻拉住，讀值隨雜訊亂跳，LED 可能亂閃或看起來一直是按下 |
-  
-  - 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開
-  - 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-29 22:25）
-
-  【問題】main.c 寫成 #include "bsp_gpio.c"，連結時 multiple definition
-  **.c 交給編譯器編譯，只 include .h**
-  
-  - 錯誤訊息：`ld.exe: ./Src/main.o: in function 'BSP_GPIO_Init': multiple definition of 'BSP_GPIO_Init'; ./Src/bsp_gpio.o: first defined here`
-  - 原因：include 會把檔案內容原封不動貼進來 → main.o 裡也有一份函式本體 → 連結時同一函式出現兩次
-  - 解法：改成 `#include "bsp_gpio.h"`
-  
-  **看懂錯誤訊息**
-  
-  | 階段 | 工具 | 做什麼 |
-  |---|---|---|
-  | 編譯 | arm-none-eabi-gcc -c | 每個 .c 各自編譯成 .o |
-  | 連結 | ld.exe | 合併所有 .o 成 .elf，每個函式只能定義一次 |
-  
-  - 訊息開頭是 ld.exe → 連結階段錯誤，每個 .c 單獨編譯都沒問題
-  - 6 個 error 其實只有一個原因：4 個函式各報一次，加上 collect2、make 各一次
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-10-29 22:26）
-
-  【問題】按鍵函式把 Active-Low 洩漏給 main
-  **回傳腳位電位時，按下反而是 false**
-  
-  | 設計 | 按下時回傳 | main 需要知道 Active-Low 嗎 |
-  |---|---|---|
-  | 輸入 0 回傳 false、1 回傳 true | false | 需要（要記得 false 才是按下） |
-  | 按下回傳 true | true | 不需要 |
-  
-  - 名稱叫 State 或 IsPressed 都可以，關鍵是「行為」要是按下回傳 true
-  - 轉換寫在 .c：`return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);`
-  - main 裡的 `== true` 可省略：函式本身就回傳 bool
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-11-02 22:05）
-
-  【問題】讀 HAL 原始碼時的四個誤解
-  **欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**
-  
-  | 誤解 | 正確 |
-  |---|---|
-  | GPIO_CRL_MODE0_1 是 bit 1:0、值為 1 | _1 是欄位內第 1 個 bit → bit 1、值 0x2 |
-  | GPIOx->BSRR = ioposition 是設定 CRL 的 bit 0 | 寫 BSRR 的 BS0 → 把 ODR bit 0 設成 1（CRL 由後面的 MODIFY_REG 寫） |
-  | WritePin(GPIO_PIN_RESET) 寫前半、輸出 1、LED 暗 | RESET 走 else 寫後半（BR13）→ 輸出 0 → Active-Low LED 亮 |
-  | main 寫 if (bitstatus == 0U) | bitstatus 是 ReadPin 的區域變數，main 看不到；要用回傳值和 GPIO_PIN_RESET 比較 |
-  
-  - ODR 名稱是 Output，但上拉／下拉輸入時用來選上拉或下拉，所以設定出現在 GPIO_MODE_INPUT 分支
-  - 追函式時：先看參數值，再看 if 條件成立與否，一路追到實際寫入的暫存器和 bit
-
-- **SPRINT-W01-S03** GPIO（暫存器重做）（2026-11-03 00:05）
-
-  【問題】驗收時的觀念修正：CNF/MODE 與通用／複用
-  **L／H 是腳位分組；CNF 高位決定誰控制腳位**
-  
-  | 誤解 | 正確 |
-  |---|---|
-  | CRL 管 bit 15～0、CRH 管 bit 31～16 | CRL 管 pin 0～7、CRH 管 pin 8～15（bit 範圍的分法是 BSRR 的兩半） |
-  | 通用和複用的差別是「內部或外部」 | 兩者訊號來源都在晶片內；差在誰決定腳位輸出 |
-  | 複用時由「外部設備」產生訊號 | 由晶片內的周邊（例如 USART1）產生 |
-  
-  **輸出模式時 CNF 的兩個 bit**
-  
-  | CNF bit | 決定什麼 | 0 | 1 |
-  |---|---|---|---|
-  | 高位 | 誰控制腳位 | 通用（程式透過 ODR） | 複用（周邊硬體） |
-  | 低位 | 電路結構 | 推挽 | 開漏 |
-  
-  ```
-    程式 → BSRR／BRR → ODR ──┐
-                              ├─[來源選擇器]→ 輸出開關 → 腳位
-    周邊（USART1 TX）─────────┘
-            CNF 高位：0 選 ODR、1 選周邊
-  ```
-  
-  **應用題**
-  
-  | 設定 | 暫存器與 bit | 4-bit | 暫存器值 |
-  |---|---|---|---|
-  | PA5 通用推挽 50 MHz | GPIOA->CRL [23:20] | 0011 | 0x4434_4444 |
-  | PA9 複用推挽 50 MHz（USART1 TX） | GPIOA->CRH [7:4] | 1011 | 0x4444_44B4 |
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 16:29）
-
-  【問題】把 SysTick 的 TICKINT 誤解成「初始化 tick」
-  **TICKINT 決定數到 0 時要不要產生中斷，跟初始化無關**
-  
-  | `STK_CTRL` bit | 名稱 | 0 | 1 |
-  |---|---|---|---|
-  | 0 | ENABLE | 停止計數 | 開始計數（從 `LOAD` 載入 RELOAD 值往下數） |
-  | 1 | TICKINT | 數到 0 只設 COUNTFLAG，要輪詢 | 數到 0 觸發 SysTick 中斷 → `SysTick_Handler` |
-  | 2 | CLKSOURCE | （待查） | （待查） |
-  | 16 | COUNTFLAG（唯讀） | — | 上次讀取後曾數到 0 |
-  
-  - 錯在哪：看英文說明時把「SysTick exception request」誤會成初始化
-  - 正確理解：要每 1 ms 自動讓 tick 加 1，必須讓它產生中斷
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 16:31）
-
-  【問題】SysTick 時脈來源選 72 MHz 的理由講反了
-  **72 MHz 的優點是解析度高，不是「低速用途也能用」；需要長週期時 /8 反而比較有利**
-  
-  | | CLKSOURCE = 1（72 MHz） | CLKSOURCE = 0（AHB/8 = 9 MHz） |
-  |---|---|---|
-  | 每數一下 | 13.9 ns | 111 ns |
-  | 24 bit 最長一輪 | ≈ 233 ms | ≈ 1.86 s |
-  | 1 ms 的 `LOAD` | 71,999 | 8,999 |
-  
-  - 錯在哪：以為選高速時脈「以後低速也能用」；實際上時脈越快，24 bit 能數的時間越短
-  - 正確理由：1 ms 兩種都放得下 → 選 72 MHz 換取高解析度（讀 `VAL` 可做微秒級量測），且和 CMSIS／HAL 慣例一致
-  - 一輪要超過 233 ms 時才需要改用 /8
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 21:38）
-
-  【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
-  **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
-  
-  | 定義 | 所在檔案 | 寫的人 |
-  |---|---|---|
-  | `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |
-  | `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |
-  
-  - `stm32f103xb.h` 第 131 行 `#include "core_cm3.h"`，所以 include `stm32f1xx.h` 就能用，不必另外 include
-  - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
-  - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:10）
-
-  【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
-  **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
-  
-  | 定義 | 所在檔案 | 寫的人 |
-  |---|---|---|
-  | `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |
-  | `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |
-  
-  - `stm32f103xb.h` 第 131 行 `#include "core_cm3.h"`，所以 include `stm32f1xx.h` 就能用，不必另外 include
-  - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
-  - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:15）
-
-  【問題】想把 SysTick_Handler 加上 static 來「不公開」
-  **handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**
-  
-  | 寫法 | 連結器看得到嗎 | 中斷發生時 |
-  |---|---|---|
-  | `.c` 裡 `void SysTick_Handler(void)`（不加 static） | 看得到，蓋過 weak | 執行你的程式 |
-  | `.c` 裡 `static void SysTick_Handler(void)` | 看不到 | 用 weak 備用 → `Default_Handler` 卡死 |
-  
-  - 「不讓 main 呼叫」靠的是 `.h` 不宣告它，不是加 `static`
-  - 正確做法：`.h` 不放 handler 宣告；`.c` 照常定義、不加 `static`
-  - 不報錯、只是卡死，和名字拼錯同一種症狀（見【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死）
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-04 22:46）
-
-  【問題】以為 ~Msk 的值是 0
-  **~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**
-  
-  | 寫法 | 值／意思 |
-  |---|---|
-  | `SysTick_VAL_CURRENT_Msk` | `0x00FFFFFF` |
-  | `~SysTick_VAL_CURRENT_Msk` | `0xFF000000`（bit 31:24 為 1） |
-  | `REG & ~Msk` | REG 的這個欄位清 0，其他 bit 保留 |
-  | `0U` | 0 |
-  
-  - 錯在哪：把讀改寫 `(REG & ~Msk) \| 新值` 裡的 `~Msk` 當成「清 0 的值」
-  - 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0
-  - 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算
-  - 正確寫法：`SysTick->VAL = 0U;`
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-05 21:38）
-
-  【問題】延遲函式用 if，沒有等待
-  **if 只判斷一次就往下走；要「一直等到條件不成立」必須用 while**
-  
-  ```c
-  // 錯：只檢查一次，立刻返回
-  if ((tick - start) < ms) { ; }
-  
-  // 對：重複檢查，直到經過 ms 個 tick
-  while ((tick - start) < ms) { }
-  ```
-  
-  - 現象：延遲沒有作用，LED 切換太快，看起來常亮或半亮
-  - 變數命名：存的是「開始等待的時間點」→ 叫 `start`，不叫 `now`
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-05 21:53）
-
-  【問題】改了最佳化等級，LED 現象卻沒變
-  **Clean／Build 只在電腦上產生 .elf，沒有按 Debug／Run 下載，晶片跑的還是舊程式**
-  
-  - 現象：拿掉 `volatile`＋`-O2` 後 LED 照常閃，邏輯分析儀數字和之前幾乎相同
-  - 查證：`Debug/SPRINT-W01-S04.list` 裡的延遲函式已經變成無窮迴圈，代表新程式碼是對的，只是沒燒進去
-  - 正確做法：改設定 → Clean → Build → **按 Debug 或 Run 下載** → 才觀察現象
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-07 18:03）
-
-  【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
-  **每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**
-  
-  - 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`
-  - 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理
-  - 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組
-  - 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組
-  - 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-08 22:30）
-
-  【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
-  **同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**
-  
-  ```c
-  if ((GPIOC->IDR & GPIO_ODR_ODR13_Msk) != 0U)   // 錯：暫存器和遮罩不一致
-  if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)   // 對
-  ```
-  
-  - `GPIO_ODR_ODR13_Msk` = `GPIO_IDR_IDR13_Msk` = `0x2000` → 程式碼能動，但讀的是腳位電位而非命令
-  - 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集
-  - 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-09 22:57）
-
-  【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對
-  **讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**
-  
-  ```c
-  bool Button_Debounce_WasPressed(void)
-  {
-      bool event = press_event;   // 先存清除前的值
-      press_event = false;        // 消費事件
-      return event;               // 回傳原本的值
-  }
-  ```
-  
-  | 寫法 | 結果 |
-  |---|---|
-  | 只 `return press_event;` | 不清除 → 每圈都回答「有」，速度亂翻 |
-  | 先 `press_event = false;` 再 `return press_event;` | 永遠回傳 false，收不到事件 |
-  | 先存、再清、再回傳 | 一次按下只被看到一次 |
-  
-  - 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-09 22:57）
-
-  【問題】以為 press_event 要加 volatile
-  **判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**
-  
-  | 變數 | 寫入 | 讀取 | `volatile` |
-  |---|---|---|---|
-  | `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |
-  | `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |
-  
-  - 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷
-  - 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯
-  - 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途
-  - 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要
-
-- **SPRINT-W01-S04** SysTick 與 non-blocking（暫存器）（2026-11-10 23:06）
-
-  【問題】改變週期後 last += period 連續補做
-  **週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**
-  
-  範例：上次 toggle 在 1000，於 1400 按下改成 100
-  
-  | 圈 | now − last | 動作 | last |
-  |---|---|---|---|
-  | 1 | 400 | toggle | 1100 |
-  | 2 | 300 | toggle | 1200 |
-  | 3 | 200 | toggle | 1300 |
-  | 4 | 100 | toggle | 1400 |
-  | 5 | 0 | — | 1400 |
-  
-  - 偶數次 → LED 回到按下前狀態；LED 看不出來，但若動作是送 UART 資料會連送 4 筆
-  - 調換「判斷 LED」與「處理按鍵」的順序修不好：只是晚一圈開始補做
-  - 根本原因：週期變了，`led_last_toggle` 還在舊週期的時間軸上
-  - 解法：改週期時 `led_last_toggle = now;`，從現在重新起算
+## ❓ 未解決（0）
 
 
 ## ✅ 已解決的問題與解法
@@ -697,6 +20,32 @@
 
 ### [SPRINT-W01-S02](notes/SPRINT-W01-S02.md) 時脈系統（暫存器）
 
+- **問題**（2026-10-15 10:51）：
+
+  【卡關】RM0008是甚麼? 我要如何取得?
+
+- **問題**（2026-10-15 13:23）：
+
+  標題： RM0008 是什麼？要查哪份文件？
+  
+  解法：
+  1. RM0008：ST 官方的 F101/102/103/105/107 參考手冊，查周邊功能與暫存器的 bit 定義。
+  2. Datasheet：查腳位、電氣特性、Flash 大小與頻率上限。
+  3. PM0056：查 Cortex-M3 核心，例如 NVIC、SysTick、HardFault。
+  建議用英文版，中文翻譯版較舊，章節編號可能不同。
+
+- **問題**（2026-10-15 13:24）：
+
+  標題： STM32F103C8 屬於哪種容量等級？
+  
+  解法：
+  
+  型號最後的 8 代表 Flash 為 64 KB，屬於 Medium-density（中容量）。
+  
+  容量等級：小容量 16～32 KB、中容量 64～128 KB、大容量 256～512 KB。
+  
+  F101/102/103 共用同一張時脈樹圖；F105/107（互聯型）的圖不同。
+
 - **解法**（2026-10-15 13:25）：
 
   標題： 72 MHz 的時脈設定推導
@@ -707,6 +56,45 @@
   AHB ÷1 = 72 MHz、APB2 ÷1 = 72 MHz。
   APB1 ÷2 = 36 MHz，因為上限是 36。
   只用 HSI 時：8 ÷ 2 × 16 = 64 MHz，到不了 72，所以必須啟用 HSE。
+
+- **問題**（2026-10-15 15:01）：
+
+  【問題】為什麼開啟 HSE 後一定要等 HSERDY？
+  - 石英剛通電要一段時間才會穩定振盪，頻率和波形都不穩
+  - 沒等就切過去：時脈不對，周邊頻率錯，嚴重時 MCU 直接當機
+
+- **解法**（2026-10-15 15:01）：
+
+  【解法】石英壞了，等待迴圈會卡死
+  - `while ((RCC->CR & RCC_CR_HSERDY) == 0);` 若 HSERDY 永遠是 0 → 無窮迴圈，程式卡死，後面都不會執行
+  - 解法：加 **timeout** 計數器，輪詢 N 次還沒就緒就跳出
+  - 跳出後**不能**繼續設 PLL，要回傳錯誤（之後 W03 會做統一錯誤碼）
+
+- **問題**（2026-10-15 15:02）：
+
+  【問題】F103C8 要定義哪個巨集？
+  - `STM32F103xB`：中容量系列（C8 64 KB、CB 128 KB）共用同一個
+  - 設定位置：Project → Properties → C/C++ Build → Settings → MCU GCC Compiler → Preprocessor
+  - 定義後 `stm32f1xx.h` 才會載入對應的 `stm32f103xb.h`
+
+- **問題**（2026-10-15 21:15）：
+
+  【問題】CubeIDE 2.x 找不到 New → STM32 Project
+  
+  - 原因：CubeIDE 2.0 起把 CubeMX 從 IDE 拆出去，舊入口被移除（網路教學多半是舊版畫面）
+  - 解法：**File → STM32 Project Create/Import** → 選 **Empty Project**
+  - 選項：語言 **C**、Binary Type **Executable**
+
+- **問題**（2026-10-15 21:18）：
+
+  【問題】建立專案出現 Project location is not empty repository
+  **建立專案時出現「Project location is not empty repository」，Next 無法按**
+  
+  - 原因：取消勾選 Use default location 後，Location 要填**專案本身的資料夾**，我填成上一層 `projects\`，裡面已有 `SPRINT-W01-S01`
+  - 解法：路徑後面補上專案名稱
+    - 錯：`...\STM32-Learning-Portfolio\projects\`
+    - 對：`...\STM32-Learning-Portfolio\projects\SPRINT-W01-S02`
+  - 資料夾不存在也沒關係，CubeIDE 會自動建立
 
 - **解法**（2026-10-15 21:19）：
 
@@ -724,6 +112,49 @@
      - Include paths：加 `../Inc/CMSIS`
   6. `main.c` 加 `#include "stm32f1xx.h"` → Build → **0 errors**
 
+- **問題**（2026-10-15 21:20）：
+
+  【問題】Build 成功，但狀態列顯示 Unresolved inclusion
+  **Build 0 errors，但狀態列顯示 `Unresolved inclusion: <stm32f1xx>`**
+  
+  - 原因：不是編譯錯誤，是 CubeIDE 的程式碼索引（Indexer）還沒更新
+  - 影響：編輯器出現波浪線、自動完成可能失效
+  - 解法：專案右鍵 → **Index → Rebuild**
+  - 寫法慣例：
+    - 自己專案的標頭檔用雙引號 `#include "stm32f1xx.h"`
+    - 系統／編譯器內建的用角括號 `#include <stdint.h>`
+
+- **問題**（2026-10-15 21:21）：
+
+  【問題】手冊 HSEON 是 bit 16，標頭檔卻寫 bit 0？
+  
+  - 原因：看錯成 `HSION`，兩者只差一個字母
+  
+  | 名稱 | 意思 | 位置 |
+  |---|---|---|
+  | HS**I**ON | Internal 內部 8 MHz RC | bit 0 |
+  | HS**E**ON | External 外部石英 | bit 16 |
+  
+  - 驗證：搜尋 `RCC_CR_HSEON_Pos` → `16U`
+  - 拿手冊和標頭檔互相核對是好習慣（IC bring-up 常要抓兩者不一致）
+
+- **問題**（2026-10-15 22:04）：
+
+  【問題】位元運算沒加括號，等待迴圈一次都不執行
+  **`while(RCC->CR >> RCC_CR_HSERDY_Pos & 1U != 1U)` 迴圈一次都不執行**
+  
+  - 可以編譯、不會報錯，但石英壞了也會回傳「成功」（最危險的錯誤）
+  - 原因：運算子優先順序
+  
+  | 優先順序 | 運算子 |
+  |---|---|
+  | 高 | `>>` 移位 |
+  | 中 | `!=` 相等比較 |
+  | 低 | `&` 位元 AND |
+  
+  - 編譯器實際理解成：`(CR >> Pos) & (1U != 1U)` → `x & 0` → 永遠是 0
+  - 口訣：`&`、`|`、`^` 的優先順序比 `==`、`!=` **低**（C 語言公認的設計缺陷）
+
 - **解法**（2026-10-15 22:04）：
 
   【解法】等待旗標 + timeout 的標準寫法
@@ -735,6 +166,30 @@
   - 迴圈內計數，超過 `TIME_OUT` 就 `return` 失敗，避免石英故障時卡死
   - `TIME_OUT` 用 `#define TIME_OUT 5000U` 定義，數值之後依實測與 datasheet 調整
   - 函式無參數要寫 `(void)`，空括號 `()` 在 C 代表「參數不確定」
+
+- **問題**（2026-10-15 22:05）：
+
+  【問題】MCU 上 printf 的輸出去哪了？
+  **在 MCU 上呼叫 printf，字會印到哪裡？**
+  
+  - MCU 沒有螢幕或終端機，`printf` 最後呼叫 `syscalls.c` 的 `_write()`
+  - `_write()` 再交給 `__io_putchar()`，預設沒有接到任何硬體 → 看不到輸出
+  - 要真的印到電腦：把 `__io_putchar` / `_write` 接到 UART（W02 USART 會做）
+  - 其他問題：
+    - 會連結大量 C 函式庫程式碼，程式變大
+    - 沒有 `\n` 時內容常卡在緩衝區，不會立即送出
+  - 目前做法：用 debugger 看變數與暫存器（中斷點 + Variables + SFRs）
+
+- **問題**（2026-10-15 22:11）：
+
+  【問題】ST-LINK 顯示 No device found on target
+  **Debug 失敗：`Error in initializing ST-LINK device. Reason: No device found on target.`**
+  
+  - 意思：電腦找得到 ST-LINK，但 ST-LINK 透過 SWD 找不到 MCU
+  - STM32CubeProgrammer 也連不上 → 問題在**硬體連線**，不是程式或專案設定
+  - 本次原因：**麵包板接觸不良**，改用雙母杜邦線直接連接就成功
+  - 麵包板簧片會氧化、鬆脫，SWD 這類高速訊號特別容易受影響
+  - 燒錄／debug 失敗時，第一步先排除麵包板
 
 - **解法**（2026-10-17 17:36）：
 
@@ -753,6 +208,32 @@
     - **升頻：先加 latency → 再升頻**
     - **降頻：先降頻 → 再減 latency**
   - 原則：**任何時刻 latency 都要夠用**
+
+- **問題**（2026-10-17 18:30）：
+
+  【問題】依目前值判斷要不要設定，結果設定被跳過
+  **`if ((FLASH->ACR & 0x30U) != 0x30U)` 裡的設定完全沒有執行**
+  
+  - 復位值 `0x30` 代入：`(0x30 & 0x30) = 0x30` → `0x30 != 0x30` → **不成立**，區塊被跳過
+  - 誤會：把「Prefetch 已開啟」當成「Flash 已設定好」
+    - 復位值 `0x30` = `0011 0000` → bit 2:0 = `000` → LATENCY 是 **0 WS**，不是 2 WS
+  - 後果：LATENCY 維持 0 WS，之後升到 72 MHz 就會讀錯指令 → 程式亂跑或 HardFault
+  - 解法：**不要依目前值決定要不要設定，直接設定**（重複寫入同一個值沒有副作用）
+  - 注意：括號內運算的值（48）≠ 整個條件的結果（0，不成立）
+
+- **問題**（2026-10-17 18:30）：
+
+  【問題】! 和 ~ 搞混，清除欄位時清掉整個暫存器
+  **`FLASH->ACR &= (!FLASH_ACR_LATENCY_Msk);` 把整個暫存器清成 0**
+  
+  | 運算子 | 名稱 | `0x7` 的結果 |
+  |---|---|---|
+  | `!` | 邏輯 NOT | `0`（結果只有 0 或 1） |
+  | `~` | 位元 NOT | `0xFFFFFFF8`（每個 bit 反轉） |
+  
+  - `&= !Msk` = `&= 0` → **32 個 bit 全部清成 0**，連 PRFTBE 也被關掉
+  - 正確清除欄位：`&= ~Msk` → 只清掉遮罩那幾個 bit，其他保持原樣
+  - `~0x7UL` 是 32 bit：`0xFFFFFFF8`（不是 `0xFFF8`），少了高位的 1 會誤清 bit 16～31
 
 - **解法**（2026-10-17 18:31）：
 
@@ -784,6 +265,67 @@
   - 結論：APB1 電路只依 36 MHz 設計與驗證，超過不在 ST 保證範圍內，屬**硬體規格**
   - 補償機制：APB 分頻 ≠ 1 時，計時器時脈 **×2** → APB1 上的 TIM2～4 仍可拿到 72 MHz
 
+- **問題**（2026-10-17 22:44）：
+
+  【問題】把其他型號才有的周邊列成 C8 的
+  **列出的 TIM5～8、USART4～5、ADC3、GPIOF～G，F103C8 其實沒有**
+  
+  - 原因：看的是 RM0008 的通用時脈圖，涵蓋整個 F10x 系列（含大容量型號）
+  - F103C8（中容量）實際的周邊：
+  
+  | 匯流排 | 周邊 |
+  |---|---|
+  | APB2（72 MHz） | GPIOA～D、AFIO、ADC1～2、TIM1、SPI1、USART1 |
+  | APB1（36 MHz） | TIM2～4、USART2～3、SPI2、I²C1～2、USB、CAN、WWDG、PWR、BKP |
+  
+  - 原則：
+    - **RM0008** 查周邊怎麼運作、暫存器定義（整個系列共用）
+    - **Datasheet** 查這顆晶片**實際有哪些**周邊、腳位、頻率上限
+  - 面試時說錯自己晶片的周邊，很容易被追問
+
+- **問題**（2026-10-19 22:12）：
+
+  【問題】PLLSRC 誤選成 RCC_CFGR_SW_HSE
+  **「PLL 輸入選 HSE」誤用 `RCC_CFGR_SW_HSE`**
+  
+  - 時脈樹上有**兩個**梯形選擇器，用途不同：
+  
+  | 選擇器 | 位置 | 決定什麼 | 巨集 |
+  |---|---|---|---|
+  | PLLSRC | PLL **前面** | PLL 的輸入來源 | `RCC_CFGR_PLLSRC_Msk` |
+  | SW | SYSCLK **前面** | 系統時脈的來源 | `RCC_CFGR_SW_HSI / HSE / PLL` |
+  
+  - `RCC_CFGR_SW_HSE` = 把 SYSCLK 直接切到 HSE，跟 PLL 無關
+  - 找巨集前先回到時脈樹確認：要設定的是**哪一個**選擇器
+
+- **問題**（2026-10-19 22:12）：
+
+  【問題】設定 bit 為 1 誤用 &
+  **要把 PLLSRC 設成 1，誤以為要用 `&`**
+  
+  | 目的 | 寫法 | 效果 |
+  |---|---|---|
+  | 設成 1 | `REG \|= Msk` | 只有遮罩的 bit 變 1，其他不變 |
+  | 清成 0 | `REG &= ~Msk` | 只有遮罩的 bit 變 0，其他不變 |
+  | 檢查 | `(REG & Msk) != 0U` | 讀取，不修改暫存器 |
+  
+  - 錯誤寫法 `REG &= Msk`：**除了遮罩的 bit，其他全部被清成 0**
+  - 口訣：`|=` 設定、`&= ~` 清除、`&` 檢查
+
+- **問題**（2026-10-19 22:13）：
+
+  【問題】CFGR 預期值算錯：SW/SWS 與 PLLMUL 左移
+  **CFGR 預期值算成 `0x003D040A`，正確是 `0x001D0400`**
+  
+  - 錯誤 1：SW / SWS 填成 `10`（PLL）
+    - 步驟 4 **還沒切換**系統時脈，SYSCLK 仍是開機預設的 HSI
+    - SW / SWS 對照：`00` = HSI、`01` = HSE、`10` = PLL → 現在應為 `00`
+    - `10` 是步驟 5 完成後才會出現的值
+  - 錯誤 2：PLLMUL `0111 << 18` 算成 `0x003C0000`
+    - `0x3C` = `0011 1100` → 等於 bit 18～21 全為 1（把 `0111` 當成 `1111`）
+    - 正確：bit 18、19、20 = 1，bit 21 = 0 → **`0x001C0000`**
+  - 換算技巧：先寫出 32 bit 二進位，從右邊每 4 個一組，再逐組換十六進位，不要心算移位
+
 - **解法**（2026-10-19 22:13）：
 
   【解法】RCC_CFGR 預期值計算表（步驟 4）
@@ -804,6 +346,29 @@
   - 方法：每個欄位單獨算出左移後的值，最後全部 OR 起來
   - 用途：寫程式前先算好，debug 時拿來逐 bit 比對
 
+- **問題**（2026-10-19 23:16）：
+
+  【問題】迴圈內歸零，timeout 永遠不會觸發
+  **`count = 0U;` 寫在 while 迴圈裡，timeout 永遠不會觸發**
+  
+  - 錯誤寫法：每圈先 `count = 0U` 再 `count++` → 每圈結束 count 都是 1，永遠到不了 5000
+  - 後果：等待條件不成立時程式永遠卡死，timeout 形同虛設
+  - 解法：
+    - `count = 0U;` 放在迴圈**前面**
+    - 第二個等待迴圈之前要**重新歸零**（第一個迴圈結束時 count 約 209）
+  - 檢查方法：在腦中跑三圈，寫出每圈結束時變數的值
+
+- **問題**（2026-10-19 23:16）：
+
+  【問題】等待 PLLRDY 卻讀錯暫存器
+  **`while ((RCC->CFGR & RCC_CR_PLLRDY_Msk) == 0U)` 永遠等不到**
+  
+  - PLLRDY 在 **RCC_CR** 的 bit 25，不是 RCC_CFGR
+  - CFGR 的 bit 25 是 **MCO** 欄位的一部分，目前為 0 → 條件永遠成立
+  - 加上 ㊲ 的歸零 bug → 程式永遠卡在這個迴圈
+  - 巨集名稱已經寫明暫存器：`RCC_CR_PLLRDY_Msk` 要配 `RCC->CR`
+  - 習慣：每寫一個位元運算，確認「**哪個暫存器的哪個 bit**」，巨集前綴要跟暫存器一致
+
 - **解法**（2026-10-19 23:16）：
 
   【解法】read-modify-write：設定幾個欄位就清除幾個
@@ -817,6 +382,84 @@
   
   - 原則：**清除的欄位與設定的欄位一一對應**
   - 結構：`REG = (REG & ~(清除清單)) | (設定清單);`，不要混用 `&`、`|` 卻不加括號
+
+- **問題**（2026-10-19 23:16）：
+
+  【問題】新增的錯誤碼與既有錯誤碼同值
+  **新增 `CLOCK_SWITCH_ERROR 1U`，跟 `CLOCK_ERROR_HSE 1U` 重複**
+  
+  - 同一個函式回傳 1 時，分不出是 HSE 失敗還是切換失敗
+  - `CLOCK_SWITCH_OK` 與 `CLOCK_OK` 重複，成功只需要一個
+  - 正確做法：在原本那組錯誤碼後面**接著編號**
+  
+  | 名稱 | 值 |
+  |---|---|
+  | `CLOCK_OK` | 0 |
+  | `CLOCK_ERROR_HSE` | 1 |
+  | `CLOCK_ERROR_PLL` | 2 |
+  | `CLOCK_ERROR_SWITCH` | 3 |
+  
+  - 原則：同一函式的錯誤碼放在同一組、數值不重複
+
+- **問題**（2026-10-19 23:17）：
+
+  【問題】等待 SWS 時比較值沒有考慮 bit 位置
+  **`while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != 2U)` 切換成功也會 timeout**
+  
+  - SWS 在 **bit 3:2**，`& Msk` 後數值**仍在原位置、沒有右移**
+  - SWS = `10` → `0000 1000` = **`0x8`**，永遠不等於 2
+  - 後果：明明切換成功，卻跑到 timeout，回傳「切換失敗」
+  - 解法：用巨集比較，位置已算好
+    - `while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL)`
+  - 同類錯誤：㉞ 的 PLLMUL 左移；**比較欄位值時一律用巨集，不要自己寫數字**
+  - 也不能寫 `== 0U`：SWS 為 `01`（HSE）時同樣不是 0，要比對的是「**等於 PLL**」
+
+- **問題**（2026-10-20 22:48）：
+
+  【問題】SW 寫成 RCC->CR：沒切換卻回報成功
+  **SW 寫成 `RCC->CR`，`clock_init()` 回傳 `CLOCK_OK`，但 SYSCLK 其實沒切換**
+  
+  - 錯誤寫法：`RCC->CR = (RCC->CR & ~(SW_Msk | SWS_Msk)) | (SW_PLL | SWS_PLL);`
+  - 實際效果（巨集的值被套到 CR）：
+    - `& ~0xF` → 清掉 CR 的 bit 0～3（HSION、HSIRDY、保留位、HSITRIM 最低位）
+    - `| 0xA` → bit 3 被設成 1 → **改到 HSITRIM**，HSI 頻率偏移
+    - SW 完全沒有被設定 → SYSCLK 仍是 HSI 8 MHz
+  - 等待迴圈讀 `RCC->CR & 0xC`：剛好讀到被設成 1 的 bit 3 → `0x8` = `RCC_CFGR_SWS_PLL` → **第一圈就判定成功**
+  - 這是第二次寫錯暫存器（第一次是 ㊳ 的 PLLRDY）
+  - 另一個錯誤：寫入了唯讀的 SWS
+  - 防止方法：**巨集前綴必須和暫存器一致**
+    - `RCC->CFGR` ↔ `RCC_CFGR_xxx`
+    - `RCC->CR` ↔ `RCC_CR_xxx`
+    - `FLASH->ACR` ↔ `FLASH_ACR_xxx`
+
+- **解法**（2026-10-20 22:50）：
+
+  【解法】S02 驗收回答範本（面試用）
+  **SPRINT-W01-S02 驗收：四題的完整回答**
+  
+  **1. 怎麼確認 SYSCLK 已切到 PLL？**
+  - 看 `RCC->CFGR` 的 SWS（bit 3:2）：`0x001D040A` 的最後一位 `0xA` = `1010`，SWS = `10` = PLL
+  - SW 是軟體寫入的「要求」，SWS 是硬體回報的「實際狀態」
+  - 不能只看函式回傳值：曾經寫錯暫存器，回傳成功但實際沒切換（㊾）
+  
+  **2. 為什麼要先設 Flash latency？**
+  - Flash 讀取時間固定，約 41.7 ns（24 MHz 一個週期，所以 0 WS 最高 24 MHz）
+  - 72 MHz 一個週期 13.9 ns → 41.7 ÷ 13.9 ≈ 3 個週期 → WS = 3 − 1 = **2**
+  - 若先升頻：CPU 在 Flash 還沒準備好時取指令 → 讀到錯誤指令 → 程式亂跑或 HardFault
+  - 升頻先加 WS 再升頻，降頻先降頻再減 WS；WS 只能多不能少
+  
+  **3. APB1 為什麼最高 36 MHz？**
+  - 出處：Datasheet 方塊圖，以及 RM0008 的 RCC_CFGR PPRE1 說明：軟體必須保證 APB1 不超過 36 MHz
+  - 屬硬體規格：APB1 上的周邊只依 36 MHz 設計與驗證，超過不保證正確運作
+  - 原因：頻率越高，功耗越大、時序收斂越難（36 MHz 週期 27.8 ns，72 MHz 只有 13.9 ns）
+  - 程式做法：**切換 SW 到 PLL 之前**先設好 APB1 ÷2，PCLK1 從 4 MHz 變成 36 MHz，全程在規格內
+  
+  **4. 和 HAL 版的差異**
+  - timeout：HAL 用時間（`HAL_GetTick()`），自寫用圈數，會受時脈與編譯最佳化影響
+  - 切換過程：HAL 先把 APB 分頻暫設 ÷16，升降頻都安全；自寫只針對開機升頻
+  - 切換後：HAL 會更新 `SystemCoreClock` 並以 `HAL_InitTick()` 重設 SysTick
+  - HAL 會讀回檢查 latency；支援所有時脈源
+  - 自寫版簡短、每個 bit 都清楚，適合固定用途
 
 - **解法**（2026-10-20 22:50）：
 
@@ -837,6 +480,30 @@
 
 ### [SPRINT-W01-S03](notes/SPRINT-W01-S03.md) GPIO（暫存器重做）
 
+- **問題**（2026-10-21 21:42）：
+
+  【問題】main.c 出現 'CLOCK_OK' undeclared
+  **錯誤碼定義在 clock_init.c，main.c 看不到**
+  
+  - 原因：`#define` 只在定義它的檔案內有效，`main.c` 只 include 了 `clock_init.h`
+  - 解法：呼叫者會用到的常數（錯誤碼）搬到 `clock_init.h`
+  - 判斷原則：問自己「呼叫這個函式的人需要知道它嗎？」需要 → .h；不需要 → .c
+
+- **問題**（2026-10-21 21:43）：
+
+  【問題】Build 成功，但編輯器顯示 Unresolved inclusion: "clock_init.h"
+  **真正原因：新程式存到了 S02 專案的 main.c**
+  
+  | 專案 | 當時的 main.c | 結果 |
+  |---|---|---|
+  | S02 | 新版（include `clock_init.h`） | S02 沒有 `clock_init.h` → Unresolved inclusion |
+  | S03 | 舊版（時鐘程式還寫在 main.c） | Build 通過，但其實沒用到 `clock_init.c` |
+  
+  - 檢查：看視窗**標題列**路徑，例如 `workspace - SPRINT-W01-S03/Src/main.c`
+  - 預防：不用的專案右鍵 → **Close Project**；開檔一律從 Project Explorer 對應專案展開
+  - 還原：S02 已 commit，用 Git 取回 HEAD 版本
+  - 和 S02 那則「Index → Rebuild」不同：那次是索引沒更新，這次是真的改錯檔案
+
 - **解法**（2026-10-21 21:43）：
 
   【解法】複製舊專案建立新課題專案
@@ -852,35 +519,24 @@
   - 自我檢查：燒錄後故意改一個明顯行為，板子沒變 → 先懷疑 launch 設定
   - Workspace 不用切換：同一個 Workspace 可以放多個專案
 
-- **解法**（2026-10-21 22:48）：
+- **問題**（2026-10-21 22:15）：
 
-  【筆記】HAL 開時脈巨集 __HAL_RCC_GPIOC_CLK_ENABLE() 拆解
-  **設好 bit 後讀回一次，用讀取動作當作延遲**
+  【問題】開 GPIO 時脈時誤用 APB2RSTR 的 mask
+  **ENR = 時脈致能；RSTR = 周邊重置，兩者 bit 位置相同但意義完全不同**
   
-  ```c
-  #define __HAL_RCC_GPIOC_CLK_ENABLE()   do { \
-          __IO uint32_t tmpreg; \
-          SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \
-          /* Delay after an RCC peripheral clock enabling */ \
-          tmpreg = READ_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \
-          UNUSED(tmpreg); \
-      } while(0U)
-  ```
+  | 暫存器 | 節號（中／英） | offset | 寫 1 的意義 |
+  |---|---|---|---|
+  | RCC_APB2RSTR | 6.3.4／7.3.4 | 0x0C | 周邊維持在重置狀態，直到軟體寫 0 |
+  | RCC_APB2ENR | 6.3.7／7.3.7 | 0x18 | 開啟周邊時脈 |
   
-  | 程式 | 作用 |
-  |---|---|
-  | `SET_BIT(REG, BIT)` | 開時脈，展開後就是「REG 或等於 BIT」 |
-  | `tmpreg = READ_BIT(...)` | 讀回同一暫存器：CPU 必須等前一筆寫入完成才能讀，形成延遲 |
-  | `__IO uint32_t tmpreg` | `__IO` = `volatile`，防止編譯器把沒人用的讀取刪掉 |
-  | `UNUSED(tmpreg)` | `(void)tmpreg`，消除 set but not used 的 warning |
-  | `do { } while(0U)` | 把多行巨集包成「一個敘述」 |
-  
-  - 為什麼要延遲：開時脈的寫入經過匯流排要幾個週期才生效，馬上設定周邊可能被忽略
-  - 讀回的「值」不重要，「讀」這個動作才重要（不是二次確認）
-  - 正式記載於 ST Errata Sheet（Delay after an RCC peripheral clock enabling）
-  - 自己的寫法：`(void)RCC->APB2ENR;`（Step 5 決定是否加入 bsp_gpio.c）
-  - 定義位置：`SET_BIT`、`READ_BIT` 在 `stm32f1xx.h`；`__IO` 在 `core_cm3.h`；`UNUSED` 是 HAL 專用（`stm32f1xx_hal_def.h`）
-  - volatile 的「暫存器」要分清楚：CPU 暫存器（R0～R12）vs 周邊暫存器（RCC->APB2ENR）
+  - 我的錯誤：寫成 `RCC_APB2RSTR_IOPBRST_Msk`，第二次又寫成 `RCC_APB3ENR_IOPAEN`
+  - 正確：`RCC_APB2ENR_IOPBEN_Msk`（bit 3）、`RCC_APB2ENR_IOPCEN_Msk`（bit 4）
+  - 命名規則：周邊_暫存器_bit名稱_Msk，前半段要和寫入的暫存器一致
+  - F1 只有 APB1、APB2，沒有 APB3；IOPB 是 port B，IOPA 是 port A
+  - 數值相同還是要用對名稱：程式碼是寫給人讀的，看到 RSTR 會誤以為在重置周邊
+  - 如果真的 `|=` 到 RCC->APB2RSTR：重置的是 **port B**（不是 A），而且會一直卡在重置狀態，GPIOB 的設定全部無效，PB0 永遠讀不到
+  - RSTR 正確用法：先寫 1 再寫 0，讓周邊回到復位值（驅動程式重新初始化時使用）
+  - 驗證名稱：打錯會出現 undeclared；也可以按 F3 跳進 `stm32f103xb.h` 確認
 
 - **解法**（2026-10-21 22:48）：
 
@@ -908,6 +564,19 @@
   - `a = a | b` 縮寫成 `a |= b`：暫存器名稱只寫一次，避免左右寫成不同暫存器
   - 同一行的 mask 名稱要統一（都用 `_Msk`）
   - 驗證：APB2ENR 前 `0x0` → 後 `0x18`（`0b11000`，bit 3、bit 4 = 1）
+
+- **問題**（2026-10-22 22:03）：
+
+  【問題】GPIO 設定的兩個誤解
+  **L／H 不是速度；LED 一設成輸出就會亮**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | CRL 的 L 代表低速，PC13 不需要高速所以用 CRL | L／H 代表 pin 0～7／pin 8～15；PC13 是 pin 13 → CRH；速度由 MODE 決定 |
+  | PC13 設成輸出後 LED 是暗的 | ODR 復位值 0 → 輸出 0 → Active-Low LED 亮 |
+  
+  - 找不到「PC13」：暫存器圖是 GPIOx 共用格式，要看欄位名稱的數字（MODE13、CNF13）
+  - 預測腳位行為時，要同時考慮「設定（CRH）」和「資料（ODR）」兩個暫存器
 
 - **解法**（2026-10-22 22:05）：
 
@@ -939,28 +608,38 @@
   - Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset
   - 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR
 
-- **解法**（2026-10-24 21:54）：
+- **問題**（2026-10-22 22:52）：
 
-  【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證
-  **命令暫存器用 = 直接寫入**
+  【問題】LED 亮／暗用錯 Set／Reset
+  **直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**
   
-  ```c
-  GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗
-  GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮
-  GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗
-  GPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）
-  ```
+  - 錯誤答案：亮 → BS13；暗 → BS13（還把 BSRR 打成 BSR）
+  - 正確答案：亮 → 清除 bit 13（BSRR bit 29 或 BRR bit 13）；暗 → 設定 bit 13（BSRR bit 13）
+  - 原因：電路是 3.3V → LED → PC13，腳位接地（0）才有電流
+  - 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）
+  - 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記
+
+- **問題**（2026-10-27 22:54）：
+
+  【問題】讀按鍵時沒有 mask，LED 恆暗
+  **IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**
   
-  | 步驟 | 寫入 | ODR | LED |
-  |---|---|---|---|
-  | ① | BSRR BS13 | 0x2000 | 暗 |
-  | ② | BSRR BR13 | 0x0000 | 亮 |
-  | ③ | BSRR BS13 | 0x2000 | 暗 |
-  | ④ | BRR BR13 | 0x0000 | 亮 |
+  - 錯誤寫法：`if (GPIOB->IDR != 0U)`
+  - 正確寫法：`if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)`
+  - 現象：不論按下或放開，LED 都是暗的
+  - Debugger 讀到 `GPIOB->IDR` = 0xFFF3、0xFFF1：bit 0 都是 1（兩次都是放開）；差在 bit 1，PB1 浮空輸入讀值亂跳
+  - 原因：其他腳位不一定是 0（浮空亂跳、JTAG 腳位預設帶上拉），整個 IDR 永遠不等於 0
+  - PB2 = BOOT1，板上接 GND，所以 bit 2 恆為 0
   
-  - 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義
-  - Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
-  - 8192 = 0x2000 = 只有 bit 13 為 1
+  **判斷單一 bit：一律和 0U 比較**
+  
+  | 運算 | 結果 |
+  |---|---|
+  | `IDR & GPIO_IDR_IDR0_Msk` | 0 或 0x0001 |
+  | `IDR & GPIO_IDR_IDR13_Msk` | 0 或 0x2000（不是 1） |
+  
+  - `&` 之後 bit 留在原位置，不會移到 bit 0
+  - 寫 `== 1U` 只對 pin 0 有效，換腳位就錯 → 用 `== 0U` 或 `!= 0U`
 
 - **解法**（2026-10-27 22:54）：
 
@@ -1019,6 +698,60 @@
   - Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值
   - 8192 = 0x2000 = 只有 bit 13 為 1
 
+- **問題**（2026-10-28 22:25）：
+
+  【問題】PB0 誤寫成 CRH
+  **pin 0～7 用 CRL，pin 8～15 用 CRH**
+  
+  - PB0 是 pin 0 → GPIOB->CRL 的 bit [3:0]
+  - 判斷時只看腳位編號，不看 port 字母
+
+- **問題**（2026-10-28 22:25）：
+
+  【問題】複習時兩個觀念的修正
+  **沒開時脈是「寫入被忽略」；浮空輸入是「放開時亂跳」**
+  
+  | 情境 | 我原本的想法 | 正確 |
+  |---|---|---|
+  | 開 GPIO 時脈（RCC->APB2ENR）放在設定 PC13 模式（GPIOC->CRH）之後 | 時脈不對，寫入的值不如預期 | 沒時脈時寫入直接被忽略，CRH 保持 0x4444_4444，PC13 從頭到尾都不是輸出，LED 完全不受控制 |
+  | PB0 的 CNF0 設成 01（浮空輸入） | 按了沒反應 | 按下穩定讀到 0；放開時沒有電阻拉住，讀值隨雜訊亂跳，LED 可能亂閃或看起來一直是按下 |
+  
+  - 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開
+  - 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動
+
+- **問題**（2026-10-29 22:25）：
+
+  【問題】main.c 寫成 #include "bsp_gpio.c"，連結時 multiple definition
+  **.c 交給編譯器編譯，只 include .h**
+  
+  - 錯誤訊息：`ld.exe: ./Src/main.o: in function 'BSP_GPIO_Init': multiple definition of 'BSP_GPIO_Init'; ./Src/bsp_gpio.o: first defined here`
+  - 原因：include 會把檔案內容原封不動貼進來 → main.o 裡也有一份函式本體 → 連結時同一函式出現兩次
+  - 解法：改成 `#include "bsp_gpio.h"`
+  
+  **看懂錯誤訊息**
+  
+  | 階段 | 工具 | 做什麼 |
+  |---|---|---|
+  | 編譯 | arm-none-eabi-gcc -c | 每個 .c 各自編譯成 .o |
+  | 連結 | ld.exe | 合併所有 .o 成 .elf，每個函式只能定義一次 |
+  
+  - 訊息開頭是 ld.exe → 連結階段錯誤，每個 .c 單獨編譯都沒問題
+  - 6 個 error 其實只有一個原因：4 個函式各報一次，加上 collect2、make 各一次
+
+- **問題**（2026-10-29 22:26）：
+
+  【問題】按鍵函式把 Active-Low 洩漏給 main
+  **回傳腳位電位時，按下反而是 false**
+  
+  | 設計 | 按下時回傳 | main 需要知道 Active-Low 嗎 |
+  |---|---|---|
+  | 輸入 0 回傳 false、1 回傳 true | false | 需要（要記得 false 才是按下） |
+  | 按下回傳 true | true | 不需要 |
+  
+  - 名稱叫 State 或 IsPressed 都可以，關鍵是「行為」要是按下回傳 true
+  - 轉換寫在 .c：`return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);`
+  - main 裡的 `== true` 可省略：函式本身就回傳 bool
+
 - **解法**（2026-10-29 22:27）：
 
   【解法】bsp_gpio.c 的結構與初始化順序
@@ -1057,6 +790,53 @@
   - 註解只寫「做什麼」，不寫 BSP 內部步驟和 Active-Low
   
   **驗證**：Build 0 errors、0 warnings；初始化後 LED 暗；按下亮、放開暗
+
+- **問題**（2026-11-02 22:05）：
+
+  【問題】讀 HAL 原始碼時的四個誤解
+  **欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | GPIO_CRL_MODE0_1 是 bit 1:0、值為 1 | _1 是欄位內第 1 個 bit → bit 1、值 0x2 |
+  | GPIOx->BSRR = ioposition 是設定 CRL 的 bit 0 | 寫 BSRR 的 BS0 → 把 ODR bit 0 設成 1（CRL 由後面的 MODIFY_REG 寫） |
+  | WritePin(GPIO_PIN_RESET) 寫前半、輸出 1、LED 暗 | RESET 走 else 寫後半（BR13）→ 輸出 0 → Active-Low LED 亮 |
+  | main 寫 if (bitstatus == 0U) | bitstatus 是 ReadPin 的區域變數，main 看不到；要用回傳值和 GPIO_PIN_RESET 比較 |
+  
+  - ODR 名稱是 Output，但上拉／下拉輸入時用來選上拉或下拉，所以設定出現在 GPIO_MODE_INPUT 分支
+  - 追函式時：先看參數值，再看 if 條件成立與否，一路追到實際寫入的暫存器和 bit
+
+- **問題**（2026-11-03 00:05）：
+
+  【問題】驗收時的觀念修正：CNF/MODE 與通用／複用
+  **L／H 是腳位分組；CNF 高位決定誰控制腳位**
+  
+  | 誤解 | 正確 |
+  |---|---|
+  | CRL 管 bit 15～0、CRH 管 bit 31～16 | CRL 管 pin 0～7、CRH 管 pin 8～15（bit 範圍的分法是 BSRR 的兩半） |
+  | 通用和複用的差別是「內部或外部」 | 兩者訊號來源都在晶片內；差在誰決定腳位輸出 |
+  | 複用時由「外部設備」產生訊號 | 由晶片內的周邊（例如 USART1）產生 |
+  
+  **輸出模式時 CNF 的兩個 bit**
+  
+  | CNF bit | 決定什麼 | 0 | 1 |
+  |---|---|---|---|
+  | 高位 | 誰控制腳位 | 通用（程式透過 ODR） | 複用（周邊硬體） |
+  | 低位 | 電路結構 | 推挽 | 開漏 |
+  
+  ```
+    程式 → BSRR／BRR → ODR ──┐
+                              ├─[來源選擇器]→ 輸出開關 → 腳位
+    周邊（USART1 TX）─────────┘
+            CNF 高位：0 選 ODR、1 選周邊
+  ```
+  
+  **應用題**
+  
+  | 設定 | 暫存器與 bit | 4-bit | 暫存器值 |
+  |---|---|---|---|
+  | PA5 通用推挽 50 MHz | GPIOA->CRL [23:20] | 0011 | 0x4434_4444 |
+  | PA9 複用推挽 50 MHz（USART1 TX） | GPIOA->CRH [7:4] | 1011 | 0x4444_44B4 |
 
 - **解法**（2026-11-03 00:06）：
 
@@ -1100,6 +880,81 @@
 
 
 ### [SPRINT-W01-S04](notes/SPRINT-W01-S04.md) SysTick 與 non-blocking（暫存器）
+
+- **問題**（2026-11-04 16:29）：
+
+  【問題】把 SysTick 的 TICKINT 誤解成「初始化 tick」
+  **TICKINT 決定數到 0 時要不要產生中斷，跟初始化無關**
+  
+  | `STK_CTRL` bit | 名稱 | 0 | 1 |
+  |---|---|---|---|
+  | 0 | ENABLE | 停止計數 | 開始計數（從 `LOAD` 載入 RELOAD 值往下數） |
+  | 1 | TICKINT | 數到 0 只設 COUNTFLAG，要輪詢 | 數到 0 觸發 SysTick 中斷 → `SysTick_Handler` |
+  | 2 | CLKSOURCE | （待查） | （待查） |
+  | 16 | COUNTFLAG（唯讀） | — | 上次讀取後曾數到 0 |
+  
+  - 錯在哪：看英文說明時把「SysTick exception request」誤會成初始化
+  - 正確理解：要每 1 ms 自動讓 tick 加 1，必須讓它產生中斷
+
+- **問題**（2026-11-04 16:31）：
+
+  【問題】SysTick 時脈來源選 72 MHz 的理由講反了
+  **72 MHz 的優點是解析度高，不是「低速用途也能用」；需要長週期時 /8 反而比較有利**
+  
+  | | CLKSOURCE = 1（72 MHz） | CLKSOURCE = 0（AHB/8 = 9 MHz） |
+  |---|---|---|
+  | 每數一下 | 13.9 ns | 111 ns |
+  | 24 bit 最長一輪 | ≈ 233 ms | ≈ 1.86 s |
+  | 1 ms 的 `LOAD` | 71,999 | 8,999 |
+  
+  - 錯在哪：以為選高速時脈「以後低速也能用」；實際上時脈越快，24 bit 能數的時間越短
+  - 正確理由：1 ms 兩種都放得下 → 選 72 MHz 換取高解析度（讀 `VAL` 可做微秒級量測），且和 CMSIS／HAL 慣例一致
+  - 一輪要超過 233 ms 時才需要改用 /8
+
+- **問題**（2026-11-04 21:38）：
+
+  【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到
+  **SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**
+  
+  | 定義 | 所在檔案 | 寫的人 |
+  |---|---|---|
+  | `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |
+  | `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |
+  
+  - `stm32f103xb.h` 第 131 行 `#include "core_cm3.h"`，所以 include `stm32f1xx.h` 就能用，不必另外 include
+  - 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值
+  - 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`
+
+- **問題**（2026-11-04 22:15）：
+
+  【問題】想把 SysTick_Handler 加上 static 來「不公開」
+  **handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**
+  
+  | 寫法 | 連結器看得到嗎 | 中斷發生時 |
+  |---|---|---|
+  | `.c` 裡 `void SysTick_Handler(void)`（不加 static） | 看得到，蓋過 weak | 執行你的程式 |
+  | `.c` 裡 `static void SysTick_Handler(void)` | 看不到 | 用 weak 備用 → `Default_Handler` 卡死 |
+  
+  - 「不讓 main 呼叫」靠的是 `.h` 不宣告它，不是加 `static`
+  - 正確做法：`.h` 不放 handler 宣告；`.c` 照常定義、不加 `static`
+  - 不報錯、只是卡死，和名字拼錯同一種症狀（見【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死）
+
+- **問題**（2026-11-04 22:46）：
+
+  【問題】以為 ~Msk 的值是 0
+  **~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**
+  
+  | 寫法 | 值／意思 |
+  |---|---|
+  | `SysTick_VAL_CURRENT_Msk` | `0x00FFFFFF` |
+  | `~SysTick_VAL_CURRENT_Msk` | `0xFF000000`（bit 31:24 為 1） |
+  | `REG & ~Msk` | REG 的這個欄位清 0，其他 bit 保留 |
+  | `0U` | 0 |
+  
+  - 錯在哪：把讀改寫 `(REG & ~Msk) \| 新值` 裡的 `~Msk` 當成「清 0 的值」
+  - 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0
+  - 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算
+  - 正確寫法：`SysTick->VAL = 0U;`
 
 - **解法**（2026-11-05 11:02）：
 
@@ -1154,6 +1009,31 @@
   - `SysTick_Config()` 流程相同（`LOAD` → 優先權 → `VAL` → `CTRL`），範圍檢查在執行時；自寫版用 `_Static_assert` 在編譯時擋
   - HAL 設兩次 SysTick（8 MHz、72 MHz），因為切時脈的逾時判斷要用 tick；自寫版 `Clock_Init()` 用迴圈次數逾時，只設一次
 
+- **問題**（2026-11-05 21:38）：
+
+  【問題】延遲函式用 if，沒有等待
+  **if 只判斷一次就往下走；要「一直等到條件不成立」必須用 while**
+  
+  ```c
+  // 錯：只檢查一次，立刻返回
+  if ((tick - start) < ms) { ; }
+  
+  // 對：重複檢查，直到經過 ms 個 tick
+  while ((tick - start) < ms) { }
+  ```
+  
+  - 現象：延遲沒有作用，LED 切換太快，看起來常亮或半亮
+  - 變數命名：存的是「開始等待的時間點」→ 叫 `start`，不叫 `now`
+
+- **問題**（2026-11-05 21:53）：
+
+  【問題】改了最佳化等級，LED 現象卻沒變
+  **Clean／Build 只在電腦上產生 .elf，沒有按 Debug／Run 下載，晶片跑的還是舊程式**
+  
+  - 現象：拿掉 `volatile`＋`-O2` 後 LED 照常閃，邏輯分析儀數字和之前幾乎相同
+  - 查證：`Debug/SPRINT-W01-S04.list` 裡的延遲函式已經變成無窮迴圈，代表新程式碼是對的，只是沒燒進去
+  - 正確做法：改設定 → Clean → Build → **按 Debug 或 Run 下載** → 才觀察現象
+
 - **解法**（2026-11-05 22:02）：
 
   【解法】BSP_SysTick_GetTick() 與 volatile 的實驗驗證
@@ -1191,6 +1071,31 @@
   - 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM
   - `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取
   - 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫
+
+- **問題**（2026-11-07 18:03）：
+
+  【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組
+  **每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**
+  
+  - 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`
+  - 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理
+  - 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組
+  - 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組
+  - 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險
+
+- **問題**（2026-11-08 22:30）：
+
+  【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR
+  **同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**
+  
+  ```c
+  if ((GPIOC->IDR & GPIO_ODR_ODR13_Msk) != 0U)   // 錯：暫存器和遮罩不一致
+  if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)   // 對
+  ```
+  
+  - `GPIO_ODR_ODR13_Msk` = `GPIO_IDR_IDR13_Msk` = `0x2000` → 程式碼能動，但讀的是腳位電位而非命令
+  - 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集
+  - 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找
 
 - **解法**（2026-11-08 22:31）：
 
@@ -1281,6 +1186,63 @@
   | 1 | 放開 | → `RELEASED` |
   | 2～6 | 跳動 | 來回，每次重設 start，最後 start = 6 |
   | 26 | 按下 | 26 − 6 = 20 → `PRESSED`，發事件 |
+
+- **問題**（2026-11-09 22:57）：
+
+  【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對
+  **讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**
+  
+  ```c
+  bool Button_Debounce_WasPressed(void)
+  {
+      bool event = press_event;   // 先存清除前的值
+      press_event = false;        // 消費事件
+      return event;               // 回傳原本的值
+  }
+  ```
+  
+  | 寫法 | 結果 |
+  |---|---|
+  | 只 `return press_event;` | 不清除 → 每圈都回答「有」，速度亂翻 |
+  | 先 `press_event = false;` 再 `return press_event;` | 永遠回傳 false，收不到事件 |
+  | 先存、再清、再回傳 | 一次按下只被看到一次 |
+  
+  - 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉
+
+- **問題**（2026-11-09 22:57）：
+
+  【問題】以為 press_event 要加 volatile
+  **判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**
+  
+  | 變數 | 寫入 | 讀取 | `volatile` |
+  |---|---|---|---|
+  | `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |
+  | `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |
+  
+  - 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷
+  - 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯
+  - 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途
+  - 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要
+
+- **問題**（2026-11-10 23:06）：
+
+  【問題】改變週期後 last += period 連續補做
+  **週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**
+  
+  範例：上次 toggle 在 1000，於 1400 按下改成 100
+  
+  | 圈 | now − last | 動作 | last |
+  |---|---|---|---|
+  | 1 | 400 | toggle | 1100 |
+  | 2 | 300 | toggle | 1200 |
+  | 3 | 200 | toggle | 1300 |
+  | 4 | 100 | toggle | 1400 |
+  | 5 | 0 | — | 1400 |
+  
+  - 偶數次 → LED 回到按下前狀態；LED 看不出來，但若動作是送 UART 資料會連送 4 筆
+  - 調換「判斷 LED」與「處理按鍵」的順序修不好：只是晚一圈開始補做
+  - 根本原因：週期變了，`led_last_toggle` 還在舊週期的時間軸上
+  - 解法：改週期時 `led_last_toggle = now;`，從現在重新起算
 
 - **解法**（2026-11-10 23:06）：
 

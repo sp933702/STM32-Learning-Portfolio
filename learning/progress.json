@@ -29,31 +29,37 @@
           "time": "2026-10-15 09:45",
           "type": "筆記",
           "text": "sizeof 的結果型別是 size_t，printf 要用 %zu",
-          "resolved": null
+          "resolved": null,
+          "id": "d62e916099"
         },
         {
           "time": "2026-10-15 09:54",
           "type": "問題",
           "text": "預測題判斷錯了 long long，理由寫成「匯流排寬度」",
-          "resolved": true
+          "resolved": true,
+          "id": "e1d27c9511",
+          "open": false
         },
         {
           "time": "2026-10-15 09:54",
           "type": "筆記",
           "text": "型別大小由 Data Model／ABI 決定；ILP32、LP64、LLP64 三者的差異",
-          "resolved": null
+          "resolved": null,
+          "id": "631bf74709"
         },
         {
           "time": "2026-10-15 09:54",
           "type": "解法",
           "text": "韌體程式一律使用 <stdint.h> 的固定寬度型別",
-          "resolved": null
+          "resolved": null,
+          "id": "b43dcc684a"
         },
         {
           "time": "2026-10-15 10:30",
           "type": "筆記",
           "text": "【SPRINT-W01-S01／Q00】Data Model 與 ABI\n\n■ 核心觀念\n・型別大小由「編譯目標的 ABI（含資料模型）」決定，C 標準只規定最小寬度\n・與電腦是幾位元、匯流排寬度無關\n・同樣是 64 位元，WSL 的 long＝8，Windows 的 long＝4\n\n■ 命名規則\nI＝int　L＝long　LL＝long long　P＝指標　數字＝列出的型別都是這個位元數\n\n■ 三種資料模型（單位 bytes：int / long / long long / 指標）\n・ILP32：4 / 4 / 8 / 4 → STM32、32 位元 x86／ARM Linux\n・LP64 ：4 / 8 / 8 / 8 → 64 位元 Linux（WSL）、macOS\n・LLP64：4 / 4 / 8 / 8 → 64 位元 Windows（MSVC、MinGW）\n※ char＝1、short＝2，三種模型都一樣\n\n■ C 標準最小寬度\nchar 8 bit ／ short、int 16 bit ／ long 32 bit ／ long long 64 bit\n順序：char ≤ short ≤ int ≤ long ≤ long long\n\n■ 固定寬度型別 <stdint.h>（括號內為 STM32 上的大小）\n・uint8_t / uint16_t / uint32_t / uint64_t（1/2/4/8）\n・uintptr_t：可存放指標數值的整數（4）\n・size_t：sizeof 的結果型別，printf 用 %zu（4）\n→ 暫存器一律用 uint32_t，不用 int／long\n\n■ ABI 與 AAPCS\n・ABI：讓不同來源的機器碼依同一套規則合作\n　（型別大小與對齊、呼叫慣例、目的檔格式）\n・AAPCS：ARM 的函式呼叫標準，屬於 ABI 的一部分\n　（AAPCS32 用於 STM32，AAPCS64 用於 64 位元 ARM）\n\n■ AAPCS32 重點（面試常考）\n・參數：前 4 個放 R0～R3，其餘放堆疊\n・回傳：R0（64 位元用 R0＋R1）\n・呼叫者保存：R0～R3、R12；被呼叫者保存：R4～R11\n・堆疊在函式呼叫邊界要 8-byte 對齊\n・自然對齊：long long、double 要 8-byte 對齊（會影響 struct sizeof）\n\n■ 平台陷阱\n・單寫 char：x86 預設 signed，ARM 預設 unsigned → 要用 int8_t／uint8_t\n・STM32F103 和 x86 都是 Little-endian\n\n■ 我答錯的地方\n・預測題誤判 long long 會變小\n　→ 原因：C 標準規定 long long 至少 64 bit\n・誤以為型別大小由匯流排寬度決定\n　→ 正確：由 ABI／資料模型決定\n\n■ 驗收答案\n・q00 在 STM32 上：1 2 4 4 8 4，與 WSL 不同的是 long 和指標",
-          "resolved": null
+          "resolved": null,
+          "id": "b0e025ff1c"
         }
       ],
       "summary": null
@@ -126,391 +132,479 @@
           "time": "2026-10-15 10:51",
           "type": "問題",
           "text": "【卡關】RM0008是甚麼? 我要如何取得?",
-          "resolved": false
+          "resolved": true,
+          "id": "b4b1947d56",
+          "open": false
         },
         {
           "time": "2026-10-15 13:23",
           "type": "問題",
           "text": "標題： RM0008 是什麼？要查哪份文件？\n\n解法：\n1. RM0008：ST 官方的 F101/102/103/105/107 參考手冊，查周邊功能與暫存器的 bit 定義。\n2. Datasheet：查腳位、電氣特性、Flash 大小與頻率上限。\n3. PM0056：查 Cortex-M3 核心，例如 NVIC、SysTick、HardFault。\n建議用英文版，中文翻譯版較舊，章節編號可能不同。",
-          "resolved": false
+          "resolved": true,
+          "id": "58db64bb15",
+          "open": false
         },
         {
           "time": "2026-10-15 13:24",
           "type": "問題",
           "text": "標題： STM32F103C8 屬於哪種容量等級？\n\n解法：\n\n型號最後的 8 代表 Flash 為 64 KB，屬於 Medium-density（中容量）。\n\n容量等級：小容量 16～32 KB、中容量 64～128 KB、大容量 256～512 KB。\n\nF101/102/103 共用同一張時脈樹圖；F105/107（互聯型）的圖不同。",
-          "resolved": false
+          "resolved": true,
+          "id": "b3871765ab",
+          "open": false
         },
         {
           "time": "2026-10-15 13:24",
           "type": "筆記",
           "text": "標題： 怎麼看時脈樹圖\n內容：\n\n四種元件：\n振盪器（OSC／RC）：時脈來源\n梯形選擇器（MUX）：從多個輸入選一個，旁邊會標控制位元名稱，例如 SW、PLLSRC\n分頻器（/N、Prescaler）\n倍頻器（PLLMUL）\n看法：從目的地沿著線往回追。\n手冊上標的是可選範圍，例如 HSE 4–16 MHz、PLLMUL ×2～×16；自己畫圖時要寫實際設定值。",
-          "resolved": null
+          "resolved": null,
+          "id": "72041028e2"
         },
         {
           "time": "2026-10-15 13:25",
           "type": "筆記",
           "text": "標題： F103 時脈來源與匯流排上限\n內容：\n\n時脈來源：\nHSI RC 8 MHz：內部\nHSE OSC 4–16 MHz：外部石英，本板為 8 MHz\nLSE 32.768 kHz：RTC 用\nLSI 40 kHz：IWDG 用\n匯流排上限：SYSCLK 72、HCLK 72、PCLK1 36、PCLK2 72（單位 MHz）\nUSB 需要 48 MHz：72 ÷ 1.5 = 48",
-          "resolved": null
+          "resolved": null,
+          "id": "38d1a3f368"
         },
         {
           "time": "2026-10-15 13:25",
           "type": "解法",
           "text": "標題： 72 MHz 的時脈設定推導\n內容：\n\nHSE 8 MHz → PLLXTPRE 選 ÷1 → PLLMUL ×9 → 72 MHz。\n不選 ÷2，因為 8 ÷ 2 = 4，需要 ×18，超過 PLLMUL 上限 ×16。\nAHB ÷1 = 72 MHz、APB2 ÷1 = 72 MHz。\nAPB1 ÷2 = 36 MHz，因為上限是 36。\n只用 HSI 時：8 ÷ 2 × 16 = 64 MHz，到不了 72，所以必須啟用 HSE。",
-          "resolved": null
+          "resolved": null,
+          "id": "c4fb38d045"
         },
         {
           "time": "2026-10-15 15:00",
           "type": "筆記",
           "text": "【筆記】怎麼看 RM0008 暫存器圖\n| 位置 | 內容 | 怎麼用 |\n|---|---|---|\n| 標題下方 | 偏移地址、復位值 | 復位值 = 開機時的預設值 |\n| 格子圖 | 上排 bit 31~16、下排 bit 15~0 | 從格子上方數字看出是第幾位 |\n| 格子下方小字 | rw / r / res | rw 可讀寫、r 只能讀、res 保留不要動 |\n| 最下方文字 | 每個 bit 的 0/1 意義 | 真正的意義看這裡 |\n\n- 讀的順序：格子圖找名稱 → 看 bit 編號 → 到文字說明找同名條目\n- 命名規律：結尾 **ON** 通常是開關（rw）、結尾 **RDY** 通常是就緒旗標（r，硬體自己設）\n- 中文版頁碼和英文版不同，討論時用**節號**",
-          "resolved": null
+          "resolved": null,
+          "id": "89e7e555d5"
         },
         {
           "time": "2026-10-15 15:00",
           "type": "筆記",
           "text": "【筆記】RCC_CR 的 HSE 相關 bit\n\n| bit | 名稱 | 屬性 | 意義 |\n|---|---|---|---|\n| 16 | HSEON | rw | 1 = 開啟 HSE |\n| 17 | HSERDY | r | 1 = HSE 已穩定就緒（硬體設定） |\n| 18 | HSEBYP | rw | 1 = 旁路，直接吃外部時脈訊號 |\n\n- HSEBYP：跳過內部振盪電路，給「主動式振盪器／外部時脈訊號」用\n- 本板接**被動石英**，需要內部電路起振 → HSEBYP 設 **0**\n- HSEBYP 只能在 HSE **關閉**時修改",
-          "resolved": null
+          "resolved": null,
+          "id": "2c34037eaa"
         },
         {
           "time": "2026-10-15 15:01",
           "type": "問題",
           "text": "【問題】為什麼開啟 HSE 後一定要等 HSERDY？\n- 石英剛通電要一段時間才會穩定振盪，頻率和波形都不穩\n- 沒等就切過去：時脈不對，周邊頻率錯，嚴重時 MCU 直接當機",
-          "resolved": false
+          "resolved": true,
+          "id": "f8e52ae932",
+          "open": false
         },
         {
           "time": "2026-10-15 15:01",
-          "type": "問題",
+          "type": "解法",
           "text": "【解法】石英壞了，等待迴圈會卡死\n- `while ((RCC->CR & RCC_CR_HSERDY) == 0);` 若 HSERDY 永遠是 0 → 無窮迴圈，程式卡死，後面都不會執行\n- 解法：加 **timeout** 計數器，輪詢 N 次還沒就緒就跳出\n- 跳出後**不能**繼續設 PLL，要回傳錯誤（之後 W03 會做統一錯誤碼）",
-          "resolved": false
+          "resolved": null,
+          "id": "0ba4313a81"
         },
         {
           "time": "2026-10-15 15:02",
           "type": "問題",
           "text": "【問題】F103C8 要定義哪個巨集？\n- `STM32F103xB`：中容量系列（C8 64 KB、CB 128 KB）共用同一個\n- 設定位置：Project → Properties → C/C++ Build → Settings → MCU GCC Compiler → Preprocessor\n- 定義後 `stm32f1xx.h` 才會載入對應的 `stm32f103xb.h`",
-          "resolved": false
+          "resolved": true,
+          "id": "3d9f4d337c",
+          "open": false
         },
         {
           "time": "2026-10-15 21:15",
           "type": "問題",
           "text": "【問題】CubeIDE 2.x 找不到 New → STM32 Project\n\n- 原因：CubeIDE 2.0 起把 CubeMX 從 IDE 拆出去，舊入口被移除（網路教學多半是舊版畫面）\n- 解法：**File → STM32 Project Create/Import** → 選 **Empty Project**\n- 選項：語言 **C**、Binary Type **Executable**",
-          "resolved": false
+          "resolved": true,
+          "id": "096eeec45e",
+          "open": false
         },
         {
           "time": "2026-10-15 21:18",
           "type": "問題",
           "text": "【問題】建立專案出現 Project location is not empty repository\n**建立專案時出現「Project location is not empty repository」，Next 無法按**\n\n- 原因：取消勾選 Use default location 後，Location 要填**專案本身的資料夾**，我填成上一層 `projects\\`，裡面已有 `SPRINT-W01-S01`\n- 解法：路徑後面補上專案名稱\n  - 錯：`...\\STM32-Learning-Portfolio\\projects\\`\n  - 對：`...\\STM32-Learning-Portfolio\\projects\\SPRINT-W01-S02`\n- 資料夾不存在也沒關係，CubeIDE 會自動建立",
-          "resolved": false
+          "resolved": true,
+          "id": "a3f2b3eeb1",
+          "open": false
         },
         {
           "time": "2026-10-15 21:18",
           "type": "筆記",
           "text": "【筆記】Project Explorer 移除舊專案（不刪檔案）\n**從 workspace 移除舊專案，但保留檔案**\n\n- Project Explorer 顯示的是 workspace 裡登記過的專案，不代表都在同一個資料夾\n- 右鍵 → **Delete** → **不要勾** Delete project contents on disk → OK\n  - ⚠️ 勾了會連檔案一起刪除，且不進資源回收筒\n- 只想收起來：右鍵 → **Close Project**\n- 要加回來：File → Open Projects from File System",
-          "resolved": null
+          "resolved": null,
+          "id": "31f72300e9"
         },
         {
           "time": "2026-10-15 21:19",
           "type": "解法",
           "text": "【解法】建立純暫存器專案的完整步驟\n**CubeIDE 2.x 建立純暫存器（不用 HAL）專案**\n\n1. File → STM32 Project Create/Import → Empty Project，晶片選 `STM32F103C8Tx`\n2. 在專案 `Inc\\` 底下新增 `CMSIS\\` 資料夾\n3. 從 `STM32Cube\\Repository\\STM32Cube_FW_F1_V1.8.7\\` 複製標頭檔：\n   - `Drivers\\CMSIS\\Device\\ST\\STM32F1xx\\Include\\` → `stm32f1xx.h`、`stm32f103xb.h`、`system_stm32f1xx.h`\n   - `Drivers\\CMSIS\\Include\\` → 全部 `.h`（`core_cm3.h` 會再引用其他檔）\n4. 專案右鍵 → Refresh（F5）\n5. Properties → C/C++ Build → Settings → MCU GCC Compiler\n   - Preprocessor：加 `STM32F103xB`\n   - Include paths：加 `../Inc/CMSIS`\n6. `main.c` 加 `#include \"stm32f1xx.h\"` → Build → **0 errors**",
-          "resolved": null
+          "resolved": null,
+          "id": "4ae159e9b2"
         },
         {
           "time": "2026-10-15 21:19",
           "type": "筆記",
           "text": "【筆記】CMSIS 標頭檔是什麼、為什麼要複製\n**CMSIS 標頭檔 = C 語言版的 Register Map**\n\n| 檔案 | 內容 |\n|---|---|\n| `stm32f1xx.h` | 總入口，依巨集選擇要載入哪顆晶片的標頭檔 |\n| `stm32f103xb.h` | 周邊基底位址、暫存器結構、每個 bit 的遮罩 |\n| `core_cm3.h` | Cortex-M3 核心：NVIC、SysTick |\n\n- 沒有它：`*(volatile uint32_t *)0x40021000 |= (1 << 16);`\n- 有了它：`RCC->CR |= RCC_CR_HSEON;`（兩行做的事完全相同）\n- 複製進專案的好處：\n  - Git 同步到另一台電腦可直接編譯\n  - 版本固定，不受韌體包更新影響\n  - 檔案就在專案裡，方便查暫存器定義\n- 放在 `Inc` 只是慣例（Inc 放 .h、Src 放 .c），編譯器只看 Include paths\n- 另開 `CMSIS` 子資料夾：區分廠商程式與自己的程式",
-          "resolved": null
+          "resolved": null,
+          "id": "de5cac35e5"
         },
         {
           "time": "2026-10-15 21:20",
           "type": "筆記",
           "text": "【筆記】Include paths 與 Preprocessor 設定的意義\n**MCU GCC Compiler 設定 = 編譯指令的參數**\n\n- 編譯第一階段是**前處理器**：先處理 `#include`、`#define`、`#if`，再真正編譯\n\n| 設定 | 變成參數 | 作用 |\n|---|---|---|\n| Include paths `../Inc/CMSIS` | `-I../Inc/CMSIS` | 告訴編譯器去哪找 .h，沒設會出現 No such file or directory |\n| Preprocessor `STM32F103xB` | `-DSTM32F103xB` | 等於每個 .c 最上面都加 `#define STM32F103xB` |\n\n- 為什麼不在 main.c 寫 `#define`：之後有多個 .c 檔，專案設定定義一次才會一致\n- 路徑用 `../`：編譯是在 `Debug\\` 資料夾執行，`..` 回到專案根目錄\n- 驗證：Build 後在 Console 找 `arm-none-eabi-gcc ... main.c` 那行，可看到 `-D`、`-I`\n- 若巨集沒定義：`stm32f1xx.h` 的 `#if/#elif` 全部不成立 → `#error` 編譯失敗",
-          "resolved": null
+          "resolved": null,
+          "id": "fefff54f2d"
         },
         {
           "time": "2026-10-15 21:20",
           "type": "問題",
           "text": "【問題】Build 成功，但狀態列顯示 Unresolved inclusion\n**Build 0 errors，但狀態列顯示 `Unresolved inclusion: <stm32f1xx>`**\n\n- 原因：不是編譯錯誤，是 CubeIDE 的程式碼索引（Indexer）還沒更新\n- 影響：編輯器出現波浪線、自動完成可能失效\n- 解法：專案右鍵 → **Index → Rebuild**\n- 寫法慣例：\n  - 自己專案的標頭檔用雙引號 `#include \"stm32f1xx.h\"`\n  - 系統／編譯器內建的用角括號 `#include <stdint.h>`",
-          "resolved": false
+          "resolved": true,
+          "id": "9eb3773797",
+          "open": false
         },
         {
           "time": "2026-10-15 21:21",
           "type": "問題",
           "text": "【問題】手冊 HSEON 是 bit 16，標頭檔卻寫 bit 0？\n\n- 原因：看錯成 `HSION`，兩者只差一個字母\n\n| 名稱 | 意思 | 位置 |\n|---|---|---|\n| HS**I**ON | Internal 內部 8 MHz RC | bit 0 |\n| HS**E**ON | External 外部石英 | bit 16 |\n\n- 驗證：搜尋 `RCC_CR_HSEON_Pos` → `16U`\n- 拿手冊和標頭檔互相核對是好習慣（IC bring-up 常要抓兩者不一致）",
-          "resolved": false
+          "resolved": true,
+          "id": "90fdf56348",
+          "open": false
         },
         {
           "time": "2026-10-15 21:21",
           "type": "筆記",
           "text": "【筆記】ST 標頭檔的 bit 定義格式\n**ST 每個 bit 的「三件組」定義**\n\n- `RCC_CR_HSEON_Pos`：Position，第幾個 bit（數字）\n- `RCC_CR_HSEON_Msk`：Mask，`0x1UL << Pos`，已移好位置的遮罩\n- `RCC_CR_HSEON`：平常寫程式用的名字，等於 Msk\n- 註解 `/*!< 0x00010000 */` 是遮罩算出的值，可快速核對\n- 多個 bit 的欄位（如 PLLMUL）遮罩會是 `0xFUL << Pos`\n- 寫程式用名稱，不要自己寫 `(1 << 16)`",
-          "resolved": null
+          "resolved": null,
+          "id": "aedbddf8ee"
         },
         {
           "time": "2026-10-15 22:04",
           "type": "問題",
           "text": "【問題】位元運算沒加括號，等待迴圈一次都不執行\n**`while(RCC->CR >> RCC_CR_HSERDY_Pos & 1U != 1U)` 迴圈一次都不執行**\n\n- 可以編譯、不會報錯，但石英壞了也會回傳「成功」（最危險的錯誤）\n- 原因：運算子優先順序\n\n| 優先順序 | 運算子 |\n|---|---|\n| 高 | `>>` 移位 |\n| 中 | `!=` 相等比較 |\n| 低 | `&` 位元 AND |\n\n- 編譯器實際理解成：`(CR >> Pos) & (1U != 1U)` → `x & 0` → 永遠是 0\n- 口訣：`&`、`|`、`^` 的優先順序比 `==`、`!=` **低**（C 語言公認的設計缺陷）",
-          "resolved": false
+          "resolved": true,
+          "id": "0c28de1fc2",
+          "open": false
         },
         {
           "time": "2026-10-15 22:04",
           "type": "解法",
           "text": "【解法】等待旗標 + timeout 的標準寫法\n**等待 HSERDY 的正確寫法（含 timeout）**\n\n- 推薦：直接用遮罩判斷，不移位\n  - `while ((RCC->CR & RCC_CR_HSERDY_Msk) == 0U)`\n- 若要移位，一律加括號：`(((RCC->CR >> Pos) & 1U) != 1U)`\n- 迴圈內計數，超過 `TIME_OUT` 就 `return` 失敗，避免石英故障時卡死\n- `TIME_OUT` 用 `#define TIME_OUT 5000U` 定義，數值之後依實測與 datasheet 調整\n- 函式無參數要寫 `(void)`，空括號 `()` 在 C 代表「參數不確定」",
-          "resolved": null
+          "resolved": null,
+          "id": "6df8c53c3e"
         },
         {
           "time": "2026-10-15 22:04",
           "type": "筆記",
           "text": "【筆記】warning: set but not used\n**`warning: variable 'hserdy' set but not used`**\n\n- `hserdy = clock_init();` 是**寫入**（set），不是**使用**（use）\n- 編譯器所說的「使用」是指**讀取**值，例如 `if (hserdy == 0U)`\n- 只寫不讀 → 編譯器判定變數沒有意義 → 產生警告\n- 解法：用回傳值做判斷（成功／失敗分別處理）",
-          "resolved": null
+          "resolved": null,
+          "id": "8ecea68aa8"
         },
         {
           "time": "2026-10-15 22:05",
           "type": "問題",
           "text": "【問題】MCU 上 printf 的輸出去哪了？\n**在 MCU 上呼叫 printf，字會印到哪裡？**\n\n- MCU 沒有螢幕或終端機，`printf` 最後呼叫 `syscalls.c` 的 `_write()`\n- `_write()` 再交給 `__io_putchar()`，預設沒有接到任何硬體 → 看不到輸出\n- 要真的印到電腦：把 `__io_putchar` / `_write` 接到 UART（W02 USART 會做）\n- 其他問題：\n  - 會連結大量 C 函式庫程式碼，程式變大\n  - 沒有 `\\n` 時內容常卡在緩衝區，不會立即送出\n- 目前做法：用 debugger 看變數與暫存器（中斷點 + Variables + SFRs）",
-          "resolved": false
+          "resolved": true,
+          "id": "1fabf98d2d",
+          "open": false
         },
         {
           "time": "2026-10-15 22:11",
           "type": "問題",
           "text": "【問題】ST-LINK 顯示 No device found on target\n**Debug 失敗：`Error in initializing ST-LINK device. Reason: No device found on target.`**\n\n- 意思：電腦找得到 ST-LINK，但 ST-LINK 透過 SWD 找不到 MCU\n- STM32CubeProgrammer 也連不上 → 問題在**硬體連線**，不是程式或專案設定\n- 本次原因：**麵包板接觸不良**，改用雙母杜邦線直接連接就成功\n- 麵包板簧片會氧化、鬆脫，SWD 這類高速訊號特別容易受影響\n- 燒錄／debug 失敗時，第一步先排除麵包板",
-          "resolved": false
+          "resolved": true,
+          "id": "bccb11624b",
+          "open": false
         },
         {
           "time": "2026-10-15 22:11",
           "type": "筆記",
           "text": "【筆記】SWD 連不上的排查順序\n**SWD 連不上 MCU 的排查順序**\n\n1. 接線：4 條線\n\n| ST-LINK V2 | Blue Pill |\n|---|---|\n| SWDIO | DIO（PA13） |\n| SWCLK | CLK（PA14） |\n| GND | GND（一定要接，共地） |\n| 3.3V | 3.3（不要接 5V） |\n\n2. 不經過麵包板，杜邦線直接連接，確認電源 LED 有亮\n3. **BOOT0 救援法**（舊程式關掉 SWD 時使用）\n   - BOOT0 跳線設 1 → 重新上電 → MCU 進入內建 Bootloader，不執行舊程式\n   - CubeProgrammer 連線 → Full chip erase\n   - BOOT0 改回 0 → 重新上電\n   - 常見根本原因：CubeMX 的 SYS → Debug 沒設 Serial Wire，HAL 初始化時把 PA13/PA14 關掉了\n4. CubeProgrammer 設定：Frequency 降到 480 kHz 以下，Mode 試 Normal / Under reset",
-          "resolved": null
+          "resolved": null,
+          "id": "9503ba0759"
         },
         {
           "time": "2026-10-15 22:12",
           "type": "筆記",
           "text": "【筆記】用 debugger 驗證暫存器程式\n**用 debugger 驗證暫存器程式的方法**\n\n- Debug Configuration：Main 分頁自動帶好；「调试器」分頁 = Debugger（ST-LINK GDB server、SWD）\n- Startup 預設會先停在 `main()` → 按 **Resume（F8）** 跑到自己設的中斷點\n- 看變數：**Variables** 或 **Expressions** 視窗\n- 看硬體暫存器：**SFRs** 視窗，或 **Live Expressions** 輸入 `RCC->CR`\n- 本次結果：`hserdy = 1`、HSEON = 1、HSERDY = 1 → HSE 已起振 ✅\n- 直接看暫存器比看變數更有說服力（變數是程式的判斷，暫存器是硬體的實際狀態）",
-          "resolved": null
+          "resolved": null,
+          "id": "3b056709ec"
         },
         {
           "time": "2026-10-15 22:31",
           "type": "筆記",
           "text": "【筆記】HSE 起振實測與 TIME_OUT 怎麼決定\n**HSE 起振實測：count = 209**\n\n- 在 `return 1;` 設中斷點，觀察 `count` → 實際等了 209 圈 HSERDY 才變 1\n- `TIME_OUT = 5000U`，約為實際需要的 24 倍，目前餘裕足夠\n- 注意：圈數會受這些條件影響\n  - 編譯最佳化：Debug `-O0` vs Release `-O2`，`-O2` 每圈更快 → 同樣時間會數到更多圈\n  - 板子、石英、溫度不同\n- 業界做法：用**時間**當 timeout，不用圈數（HAL 用 SysTick，HSE 預設等 100 ms）\n- TODO：做完 SysTick 後，把 HSE timeout 改成以時間判斷",
-          "resolved": null
+          "resolved": null,
+          "id": "a8c8906d40"
         },
         {
           "time": "2026-10-16 01:31",
-          "type": "筆記",
+          "type": "進度",
           "text": "【本次進度】接下來要做Flash latency",
-          "resolved": null
+          "resolved": null,
+          "id": "7f7406df8c"
         },
         {
           "time": "2026-10-17 17:33",
           "type": "筆記",
           "text": "【筆記】FLASH_ACR 暫存器\n**FLASH_ACR（Flash Access Control Register）**\n\n- 查詢文件：Flash 程式設計手冊（PM0075），第三章暫存器說明\n- 復位值：`0x0000 0030`\n\n| bit | 名稱 | 屬性 | 意義 |\n|---|---|---|---|\n| 2:0 | LATENCY | rw | Flash 等待週期數（多 bit 欄位） |\n| 4 | PRFTBE | rw | Prefetch 開關（Enable） |\n| 5 | PRFTBS | r | Prefetch 狀態（Status，硬體設定） |\n\n- 命名規律：結尾 **E** = Enable（寫）、結尾 **S** = Status（讀），同 HSEON / HSERDY\n- 復位值 `0x30` = `0011 0000` → bit 4、5 = 1 → **開機預設 Prefetch 已開啟**\n- 仍建議明確設定 PRFTBE：程式自帶說明，且進入程式時不一定是復位值（例如從 Bootloader 跳入）",
-          "resolved": null
+          "resolved": null,
+          "id": "3292d24693"
         },
         {
           "time": "2026-10-17 17:35",
           "type": "筆記",
           "text": "【筆記】Flash 等待週期對照表\n**SYSCLK 與 Flash 等待週期（WS = Wait State）**\n\n| SYSCLK | LATENCY |\n|---|---|\n| 0 < SYSCLK ≤ 24 MHz | 0 WS |\n| 24 < SYSCLK ≤ 48 MHz | 1 WS |\n| 48 < SYSCLK ≤ 72 MHz | 2 WS |\n\n- 本課題 SYSCLK = 72 MHz → **2 WS**\n- 換算：等待週期數 = 總共需要的週期數 − 1\n- 所以 SYSCLK = 72 MHz 需要等待的 Flash 週期數 = 3",
-          "resolved": null
+          "resolved": null,
+          "id": "a96b9d61ce"
         },
         {
           "time": "2026-10-17 17:36",
           "type": "解法",
           "text": "【解法】為什麼要先調 Flash latency 再升頻（驗收第 2 條）\n**為什麼要先調 Flash latency，再提高 SYSCLK？**\n\n- Flash 讀取需要一段**固定時間**，不會因 CPU 變快而變快\n  - 0 WS 最高 24 MHz → Flash 約需 41.7 ns\n  - 72 MHz 一個週期 13.9 ns → 41.7 ÷ 13.9 ≈ **3 個週期** → 需額外等 **2 WS**\n- latency 不夠時：CPU 在 Flash 還沒準備好就取指令 → 拿到錯誤指令／資料 → 程式亂跑或 **HardFault**\n- 如果先升頻再設 latency：\n  - 中間空檔 CPU 以 72 MHz、0 WS 執行\n  - 連「設定 latency 的那條指令」都可能讀錯 → 還沒執行到就當機\n- 先設 latency：此時仍是 8 MHz，多等幾個週期只是稍慢，不會出錯\n- 正確順序：\n  - **升頻：先加 latency → 再升頻**\n  - **降頻：先降頻 → 再減 latency**\n- 原則：**任何時刻 latency 都要夠用**",
-          "resolved": null
+          "resolved": null,
+          "id": "1684de2ea3"
         },
         {
           "time": "2026-10-17 18:30",
           "type": "問題",
           "text": "【問題】依目前值判斷要不要設定，結果設定被跳過\n**`if ((FLASH->ACR & 0x30U) != 0x30U)` 裡的設定完全沒有執行**\n\n- 復位值 `0x30` 代入：`(0x30 & 0x30) = 0x30` → `0x30 != 0x30` → **不成立**，區塊被跳過\n- 誤會：把「Prefetch 已開啟」當成「Flash 已設定好」\n  - 復位值 `0x30` = `0011 0000` → bit 2:0 = `000` → LATENCY 是 **0 WS**，不是 2 WS\n- 後果：LATENCY 維持 0 WS，之後升到 72 MHz 就會讀錯指令 → 程式亂跑或 HardFault\n- 解法：**不要依目前值決定要不要設定，直接設定**（重複寫入同一個值沒有副作用）\n- 注意：括號內運算的值（48）≠ 整個條件的結果（0，不成立）",
-          "resolved": false
+          "resolved": true,
+          "id": "e177279c9a",
+          "open": false
         },
         {
           "time": "2026-10-17 18:30",
           "type": "問題",
           "text": "【問題】! 和 ~ 搞混，清除欄位時清掉整個暫存器\n**`FLASH->ACR &= (!FLASH_ACR_LATENCY_Msk);` 把整個暫存器清成 0**\n\n| 運算子 | 名稱 | `0x7` 的結果 |\n|---|---|---|\n| `!` | 邏輯 NOT | `0`（結果只有 0 或 1） |\n| `~` | 位元 NOT | `0xFFFFFFF8`（每個 bit 反轉） |\n\n- `&= !Msk` = `&= 0` → **32 個 bit 全部清成 0**，連 PRFTBE 也被關掉\n- 正確清除欄位：`&= ~Msk` → 只清掉遮罩那幾個 bit，其他保持原樣\n- `~0x7UL` 是 32 bit：`0xFFFFFFF8`（不是 `0xFFF8`），少了高位的 1 會誤清 bit 16～31",
-          "resolved": false
+          "resolved": true,
+          "id": "34930e1fd3",
+          "open": false
         },
         {
           "time": "2026-10-17 18:31",
           "type": "筆記",
           "text": "【筆記】ST 多 bit 欄位巨集的陷阱\n**`FLASH_ACR_LATENCY_2` 不是「2 WS」**\n\n| 巨集 | 值 | 意義 |\n|---|---|---|\n| `FLASH_ACR_LATENCY_Msk` | `0x7` | 整個欄位 bit 2:0 |\n| `FLASH_ACR_LATENCY_0` | `0x1` | 欄位中的 bit 0 |\n| `FLASH_ACR_LATENCY_1` | `0x2` | 欄位中的 bit 1 |\n| `FLASH_ACR_LATENCY_2` | `0x4` | 欄位中的 bit 2 |\n\n- 巨集名稱的數字 = **欄位中第幾個 bit**，不是設定的數值\n- 2 WS = 二進位 `010` → 用 `FLASH_ACR_LATENCY_1`\n- 之後的 PLLMUL、PPRE1 等多 bit 欄位也是同樣的命名方式",
-          "resolved": null
+          "resolved": null,
+          "id": "177375070a"
         },
         {
           "time": "2026-10-17 18:31",
           "type": "解法",
           "text": "【解法】Flash latency 的正確寫法與驗證\n**FLASH_ACR 設定：Prefetch 開啟 + 2 WS**\n\n- 開啟 Prefetch：`FLASH->ACR |= FLASH_ACR_PRFTBE_Msk;`\n- 設定 LATENCY（read-modify-write，一行完成）：\n  - `FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_1;`\n- 通用公式：`REG = (REG & ~欄位Msk) | 新值;`\n- 為什麼不能只用 `|=`：舊值 `001` |= `010` → `011`，舊的 bit 殘留\n- 不要寫 PRFTBS：它是 **r（唯讀）**，硬體回報狀態，寫入無效\n- 驗證：預期 `0011 0010` = **0x32 = 50**，debugger 實際值 50 ✅",
-          "resolved": null
+          "resolved": null,
+          "id": "c397d7d25a"
         },
         {
           "time": "2026-10-17 18:32",
           "type": "筆記",
           "text": "【筆記】驗證的原則：先獨立算出預期值\n**錯的程式通過了錯的驗證**\n\n- 第一版程式：設定被跳過，實際值 48（0x30）\n- 預期值也算成 `110000`（漏了 LATENCY 的 `010`）→ 兩者「相同」，誤以為成功\n- 原則：\n  - 寫程式前，先**根據手冊獨立算出**預期的暫存器值（每個欄位逐一列出）\n  - 再用 debugger 比對實際值\n  - 不能看到實際值之後才去對答案\n- 實務上「錯的程式 + 錯的驗證」最危險，因為不會有任何錯誤訊息",
-          "resolved": null
+          "resolved": null,
+          "id": "a339fd236f"
         },
         {
           "time": "2026-10-17 22:42",
           "type": "筆記",
           "text": "【筆記】RCC_CFGR 欄位與 72 MHz 設定值\n**RCC_CFGR（時脈設定暫存器）：72 MHz 要設定的欄位**\n\n| 欄位 | bit | 設定值 | 意義 |\n|---|---|---|---|\n| PLLSRC | 16 | `1` | PLL 輸入選 HSE |\n| PLLXTPRE | 17 | `0` | HSE 進 PLL 前 ÷1 |\n| PLLMUL | 21:18 | `0111` | ×9 |\n| HPRE | 7:4 | `0000` | AHB ÷1 |\n| PPRE1 | 10:8 | `100` | APB1 ÷2 |\n| PPRE2 | 13:11 | `000` | APB2 ÷1 |\n\n- PLLMUL 的**設定值不等於倍數**：×9 是 `0111`（7），要查對照表\n- 手冊中的 `x` = don't care：例如 HPRE `0xxx`，只要 bit 7 = 0 就是不分頻\n- 寫程式時 `x` 一律寫 0：跟復位值一致、debugger 好比對、不留意義不明的 bit",
-          "resolved": null
+          "resolved": null,
+          "id": "9c3bc00682"
         },
         {
           "time": "2026-10-17 22:42",
           "type": "筆記",
           "text": "【筆記】PLL 的開關與設定限制\n**PLL 開關（RCC_CR）與設定順序**\n\n| bit | 名稱 | 屬性 | 意義 |\n|---|---|---|---|\n| 24 | PLLON | rw | 1 = 開啟 PLL |\n| 25 | PLLRDY | r | 1 = PLL 已鎖定（硬體設定） |\n\n- 命名規律同 HSEON / HSERDY：ON = 開關、RDY = 就緒旗標\n- 限制：PLLSRC、PLLXTPRE、PLLMUL 必須在 **PLLON = 0** 時設定，開啟後不能修改\n  - 手冊沒有 PLLOFF 這個 bit，「關閉」就是 PLLON = 0\n  - 開機時 PLL 預設是關閉的\n- 正確順序：設定 PLL 參數 → PLLON = 1 → 等 PLLRDY = 1\n- 另一個限制：PLL 正在當 SYSCLK 時不能關掉；要改設定必須先把 SYSCLK 切回 HSI/HSE",
-          "resolved": null
+          "resolved": null,
+          "id": "378389bd54"
         },
         {
           "time": "2026-10-17 22:43",
           "type": "解法",
           "text": "【解法】APB1 為什麼最高只能 36 MHz（驗收第 3 條）\n**APB1 為什麼最高 36 MHz？**\n\n- 依據：Datasheet 方塊圖標示 APB1 最高 **36 MHz**、APB2 最高 **72 MHz**\n- 原因：晶片設計的取捨\n  - **功耗**：動態功耗大致與頻率成正比\n  - **時序收斂（Timing closure）**：訊號必須在一個週期內從一個正反器傳到下一個\n    - 72 MHz 週期 13.9 ns，36 MHz 週期 27.8 ns\n    - 要跑更快需要更快／更大的電晶體 → 面積、功耗、設計與驗證成本都上升\n- ST 的分配：\n  - APB2（72 MHz）：需要速度的周邊（GPIO、TIM1、ADC、SPI1、USART1）\n  - APB1（36 MHz）：36 MHz 就夠用的周邊（USART2/3、I²C、TIM2～4、USB、CAN）\n- 結論：APB1 電路只依 36 MHz 設計與驗證，超過不在 ST 保證範圍內，屬**硬體規格**\n- 補償機制：APB 分頻 ≠ 1 時，計時器時脈 **×2** → APB1 上的 TIM2～4 仍可拿到 72 MHz",
-          "resolved": null
+          "resolved": null,
+          "id": "4adb58098d"
         },
         {
           "time": "2026-10-17 22:44",
           "type": "問題",
           "text": "【問題】把其他型號才有的周邊列成 C8 的\n**列出的 TIM5～8、USART4～5、ADC3、GPIOF～G，F103C8 其實沒有**\n\n- 原因：看的是 RM0008 的通用時脈圖，涵蓋整個 F10x 系列（含大容量型號）\n- F103C8（中容量）實際的周邊：\n\n| 匯流排 | 周邊 |\n|---|---|\n| APB2（72 MHz） | GPIOA～D、AFIO、ADC1～2、TIM1、SPI1、USART1 |\n| APB1（36 MHz） | TIM2～4、USART2～3、SPI2、I²C1～2、USB、CAN、WWDG、PWR、BKP |\n\n- 原則：\n  - **RM0008** 查周邊怎麼運作、暫存器定義（整個系列共用）\n  - **Datasheet** 查這顆晶片**實際有哪些**周邊、腳位、頻率上限\n- 面試時說錯自己晶片的周邊，很容易被追問",
-          "resolved": false
+          "resolved": true,
+          "id": "35f565b643",
+          "open": false
         },
         {
           "time": "2026-10-19 22:12",
           "type": "問題",
           "text": "【問題】PLLSRC 誤選成 RCC_CFGR_SW_HSE\n**「PLL 輸入選 HSE」誤用 `RCC_CFGR_SW_HSE`**\n\n- 時脈樹上有**兩個**梯形選擇器，用途不同：\n\n| 選擇器 | 位置 | 決定什麼 | 巨集 |\n|---|---|---|---|\n| PLLSRC | PLL **前面** | PLL 的輸入來源 | `RCC_CFGR_PLLSRC_Msk` |\n| SW | SYSCLK **前面** | 系統時脈的來源 | `RCC_CFGR_SW_HSI / HSE / PLL` |\n\n- `RCC_CFGR_SW_HSE` = 把 SYSCLK 直接切到 HSE，跟 PLL 無關\n- 找巨集前先回到時脈樹確認：要設定的是**哪一個**選擇器",
-          "resolved": false
+          "resolved": true,
+          "id": "156d8c65e7",
+          "open": false
         },
         {
           "time": "2026-10-19 22:12",
           "type": "問題",
           "text": "【問題】設定 bit 為 1 誤用 &\n**要把 PLLSRC 設成 1，誤以為要用 `&`**\n\n| 目的 | 寫法 | 效果 |\n|---|---|---|\n| 設成 1 | `REG \\|= Msk` | 只有遮罩的 bit 變 1，其他不變 |\n| 清成 0 | `REG &= ~Msk` | 只有遮罩的 bit 變 0，其他不變 |\n| 檢查 | `(REG & Msk) != 0U` | 讀取，不修改暫存器 |\n\n- 錯誤寫法 `REG &= Msk`：**除了遮罩的 bit，其他全部被清成 0**\n- 口訣：`|=` 設定、`&= ~` 清除、`&` 檢查",
-          "resolved": false
+          "resolved": true,
+          "id": "d355d2fb45",
+          "open": false
         },
         {
           "time": "2026-10-19 22:13",
           "type": "筆記",
           "text": "【筆記】值為 0 的巨集：RCC_CFGR_PLLXTPRE_HSE\n**`RCC_CFGR_PLLXTPRE_HSE` 的值是 0**\n\n- `RCC_CFGR_PLLXTPRE_HSE` = `0x00000000`（HSE ÷1）\n- `RCC_CFGR_PLLXTPRE_HSE_DIV2` = `0x00020000`（HSE ÷2）\n- `|=` 一個 0 不會改變任何 bit → 真正讓它變成 ÷1 的是**先清除欄位**（`& ~Msk`）\n- 仍然寫上這個巨集：**表達意圖**，讀程式的人一看就知道選的是 ÷1\n- 同理：`RCC_CFGR_HPRE_DIV1`、`RCC_CFGR_PPRE2_DIV1` 的值也都是 0",
-          "resolved": null
+          "resolved": null,
+          "id": "fe5a9a036f"
         },
         {
           "time": "2026-10-19 22:13",
           "type": "問題",
           "text": "【問題】CFGR 預期值算錯：SW/SWS 與 PLLMUL 左移\n**CFGR 預期值算成 `0x003D040A`，正確是 `0x001D0400`**\n\n- 錯誤 1：SW / SWS 填成 `10`（PLL）\n  - 步驟 4 **還沒切換**系統時脈，SYSCLK 仍是開機預設的 HSI\n  - SW / SWS 對照：`00` = HSI、`01` = HSE、`10` = PLL → 現在應為 `00`\n  - `10` 是步驟 5 完成後才會出現的值\n- 錯誤 2：PLLMUL `0111 << 18` 算成 `0x003C0000`\n  - `0x3C` = `0011 1100` → 等於 bit 18～21 全為 1（把 `0111` 當成 `1111`）\n  - 正確：bit 18、19、20 = 1，bit 21 = 0 → **`0x001C0000`**\n- 換算技巧：先寫出 32 bit 二進位，從右邊每 4 個一組，再逐組換十六進位，不要心算移位",
-          "resolved": false
+          "resolved": true,
+          "id": "d01fb6159d",
+          "open": false
         },
         {
           "time": "2026-10-19 22:13",
           "type": "解法",
           "text": "【解法】RCC_CFGR 預期值計算表（步驟 4）\n**步驟 4 完成後（尚未切換 SW）的 RCC_CFGR 預期值**\n\n| 欄位 | bit | 設定值 | 左移後 |\n|---|---|---|---|\n| SW | 1:0 | `00` | `0x00000000` |\n| SWS | 3:2 | `00` | `0x00000000` |\n| HPRE | 7:4 | `0000` | `0x00000000` |\n| PPRE1 | 10:8 | `100` | `0x00000400` |\n| PPRE2 | 13:11 | `000` | `0x00000000` |\n| PLLSRC | 16 | `1` | `0x00010000` |\n| PLLXTPRE | 17 | `0` | `0x00000000` |\n| PLLMUL | 21:18 | `0111` | `0x001C0000` |\n| **合計** | | | **`0x001D0400`** |\n\n- 方法：每個欄位單獨算出左移後的值，最後全部 OR 起來\n- 用途：寫程式前先算好，debug 時拿來逐 bit 比對",
-          "resolved": null
+          "resolved": null,
+          "id": "598013da8b"
         },
         {
           "time": "2026-10-19 22:14",
           "type": "筆記",
           "text": "【筆記】錯誤碼設計：成功 = 0，錯誤 = 非 0\n**函式有多個失敗點時，用錯誤碼回傳**\n\n- `#define CLOCK_OK 0U`、`#define CLOCK_ERR_HSE 1U`、`#define CLOCK_ERR_PLL 2U`\n- 為什麼成功用 0：\n  - 成功只有一種，失敗可能有很多種\n  - `if (ret != CLOCK_OK)` 一次抓到所有錯誤，新增錯誤碼也不用改判斷\n  - 需要細分時再看 `ret` 的值\n- 業界同樣做法：HAL 的 `HAL_OK = 0`、`HAL_ERROR`、`HAL_TIMEOUT`\n- 為什麼不用兩個 0/1 旗標（如 `hse_ok`、`pll_ok`）：\n  - 2 × 2 = 4 種組合，但有意義的只有 3 種\n  - 「HSE 失敗、PLL 成功」不可能發生（HSE 失敗會先 return），程式卻還是得處理\n  - `pll_ok = 0` 分不出是「失敗」還是「根本沒執行」\n- 設計原則：**讓不合法的狀態根本表示不出來**（make illegal states unrepresentable）",
-          "resolved": null
+          "resolved": null,
+          "id": "0b4ed8619c"
         },
         {
           "time": "2026-10-19 23:16",
           "type": "問題",
           "text": "【問題】迴圈內歸零，timeout 永遠不會觸發\n**`count = 0U;` 寫在 while 迴圈裡，timeout 永遠不會觸發**\n\n- 錯誤寫法：每圈先 `count = 0U` 再 `count++` → 每圈結束 count 都是 1，永遠到不了 5000\n- 後果：等待條件不成立時程式永遠卡死，timeout 形同虛設\n- 解法：\n  - `count = 0U;` 放在迴圈**前面**\n  - 第二個等待迴圈之前要**重新歸零**（第一個迴圈結束時 count 約 209）\n- 檢查方法：在腦中跑三圈，寫出每圈結束時變數的值",
-          "resolved": false
+          "resolved": true,
+          "id": "bc661991f8",
+          "open": false
         },
         {
           "time": "2026-10-19 23:16",
           "type": "問題",
           "text": "【問題】等待 PLLRDY 卻讀錯暫存器\n**`while ((RCC->CFGR & RCC_CR_PLLRDY_Msk) == 0U)` 永遠等不到**\n\n- PLLRDY 在 **RCC_CR** 的 bit 25，不是 RCC_CFGR\n- CFGR 的 bit 25 是 **MCO** 欄位的一部分，目前為 0 → 條件永遠成立\n- 加上 ㊲ 的歸零 bug → 程式永遠卡在這個迴圈\n- 巨集名稱已經寫明暫存器：`RCC_CR_PLLRDY_Msk` 要配 `RCC->CR`\n- 習慣：每寫一個位元運算，確認「**哪個暫存器的哪個 bit**」，巨集前綴要跟暫存器一致",
-          "resolved": false
+          "resolved": true,
+          "id": "39f14d8222",
+          "open": false
         },
         {
           "time": "2026-10-19 23:16",
           "type": "筆記",
           "text": "【筆記】RCC_CR 實測值解讀（步驟 4 完成時）\n**`RCC->CR` = 50562691 = `0x03038683`**\n\n| bit | 值 | 意義 |\n|---|---|---|\n| 25、24 | `11` | PLLRDY = 1、PLLON = 1 → PLL 已鎖定 |\n| 17、16 | `11` | HSERDY = 1、HSEON = 1 |\n| 15:8 | `0x86` | HSICAL：ST 出廠校正值，每顆晶片不同 |\n| 7:3 | `10000` | HSITRIM：預設微調值 |\n| 1、0 | `11` | HSIRDY = 1、HSION = 1（SYSCLK 仍在用 HSI） |\n\n- `RCC->CFGR` = `0x001D0400`，與預期一致\n- 實測等待圈數：HSE 起振 **209** 圈、PLL 鎖定 **31** 圈\n- Expressions 顯示 Error：變數已改名或運算式括號不完整，刪除即可",
-          "resolved": null
+          "resolved": null,
+          "id": "3f0f5c91f7"
         },
         {
           "time": "2026-10-19 23:16",
           "type": "解法",
           "text": "【解法】read-modify-write：設定幾個欄位就清除幾個\n**CFGR 只清除了 PLLXTPRE，其他 5 個欄位沒清**\n\n- 現在剛好能動：開機時這些欄位都是 0\n- 以後會出事：從 Bootloader 跳入、或函式執行第二次時，舊 bit 殘留（同 `001 | 010 = 011`）\n- 正確寫法：\n\n`RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_PLLSRC_Msk | RCC_CFGR_PLLXTPRE_Msk | RCC_CFGR_PLLMULL_Msk | RCC_CFGR_HPRE_Msk | RCC_CFGR_PPRE1_Msk | RCC_CFGR_PPRE2_Msk)) | (6 個設定值);`\n\n- 原則：**清除的欄位與設定的欄位一一對應**\n- 結構：`REG = (REG & ~(清除清單)) | (設定清單);`，不要混用 `&`、`|` 卻不加括號",
-          "resolved": null
+          "resolved": null,
+          "id": "618f95eceb"
         },
         {
           "time": "2026-10-19 23:16",
           "type": "問題",
           "text": "【問題】新增的錯誤碼與既有錯誤碼同值\n**新增 `CLOCK_SWITCH_ERROR 1U`，跟 `CLOCK_ERROR_HSE 1U` 重複**\n\n- 同一個函式回傳 1 時，分不出是 HSE 失敗還是切換失敗\n- `CLOCK_SWITCH_OK` 與 `CLOCK_OK` 重複，成功只需要一個\n- 正確做法：在原本那組錯誤碼後面**接著編號**\n\n| 名稱 | 值 |\n|---|---|\n| `CLOCK_OK` | 0 |\n| `CLOCK_ERROR_HSE` | 1 |\n| `CLOCK_ERROR_PLL` | 2 |\n| `CLOCK_ERROR_SWITCH` | 3 |\n\n- 原則：同一函式的錯誤碼放在同一組、數值不重複",
-          "resolved": false
+          "resolved": true,
+          "id": "445b194d83",
+          "open": false
         },
         {
           "time": "2026-10-19 23:17",
           "type": "問題",
           "text": "【問題】等待 SWS 時比較值沒有考慮 bit 位置\n**`while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != 2U)` 切換成功也會 timeout**\n\n- SWS 在 **bit 3:2**，`& Msk` 後數值**仍在原位置、沒有右移**\n- SWS = `10` → `0000 1000` = **`0x8`**，永遠不等於 2\n- 後果：明明切換成功，卻跑到 timeout，回傳「切換失敗」\n- 解法：用巨集比較，位置已算好\n  - `while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL)`\n- 同類錯誤：㉞ 的 PLLMUL 左移；**比較欄位值時一律用巨集，不要自己寫數字**\n- 也不能寫 `== 0U`：SWS 為 `01`（HSE）時同樣不是 0，要比對的是「**等於 PLL**」",
-          "resolved": false
+          "resolved": true,
+          "id": "fc58b2098f",
+          "open": false
         },
         {
           "time": "2026-10-19 23:17",
           "type": "筆記",
           "text": "【筆記】SW 與 SWS：一個寫、一個讀\n**系統時脈切換：SW（寫）與 SWS（讀）**\n\n| 欄位 | bit | 屬性 | 巨集（選 PLL） | 值 |\n|---|---|---|---|---|\n| SW | 1:0 | rw | `RCC_CFGR_SW_PLL` | `0x2` |\n| SWS | 3:2 | r | `RCC_CFGR_SWS_PLL` | `0x8` |\n\n- 對照：`00` = HSI、`01` = HSE、`10` = PLL\n- SW 是「要求」，SWS 是硬體回報「實際正在使用」的時脈；寫入 SW 後要等 SWS 跟上\n- 同樣模式：HSEON/HSERDY、PLLON/PLLRDY、PRFTBE/PRFTBS\n- 不要寫入 SWS（唯讀）\n- 用 `RCC_CFGR_SW_PLL`，不要用 `RCC_CFGR_SW_1`：值相同（0x2），但 `_1` 代表「第 1 個 bit」，讀不出意圖\n- 切換完成後 CFGR 預期值：`0x001D0400 | 0x2 | 0x8` = **`0x001D040A`**",
-          "resolved": null
+          "resolved": null,
+          "id": "a620e2647c"
         },
         {
           "time": "2026-10-20 22:48",
           "type": "問題",
           "text": "【問題】SW 寫成 RCC->CR：沒切換卻回報成功\n**SW 寫成 `RCC->CR`，`clock_init()` 回傳 `CLOCK_OK`，但 SYSCLK 其實沒切換**\n\n- 錯誤寫法：`RCC->CR = (RCC->CR & ~(SW_Msk | SWS_Msk)) | (SW_PLL | SWS_PLL);`\n- 實際效果（巨集的值被套到 CR）：\n  - `& ~0xF` → 清掉 CR 的 bit 0～3（HSION、HSIRDY、保留位、HSITRIM 最低位）\n  - `| 0xA` → bit 3 被設成 1 → **改到 HSITRIM**，HSI 頻率偏移\n  - SW 完全沒有被設定 → SYSCLK 仍是 HSI 8 MHz\n- 等待迴圈讀 `RCC->CR & 0xC`：剛好讀到被設成 1 的 bit 3 → `0x8` = `RCC_CFGR_SWS_PLL` → **第一圈就判定成功**\n- 這是第二次寫錯暫存器（第一次是 ㊳ 的 PLLRDY）\n- 另一個錯誤：寫入了唯讀的 SWS\n- 防止方法：**巨集前綴必須和暫存器一致**\n  - `RCC->CFGR` ↔ `RCC_CFGR_xxx`\n  - `RCC->CR` ↔ `RCC_CR_xxx`\n  - `FLASH->ACR` ↔ `FLASH_ACR_xxx`",
-          "resolved": false
+          "resolved": true,
+          "id": "a4d35bd1e1",
+          "open": false
         },
         {
           "time": "2026-10-20 22:49",
           "type": "筆記",
           "text": "【筆記】只看回傳值不夠，要直接看暫存器\n**驗證時為什麼一定要看 SWS，不能只看 `clock_state`？**\n\n- `clock_state` 是程式自己的判斷，程式寫錯時判斷也會錯\n- ㊾ 的實例：SW 寫錯暫存器，等待條件又剛好成立 → `clock_state = CLOCK_OK`，但 SYSCLK 仍是 8 MHz\n- 不當機、不報錯、回傳值正常 → **最危險的一種錯誤**\n- 暫存器（SWS）是**硬體回報的實際狀態**，才是真正的證據\n- 這就是完成標準要求「用 debugger 確認 SWS」的原因\n- 原則：驗證要看**硬體狀態**，不要只相信軟體的判斷",
-          "resolved": null
+          "resolved": null,
+          "id": "0fe5a8316f"
         },
         {
           "time": "2026-10-20 22:49",
           "type": "筆記",
           "text": "【筆記】切換時脈的設定順序：任何時刻都要在規格內\n**切換時脈時，Flash latency 與 APB 分頻的順序**\n\n- 原則：**任何時刻，每個時脈都要在規格內**（Flash 夠時間讀、PCLK1 ≤ 36 MHz）\n- 比喻：SYSCLK = 總水壓、APB 分頻 = 減壓閥、APB1 支管上限 36；一次只能動一個\n\n| 寫法 | 升頻 8 → 72 | 降頻 72 → 8 |\n|---|---|---|\n| 先設目標分頻，再切換（自寫） | ✅ PCLK1：8 → 4 → 36 | ❌ 瞬間 72 |\n| 先切換，再設分頻 | ❌ 瞬間 72 | ✅ PCLK1：36 → 4 → 8 |\n| HAL：先 ÷16 → 切換 → 設目標 | ✅ 最高 4.5 | ✅ 最高 4.5 |\n\n- 前兩種寫法都要**先知道升頻或降頻**，選錯就超規格\n- HAL 先把 APB 分頻設成 ÷16：不管怎麼切，PCLK 最高 72 ÷ 16 = 4.5 MHz，**不用判斷方向**\n- HAL 降的是**匯流排分頻**，不是 SYSCLK；SYSCLK 照常切換\n- 自寫 `clock_init()` 只在開機執行、永遠是升頻 → 「先設 ÷2 再切換」已足夠\n- 同一原則用在 Flash latency：升頻先加 WS、降頻後減 WS（㉑）",
-          "resolved": null
+          "resolved": null,
+          "id": "61c666f5ca"
         },
         {
           "time": "2026-10-20 22:50",
-          "type": "筆記",
+          "type": "解法",
           "text": "【解法】S02 驗收回答範本（面試用）\n**SPRINT-W01-S02 驗收：四題的完整回答**\n\n**1. 怎麼確認 SYSCLK 已切到 PLL？**\n- 看 `RCC->CFGR` 的 SWS（bit 3:2）：`0x001D040A` 的最後一位 `0xA` = `1010`，SWS = `10` = PLL\n- SW 是軟體寫入的「要求」，SWS 是硬體回報的「實際狀態」\n- 不能只看函式回傳值：曾經寫錯暫存器，回傳成功但實際沒切換（㊾）\n\n**2. 為什麼要先設 Flash latency？**\n- Flash 讀取時間固定，約 41.7 ns（24 MHz 一個週期，所以 0 WS 最高 24 MHz）\n- 72 MHz 一個週期 13.9 ns → 41.7 ÷ 13.9 ≈ 3 個週期 → WS = 3 − 1 = **2**\n- 若先升頻：CPU 在 Flash 還沒準備好時取指令 → 讀到錯誤指令 → 程式亂跑或 HardFault\n- 升頻先加 WS 再升頻，降頻先降頻再減 WS；WS 只能多不能少\n\n**3. APB1 為什麼最高 36 MHz？**\n- 出處：Datasheet 方塊圖，以及 RM0008 的 RCC_CFGR PPRE1 說明：軟體必須保證 APB1 不超過 36 MHz\n- 屬硬體規格：APB1 上的周邊只依 36 MHz 設計與驗證，超過不保證正確運作\n- 原因：頻率越高，功耗越大、時序收斂越難（36 MHz 週期 27.8 ns，72 MHz 只有 13.9 ns）\n- 程式做法：**切換 SW 到 PLL 之前**先設好 APB1 ÷2，PCLK1 從 4 MHz 變成 36 MHz，全程在規格內\n\n**4. 和 HAL 版的差異**\n- timeout：HAL 用時間（`HAL_GetTick()`），自寫用圈數，會受時脈與編譯最佳化影響\n- 切換過程：HAL 先把 APB 分頻暫設 ÷16，升降頻都安全；自寫只針對開機升頻\n- 切換後：HAL 會更新 `SystemCoreClock` 並以 `HAL_InitTick()` 重設 SysTick\n- HAL 會讀回檢查 latency；支援所有時脈源\n- 自寫版簡短、每個 bit 都清楚，適合固定用途",
-          "resolved": null
+          "resolved": null,
+          "id": "f1f8006199"
         },
         {
           "time": "2026-10-20 22:50",
           "type": "解法",
           "text": "【解法】上板驗證結果（步驟 5 完成）\n**SYSCLK 72 MHz 上板驗證通過**\n\n| 項目 | 實際值 | 意義 |\n|---|---|---|\n| `clock_state` | 0 | `CLOCK_OK` |\n| `RCC->CFGR` | `0x001D040A` | SW = `10`、SWS = `10` → SYSCLK = PLL ✅ |\n| `RCC->CR` | `0x03038683` | HSE、PLL 皆就緒；HSITRIM = `10000` 未被改動 |\n| `FLASH->ACR` | `0x32` | Prefetch 開啟、2 WS |\n\n- `0xA` = `1010`：bit 1:0（SW）= `10`、bit 3:2（SWS）= `10`\n- 切換 SW 後第一次檢查 SWS 就已完成（count = 0）\n- 中斷點在 `main()` 時，`clock_init()` 內的區域變數會顯示 Error，屬正常",
-          "resolved": null
+          "resolved": null,
+          "id": "822653f6c0"
         },
         {
           "time": "2026-10-20 22:51",
           "type": "筆記",
           "text": "【筆記】自寫 clock_init() 與 HAL 版比較\n**`clock_init()` vs HAL `SystemClock_Config()`**\n\n| 項目 | 自寫 `clock_init()` | HAL |\n|---|---|---|\n| 結構 | 一個函式，依序設定 | `RCC_OscInitStruct`（時脈怎麼產生）＋ `RCC_ClkInitStruct`（時脈怎麼分配） |\n| 適用範圍 | 只做 HSE → PLL 72 MHz | 支援所有時脈源與任意升降頻 |\n| timeout | 迴圈圈數 | 時間（`HAL_GetTick()`，HSE 100 ms、PLL 2 ms、切換 5 s） |\n| Flash latency | 切換前設定一次 | 升頻在切換前、降頻在切換後；設定後**讀回檢查** |\n| APB 分頻 | 切換前直接設成 ÷2 | 切換前暫設 **÷16**，切換後才設目標值 |\n| 切換後 | 無 | 更新 `SystemCoreClock`、`HAL_InitTick()` 重設 SysTick |\n| 錯誤處理 | `CLOCK_OK` / `CLOCK_ERROR_xxx` | `HAL_OK` / `HAL_ERROR` / `HAL_TIMEOUT` → `Error_Handler()` |\n\n- 自寫版：簡短、每個 bit 都清楚，適合固定用途的開機初始化\n- HAL 版：通用、保守，代價是程式碼長、依賴 SysTick\n- HAL 原始碼：`STM32Cube_FW_F1_V1.8.7\\Drivers\\STM32F1xx_HAL_Driver\\Src\\stm32f1xx_hal_rcc.c`",
-          "resolved": null
+          "resolved": null,
+          "id": "2952a707ad"
         },
         {
           "time": "2026-10-20 22:52",
           "type": "筆記",
           "text": "【筆記】timeout 用時間比用圈數好\n**為什麼 timeout 要用時間，不用圈數？**\n\n- 一圈的時間會變：\n  - 編譯最佳化：`-O2` 比 `-O0` 快\n  - 時脈頻率：同一段程式在 72 MHz 比 8 MHz 快 9 倍\n- 同樣寫 5000 圈，實際等待時間可能差十倍以上，且無法從程式看出等了多久\n- 用時間：寫 100 ms 就是 100 ms，與編譯選項、時脈無關\n- Datasheet 的起振時間規格本來就以時間表示，可直接對照\n- 實測：HSE 209 圈 ≈ 0.39 ms（以每圈 15 個週期、8 MHz 估算）；HAL 給 100 ms，約 250 倍餘裕\n- TODO：做完 SysTick 後改成以時間判斷",
-          "resolved": null
+          "resolved": null,
+          "id": "a1c600bb71"
         },
         {
           "time": "2026-10-20 22:52",
           "type": "筆記",
           "text": "【筆記】時脈改變後為什麼要更新 SystemCoreClock 與 SysTick\n**切換時脈後，HAL 多做的兩件事**\n\n- `SystemCoreClock`：存放目前 HCLK 頻率（Hz），其他程式靠它計算\n  - SysTick 1 ms 的重載值、UART 鮑率、`HAL_Delay()` 的時間基準\n  - 時脈改了卻沒更新 → 這些計算全部錯誤\n- `HAL_InitTick()`：依新頻率重設 SysTick\n  - 原本依 8 MHz 設定：8000 個週期 = 1 ms\n  - 切到 72 MHz 後：8000 個週期 = 8000 ÷ 72 MHz ≈ **0.111 ms**\n  - 不重設的話，`HAL_Delay(1000)` 實際只延遲約 **111 ms**\n- 注意：Empty 專案沒有 `system_stm32f1xx.c`，目前沒有 `SystemCoreClock`，下一個課題做 SysTick 時要自己處理",
-          "resolved": null
+          "resolved": null,
+          "id": "7c6ba6385f"
         },
         {
           "time": "2026-10-20 23:01",
           "type": "筆記",
           "text": "**STM32 開機一律從 HSI 8 MHz 開始**\n\n- reset 後 RCC 回到復位值：`RCC_CR` HSION = 1、`RCC_CFGR` = `0x00000000`（SW = SWS = `00` = HSI）\n- 設計理由：HSI 在晶片內部，不需外部零件，石英壞了 MCU 也能開機，再由程式決定是否切換\n- 會回到 HSI 的情況：上電、NRST、軟體重置、看門狗重置、Standby 喚醒\n- 例外：\n  - Stop 喚醒不是 reset，但硬體會把 SYSCLK 切回 HSI → 醒來要再呼叫 `clock_init()`\n  - 從 Bootloader 跳入時，時脈可能已被改過，不是復位值 → 要清除後再設定（㊵）\n- 驗證：在 `clock_init()` 之前設中斷點，`RCC->CFGR` 應為 `0x00000000`",
-          "resolved": null
+          "resolved": null,
+          "id": "63c0887059"
         },
         {
           "time": "2026-10-20 23:07",
           "type": "筆記",
           "text": "**S02 縮寫總表**\n\n### 時脈來源\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| HSI | High-Speed Internal | 內部高速振盪器，8 MHz RC，開機預設 |\n| HSE | High-Speed External | 外部高速振盪器，本板接 8 MHz 石英 |\n| LSI | Low-Speed Internal | 內部低速振盪器，40 kHz，給 IWDG 用 |\n| LSE | Low-Speed External | 外部低速石英，32.768 kHz，給 RTC 用 |\n| PLL | Phase-Locked Loop | 鎖相迴路，把輸入時脈倍頻（本課題 ×9） |\n| RC | Resistor-Capacitor | 電阻電容振盪電路（HSI、LSI 的類型） |\n| OSC | Oscillator | 振盪器 |\n\n### 時脈與匯流排\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| SYSCLK | System Clock | 系統時脈，本課題 72 MHz |\n| HCLK | AHB Clock | AHB 匯流排時脈（CPU、記憶體），72 MHz |\n| PCLK1 | Peripheral Clock 1 | APB1 周邊時脈，上限 36 MHz |\n| PCLK2 | Peripheral Clock 2 | APB2 周邊時脈，上限 72 MHz |\n| AHB | Advanced High-performance Bus | 高效能匯流排 |\n| APB | Advanced Peripheral Bus | 周邊匯流排（APB1 低速、APB2 高速） |\n| MCO | Microcontroller Clock Output | 把內部時脈輸出到腳位（CFGR bit 26:24） |\n| MUX | Multiplexer | 多工器／選擇器，時脈樹上的梯形 |\n\n### 暫存器\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| RCC | Reset and Clock Control | 重置與時脈控制周邊 |\n| CR | Clock Control Register | RCC_CR：時脈開關與就緒旗標 |\n| CFGR | Clock Configuration Register | RCC_CFGR：PLL、分頻、時脈切換設定 |\n| ACR | Access Control Register | FLASH_ACR：Flash 等待週期與預取 |\n| SFR | Special Function Register | 特殊功能暫存器（debugger 的 SFRs 視窗） |\n\n### 暫存器欄位（bit 名稱）\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| HSEON / HSION / PLLON | … ON | 開關，寫 1 開啟（rw） |\n| HSERDY / HSIRDY / PLLRDY | … Ready | 就緒旗標，硬體設定（r） |\n| HSEBYP | HSE Bypass | 旁路：直接吃外部時脈訊號（接石英設 0） |\n| HSITRIM | HSI Trimming | HSI 微調值（CR bit 7:3） |\n| HSICAL | HSI Calibration | HSI 出廠校正值（CR bit 15:8） |\n| PLLSRC | PLL Source | PLL 輸入來源（HSI÷2 或 HSE） |\n| PLLXTPRE | PLL XT Prescaler | HSE 進 PLL 前的分頻（÷1／÷2），XT = 石英 |\n| PLLMUL | PLL Multiplication factor | PLL 倍數（×9 = `0111`）；巨集寫作 PLLMULL |\n| HPRE | AHB (HCLK) Prescaler | AHB 分頻 |\n| PPRE1 / PPRE2 | APB1 / APB2 Prescaler | APB1／APB2 分頻 |\n| SW | System clock Switch | 系統時脈選擇（rw） |\n| SWS | System clock Switch Status | 系統時脈實際狀態（r） |\n| LATENCY | Flash Latency | Flash 等待週期數（ACR bit 2:0） |\n| PRFTBE | Prefetch Buffer Enable | 預取緩衝開關（rw） |\n| PRFTBS | Prefetch Buffer Status | 預取緩衝狀態（r） |\n| WS | Wait State | 等待週期（72 MHz 需 2 WS） |\n\n### 命名規律與巨集後綴\n| 寫法 | 意義 |\n|---|---|\n| …ON／…RDY | 開關（寫）／就緒旗標（讀） |\n| …E／…S | Enable（寫）／Status（讀） |\n| `_Pos` | Position：欄位從第幾個 bit 開始 |\n| `_Msk` | Mask：已移好位置的遮罩 |\n| `_0`、`_1`、`_2` | 欄位中的第幾個 bit（不是設定值） |\n| `_DIV2`、`_PLL`、`MULL9` | 有意義的設定值巨集（優先使用） |\n| `U`／`UL` | unsigned／unsigned long 的數字後綴 |\n| `x`（手冊中） | don't care，寫程式時一律寫 0 |\n| rw／r／res | 可讀寫／唯讀／保留不可動 |\n\n### 文件與軟體\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| RM0008 | Reference Manual | F10x 參考手冊：周邊與暫存器定義 |\n| PM0056 | Programming Manual | Cortex-M3 程式設計手冊：NVIC、SysTick |\n| PM0075 | Programming Manual | Flash 程式設計手冊：FLASH_ACR |\n| DS | Datasheet | 資料手冊：腳位、電氣特性、頻率上限、實際周邊 |\n| CMSIS | Cortex Microcontroller Software Interface Standard | Arm 標準介面，提供暫存器定義標頭檔 |\n| HAL | Hardware Abstraction Layer | ST 的硬體抽象層函式庫 |\n| MISRA C | Motor Industry Software Reliability Association | 嵌入式 C 程式碼規範 |\n| IDE | Integrated Development Environment | 整合開發環境（STM32CubeIDE） |\n| ELF | Executable and Linkable Format | 編譯產生的執行檔格式（.elf） |\n| RMW | Read-Modify-Write | 讀取 → 修改 → 寫回，`REG = (REG & ~Msk) | 值` |\n\n### 燒錄與除錯\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| SWD | Serial Wire Debug | 兩線式除錯介面 |\n| SWDIO | Serial Wire Debug I/O | SWD 資料線（PA13） |\n| SWCLK | Serial Wire Clock | SWD 時脈線（PA14） |\n| ST-LINK | — | ST 的燒錄／除錯器 |\n| GDB | GNU Debugger | CubeIDE 背後的除錯程式 |\n| NRST | Reset pin（低電位有效） | 重置腳 |\n| BOOT0 | Boot mode pin 0 | 開機模式腳，設 1 進入內建 Bootloader |\n\n### 晶片與系統\n| 縮寫 | 英文全名 | 中文說明 |\n|---|---|---|\n| MCU | Microcontroller Unit | 微控制器 |\n| CPU | Central Processing Unit | 中央處理器（Cortex-M3 核心） |\n| NVIC | Nested Vectored Interrupt Controller | 巢狀向量中斷控制器 |\n| SysTick | System Tick Timer | Cortex-M 內建的系統計時器 |\n| HardFault | — | 硬體錯誤例外，例如讀到錯誤指令 |\n| IWDG | Independent Watchdog | 獨立看門狗（用 LSI） |\n| WWDG | Window Watchdog | 窗口看門狗 |\n| RTC | Real-Time Clock | 即時時鐘（用 LSE） |\n| LD／MD／HD | Low／Medium／High Density | 小／中／大容量（C8 = 64 KB = MD） |\n\n### 本課題提到的周邊\n| 縮寫 | 英文全名 | 所在匯流排 |\n|---|---|---|\n| GPIO | General-Purpose I/O | APB2 |\n| AFIO | Alternate Function I/O | APB2 |\n| ADC | Analog-to-Digital Converter | APB2 |\n| TIM | Timer（TIM1 高級、TIM2～4 一般） | TIM1 在 APB2；TIM2～4 在 APB1 |\n| USART | Universal Synchronous/Asynchronous Receiver Transmitter | USART1 在 APB2；USART2、3 在 APB1 |\n| SPI | Serial Peripheral Interface | SPI1 在 APB2；SPI2 在 APB1 |\n| I²C | Inter-Integrated Circuit | APB1 |\n| CAN | Controller Area Network | APB1 |\n| USB | Universal Serial Bus | APB1（需要 48 MHz） |\n| PWR／BKP | Power control／Backup | APB1 |\n\n### 單位與電路概念\n| 縮寫 | 說明 |\n|---|---|\n| MHz／kHz | 百萬赫茲／千赫茲 |\n| ns／µs／ms | 奈秒／微秒／毫秒，1 µs = 1000 ns；週期（ns）= 1000 ÷ 頻率（MHz） |\n| FF | Flip-Flop，正反器 |\n| Timing closure | 時序收斂：訊號要在一個週期內傳到下一個正反器 |\n| Bring-up | 晶片初次上電驗證 |",
-          "resolved": null
+          "resolved": null,
+          "id": "a24a5711f5"
         },
         {
           "time": "2026-10-20 23:09",
           "type": "筆記",
           "text": "**從開機到 clock_init() 完成的流程（SPRINT-W01-S02 專案實測）**\n\n圖例：⭐ = S02 本課學到的內容　🔜 = 預習，之後課題會深入（W01 Startup／Linker Script）\n\n---\n\n**0. 上電／Reset（硬體）⭐**\n- ⭐ 暫存器回到**復位值**：\n  - ⭐ `RCC_CR`：HSION = 1、HSIRDY = 1 → HSI 8 MHz 開啟；HSE、PLL 關閉\n  - ⭐ `RCC_CFGR` = `0x00000000` → SW = SWS = `00` → **SYSCLK = HSI**\n  - ⭐ `FLASH_ACR` = `0x30` → 0 WS、Prefetch 開啟\n- ⭐ 設計理由：HSI 在晶片內部，石英壞了 MCU 也能開機\n- ⭐ 會回到 HSI 的情況：上電、NRST、軟體重置、看門狗、Standby 喚醒；Stop 喚醒也會切回 HSI\n\n**1. 讀 BOOT0（硬體）⭐**\n- BOOT0 = 0 → 從主 Flash（0x0800_0000）開機\n- ⭐ BOOT0 = 1 → 進入 ST 內建 Bootloader，不執行自己的程式（SWD 救援法，⑮）\n\n**2. 讀向量表 `g_pfnVectors`（硬體）🔜**\n- 🔜 0x0800_0000：`_estack` = `0x2000_5000` → 載入 SP（堆疊指標）\n- 🔜 0x0800_0004：`Reset_Handler` = `0x0800_0271` → 載入 PC（最低位 1 = Thumb 模式）\n\n**3. Reset_Handler：設定 SP（啟動檔）🔜**\n\n**4. `bl SystemInit`：本專案中被換成 `nop.w` 🔜**\n- 🔜 啟動檔宣告 `.weak SystemInit`：找不到定義時，連結器把呼叫換成 NOP\n- 🔜 證據：`.list` 檔中 `bl SystemInit` → `8000274: f3af 8000 nop.w`\n- 🔜 所以進入 `main()` 時時脈是復位狀態，也沒有 `SystemCoreClock`\n- 🔜 HAL 專案的 `SystemInit()` 會重設 RCC、設定向量表位置\n\n**5. 準備 C 執行環境（啟動檔）🔜**\n- 🔜 複製 `.data`：有初始值的全域變數，Flash（`_sidata`）→ RAM（`_sdata`～`_edata`）\n- 🔜 清零 `.bss`：沒有初始值的全域變數，RAM（`_sbss`～`_ebss`）寫 0\n- 🔜 `__libc_init_array`：C 函式庫初始化\n- 🔜 `bl main`\n\n**6. `main()` → `clock_init()` ⭐⭐ 本課主體**\n\n| 步驟 | 暫存器 | 等待 | 失敗回傳 |\n|---|---|---|---|\n| ⭐ HSE 開啟 | CR HSEON | HSERDY（209 圈） | `CLOCK_ERROR_HSE` |\n| ⭐ Flash 2 WS + Prefetch | ACR = `0x32` | — | — |\n| ⭐ PLL 與分頻 | CFGR = `0x001D0400` | — | — |\n| ⭐ PLL 開啟 | CR PLLON | PLLRDY（31 圈） | `CLOCK_ERROR_PLL` |\n| ⭐ 切換 SYSCLK | CFGR SW = PLL | SWS = PLL（0 圈） | `CLOCK_ERROR_SWITCH` |\n| ⭐ 完成 | CFGR = `0x001D040A` | — | `CLOCK_OK` |\n\n- ⭐ 順序原則：**任何時刻每個時脈都要在規格內**\n  - ⭐ 先設 Flash latency，再升頻（㉑）\n  - ⭐ 先設 APB1 ÷2，再切換 SW（51）\n  - ⭐ PLL 參數要在 PLLON = 0 時設定（㉘）\n- ⭐ 每個等待都有 timeout，避免石英或 PLL 故障時卡死（㊲）\n- ⭐ 驗證要看 SWS，不能只看回傳值（㊿）\n\n**7. 回到 `main()`**\n- ⭐ 失敗停在 `while (clock_state != CLOCK_OK)`；成功進入 `for(;;)`\n- 🔜 `main()` 若 return → 啟動檔 `LoopForever` 無窮迴圈（MCU 沒有作業系統可回）\n\n---\n\n**相關檔案**\n- ⭐ `Src/main.c`：`clock_init()`\n- ⭐ `Inc/CMSIS/stm32f103xb.h`：暫存器結構與 bit 巨集\n- 🔜 `Startup/startup_stm32f103c8tx.s`：向量表、`Reset_Handler`\n- 🔜 `STM32F103C8TX_FLASH.ld`：記憶體配置（FLASH 64K @ 0x0800_0000、RAM 20K @ 0x2000_0000）、`_estack`\n- 🔜 `Debug/SPRINT-W01-S02.list`：反組譯結果，可看到實際的指令與位址",
-          "resolved": null
+          "resolved": null,
+          "id": "984f37a4ec"
         }
       ]
     },
@@ -576,295 +670,328 @@
           "time": "2026-10-21 21:42",
           "type": "筆記",
           "text": "【筆記】CMSIS 總入口與晶片巨集\n**程式一律 include `stm32f1xx.h`，由巨集決定載入哪顆晶片的標頭檔**\n\n| 項目 | 內容 |\n|---|---|\n| `stm32f1xx.h` | F1 系列總入口，本身不定義暫存器 |\n| `-DSTM32F103xB` | 專案 Preprocessor 設定，讓總入口載入 `stm32f103xb.h` |\n| `stm32f103xb.h` | 真正的暫存器定義（基底位址、結構、bit 遮罩） |\n\n- 不要直接 include `stm32f103xb.h`：等於繞過選型號的機制，換晶片要逐檔修改\n- 追定義來源：對 `#include` 或暫存器名稱按 **F3**（Open Declaration）\n- 料號解碼（Datasheet → Ordering information scheme）\n\n| 片段 | 意義 |\n|---|---|\n| F103 | performance line |\n| C | 48 pin |\n| 8 | Flash 64 KB（B = 128 KB）→ Medium-density |\n| T | LQFP 封裝 |\n| 6 | -40～85°C |",
-          "resolved": null
+          "resolved": null,
+          "id": "b268ecbc8b"
         },
         {
           "time": "2026-10-21 21:42",
           "type": "筆記",
           "text": "【筆記】.h／.c 拆分原則\n**.h 放「呼叫者需要知道的」，.c 放「實作細節」**\n\n| 放在 .h | 放在 .c |\n|---|---|\n| 函式宣告 `uint32_t Clock_Init(void);` | 函式實作 |\n| 呼叫者要用的常數（`CLOCK_OK`、`CLOCK_ERROR_xxx`） | 內部常數（`TIME_OUT`） |\n| 介面需要的型別標頭 `<stdint.h>` | 暫存器標頭 `stm32f1xx.h` |\n| — | 只在檔案內用的輔助函式（加 `static`） |\n\n- **Include guard**：`#ifndef CLOCK_INIT_H／#define／#endif`，防止重複引入（面試常問）\n- **Self-contained**：標頭檔用到什麼型別，就自己 include 對應標頭，不依賴別人先 include\n- **.c 第一行先 include 自己的 .h**：若 .h 不是 self-contained，編譯時會馬上報錯\n- 暫存器標頭放 .c 不放 .h：使用者只需要知道函式介面，不用看到暫存器（隱藏實作）\n- 資料夾分工：自己的檔案放 `Inc/`、`Src/`；廠商檔案放 `Inc/CMSIS/`，不要混放",
-          "resolved": null
+          "resolved": null,
+          "id": "ed73a7f634"
         },
         {
           "time": "2026-10-21 21:42",
           "type": "問題",
           "text": "【問題】main.c 出現 'CLOCK_OK' undeclared\n**錯誤碼定義在 clock_init.c，main.c 看不到**\n\n- 原因：`#define` 只在定義它的檔案內有效，`main.c` 只 include 了 `clock_init.h`\n- 解法：呼叫者會用到的常數（錯誤碼）搬到 `clock_init.h`\n- 判斷原則：問自己「呼叫這個函式的人需要知道它嗎？」需要 → .h；不需要 → .c",
-          "resolved": false
+          "resolved": true,
+          "id": "520d0cf64f",
+          "open": false
         },
         {
           "time": "2026-10-21 21:43",
           "type": "問題",
           "text": "【問題】Build 成功，但編輯器顯示 Unresolved inclusion: \"clock_init.h\"\n**真正原因：新程式存到了 S02 專案的 main.c**\n\n| 專案 | 當時的 main.c | 結果 |\n|---|---|---|\n| S02 | 新版（include `clock_init.h`） | S02 沒有 `clock_init.h` → Unresolved inclusion |\n| S03 | 舊版（時鐘程式還寫在 main.c） | Build 通過，但其實沒用到 `clock_init.c` |\n\n- 檢查：看視窗**標題列**路徑，例如 `workspace - SPRINT-W01-S03/Src/main.c`\n- 預防：不用的專案右鍵 → **Close Project**；開檔一律從 Project Explorer 對應專案展開\n- 還原：S02 已 commit，用 Git 取回 HEAD 版本\n- 和 S02 那則「Index → Rebuild」不同：那次是索引沒更新，這次是真的改錯檔案",
-          "resolved": false
+          "resolved": true,
+          "id": "517fa0d6d2",
+          "open": false
         },
         {
           "time": "2026-10-21 21:43",
           "type": "解法",
           "text": "【解法】複製舊專案建立新課題專案\n**Copy → Paste 之後要處理名稱與 launch 設定兩個坑**\n\n1. Project Explorer 對舊專案右鍵 → Copy → Paste，取新名稱\n2. 刪掉新專案的 `Debug/` 資料夾\n3. 名稱檢查：顯示成 `名稱 (in 資料夾)` 代表專案名稱 ≠ 資料夾名稱 → 右鍵 **Rename** 改成一致\n4. 刪掉複製過來的 `舊專案 Debug.launch`（它仍指向舊專案的 `.elf`）\n5. 右鍵 → **Debug As → STM32 C/C++ Application**，自動產生新的 launch 設定\n6. 路徑和名稱不要有空白，避免 GCC／Make 出錯\n\n- 自我檢查：燒錄後故意改一個明顯行為，板子沒變 → 先懷疑 launch 設定\n- Workspace 不用切換：同一個 Workspace 可以放多個專案",
-          "resolved": null
+          "resolved": null,
+          "id": "514c3e450c"
         },
         {
           "time": "2026-10-21 22:15",
           "type": "筆記",
           "text": "【筆記】RM0008 中文版與英文版節號對照\n**中文版章節編號比英文版少 1，討論與面試以英文版為準**\n\n| 暫存器 | 中文版 | 英文版（Rev 17） |\n|---|---|---|\n| RCC_APB2RSTR | 6.3.4 | 7.3.4 |\n| RCC_APB2ENR | 6.3.7 | 7.3.7 |\n| GPIOx_CRL | 8.2.1 | 9.2.1 |\n| GPIOx_BSRR | 8.2.5 | 9.2.5 |\n| GPIOx_BRR | 8.2.6 | 9.2.6 |\n\n- 原因：英文版多了一章，RCC 在英文版是第 7 章，中文版是第 6 章\n- 英文版第 8 章是互聯型（F105/107）的 RCC，F103 不要看那一章\n- 中文翻譯版較舊，內容有疑問時以英文版為準\n- 檔案位置：`Desktop\\STM32 參考文件\\`",
-          "resolved": null
+          "resolved": null,
+          "id": "741e8d38cb"
         },
         {
           "time": "2026-10-21 22:15",
           "type": "筆記",
           "text": "【筆記】RCC_APB2ENR：開啟 GPIO 時脈\n**F1 的周邊開機時預設沒有時脈，沒開時脈的話，寫 GPIO 暫存器完全無效**\n\n| 項目 | 內容 |\n|---|---|\n| 節號 | 中文版 6.3.7／英文版 7.3.7 |\n| 位址偏移 | 0x18（RCC 基底 0x4002_1000 + 0x18） |\n| 復位值 | 0x0000_0000（全部周邊時脈關閉） |\n| bit 2 | IOPAEN：GPIOA |\n| bit 3 | IOPBEN：GPIOB（本課按鍵 PB0） |\n| bit 4 | IOPCEN：GPIOC（本課 LED PC13） |\n\n- 名稱意義：IOP = I/O Port，EN = Enable\n- 寫法：`RCC->APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);`\n- 用 `|=` 不用 `=`：APB2ENR 同時管 AFIO、USART1、SPI1、ADC1 等周邊的時脈\n  - 用 `=` 開 USART1 時，會把 GPIO 的時脈一起關掉，這種 bug 很難找\n  - 和 S02 的原則相同：只動自己的欄位\n- 預期結果：bit 3、bit 4 為 1 → `0x0000_0018`",
-          "resolved": null
+          "resolved": null,
+          "id": "e9b4b56eb9"
         },
         {
           "time": "2026-10-21 22:15",
           "type": "問題",
           "text": "【問題】開 GPIO 時脈時誤用 APB2RSTR 的 mask\n**ENR = 時脈致能；RSTR = 周邊重置，兩者 bit 位置相同但意義完全不同**\n\n| 暫存器 | 節號（中／英） | offset | 寫 1 的意義 |\n|---|---|---|---|\n| RCC_APB2RSTR | 6.3.4／7.3.4 | 0x0C | 周邊維持在重置狀態，直到軟體寫 0 |\n| RCC_APB2ENR | 6.3.7／7.3.7 | 0x18 | 開啟周邊時脈 |\n\n- 我的錯誤：寫成 `RCC_APB2RSTR_IOPBRST_Msk`，第二次又寫成 `RCC_APB3ENR_IOPAEN`\n- 正確：`RCC_APB2ENR_IOPBEN_Msk`（bit 3）、`RCC_APB2ENR_IOPCEN_Msk`（bit 4）\n- 命名規則：周邊_暫存器_bit名稱_Msk，前半段要和寫入的暫存器一致\n- F1 只有 APB1、APB2，沒有 APB3；IOPB 是 port B，IOPA 是 port A\n- 數值相同還是要用對名稱：程式碼是寫給人讀的，看到 RSTR 會誤以為在重置周邊\n- 如果真的 `|=` 到 RCC->APB2RSTR：重置的是 **port B**（不是 A），而且會一直卡在重置狀態，GPIOB 的設定全部無效，PB0 永遠讀不到\n- RSTR 正確用法：先寫 1 再寫 0，讓周邊回到復位值（驅動程式重新初始化時使用）\n- 驗證名稱：打錯會出現 undeclared；也可以按 F3 跳進 `stm32f103xb.h` 確認",
-          "resolved": false
+          "resolved": true,
+          "id": "9934a51749",
+          "open": false
         },
         {
           "time": "2026-10-21 22:46",
           "type": "筆記",
           "text": "【筆記】多行巨集為什麼要用 do { } while(0)\n**讓巨集變成「一個敘述」，在 if／else 中才不會出錯（面試常考）**\n\n只用大括號：`#define LED_ON() { a(); b(); }`\n\n```c\nif (x)\n    { a(); b(); };   // 結尾的 ; 是另一個空敘述，if 到此結束\nelse                 // error: 'else' without a previous 'if'\n```\n\n改用 do-while：`#define LED_ON() do { a(); b(); } while (0)`\n\n```c\nif (x)\n    do { a(); b(); } while (0);   // ; 屬於 do-while 語法，整體是一個敘述\nelse\n    ...\n```\n\n- `while(0)` 條件不成立，內容剛好執行一次，目的不是迴圈\n- 附帶好處：忘記加分號會編譯錯誤，強迫像函式一樣使用",
-          "resolved": null
-        },
-        {
-          "time": "2026-10-21 22:48",
-          "type": "解法",
-          "text": "【筆記】HAL 開時脈巨集 __HAL_RCC_GPIOC_CLK_ENABLE() 拆解\n**設好 bit 後讀回一次，用讀取動作當作延遲**\n\n```c\n#define __HAL_RCC_GPIOC_CLK_ENABLE()   do { \\\n        __IO uint32_t tmpreg; \\\n        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        /* Delay after an RCC peripheral clock enabling */ \\\n        tmpreg = READ_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        UNUSED(tmpreg); \\\n    } while(0U)\n```\n\n| 程式 | 作用 |\n|---|---|\n| `SET_BIT(REG, BIT)` | 開時脈，展開後就是「REG 或等於 BIT」 |\n| `tmpreg = READ_BIT(...)` | 讀回同一暫存器：CPU 必須等前一筆寫入完成才能讀，形成延遲 |\n| `__IO uint32_t tmpreg` | `__IO` = `volatile`，防止編譯器把沒人用的讀取刪掉 |\n| `UNUSED(tmpreg)` | `(void)tmpreg`，消除 set but not used 的 warning |\n| `do { } while(0U)` | 把多行巨集包成「一個敘述」 |\n\n- 為什麼要延遲：開時脈的寫入經過匯流排要幾個週期才生效，馬上設定周邊可能被忽略\n- 讀回的「值」不重要，「讀」這個動作才重要（不是二次確認）\n- 正式記載於 ST Errata Sheet（Delay after an RCC peripheral clock enabling）\n- 自己的寫法：`(void)RCC->APB2ENR;`（Step 5 決定是否加入 bsp_gpio.c）\n- 定義位置：`SET_BIT`、`READ_BIT` 在 `stm32f1xx.h`；`__IO` 在 `core_cm3.h`；`UNUSED` 是 HAL 專用（`stm32f1xx_hal_def.h`）\n- volatile 的「暫存器」要分清楚：CPU 暫存器（R0～R12）vs 周邊暫存器（RCC->APB2ENR）",
-          "resolved": null
+          "resolved": null,
+          "id": "886a06ffba"
         },
         {
           "time": "2026-10-21 22:48",
           "type": "解法",
           "text": "【解法】單一 bit 與多 bit 欄位的寫法選擇\n**單一 bit 不需要先清再設**\n\n| 欄位類型 | 寫法 | 例子 |\n|---|---|---|\n| 單一 bit 設 1 | 或等於 | 開 GPIOB、GPIOC 時脈 |\n| 單一 bit 清 0 | 且等於「反相 mask」 | 關閉某個 bit |\n| 多 bit 欄位 | 先清再設 | S02 的 PLLMUL（4 bit） |\n\n```c\n// 單一 bit 設 1\nRCC->APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);\n\n// 單一 bit 清 0\nREG &= ~BIT_Msk;\n\n// 多 bit 欄位：先清再設\nREG = (REG & ~FIELD_Msk) | FIELD_VALUE;\n```\n\n- 我原本的寫法：單一 bit 也先清再設 → 結果相同，但清除那一步沒有作用\n- `a = a | b` 縮寫成 `a |= b`：暫存器名稱只寫一次，避免左右寫成不同暫存器\n- 同一行的 mask 名稱要統一（都用 `_Msk`）\n- 驗證：APB2ENR 前 `0x0` → 後 `0x18`（`0b11000`，bit 3、bit 4 = 1）",
-          "resolved": null
-        },
-        {
-          "time": "2026-10-22 21:59",
-          "type": "筆記",
-          "text": "【筆記】F1 GPIO 的 CNF/MODE 4-bit 編碼\n**每個腳位用 4 bit 設定：高 2 bit 是 CNF，低 2 bit 是 MODE**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 管哪些腳位 |\n|---|---|---|---|---|\n| GPIOx_CRL | 8.2.1／9.2.1 | 0x00 | 0x4444_4444 | pin 0～7 |\n| GPIOx_CRH | 8.2.2／9.2.2 | 0x04 | 0x4444_4444 | pin 8～15 |\n\n- L／H = Low／High，指「低編號 8 隻腳／高編號 8 隻腳」，跟速度無關\n- 32 bit ÷ 4 bit = 8 個腳位，所以 16 隻腳要兩個暫存器\n- 欄位名稱的數字 = 腳位編號（MODE13、CNF13 = pin 13）；暫存器是 GPIOA～E 共用格式\n- 起始 bit：CRL 為 y × 4，CRH 為 (y − 8) × 4 → PC13 在 CRH 的 bit [23:20]\n\n**MODE（低 2 bit）：決定輸入或輸出，輸出時決定最大速度（表18）**\n\n| MODE | 意義 |\n|---|---|\n| 00 | 輸入模式（復位值） |\n| 01 | 輸出，最大 10 MHz |\n| 10 | 輸出，最大 2 MHz |\n| 11 | 輸出，最大 50 MHz |\n\n**CNF（高 2 bit）：意義依 MODE 而不同（表17）**\n\n| CNF | 輸入模式（MODE = 00） | 輸出模式（MODE 不為 00） |\n|---|---|---|\n| 00 | 類比輸入 | 通用推挽 |\n| 01 | 浮空輸入（復位值） | 通用開漏 |\n| 10 | 上拉／下拉輸入 | 複用推挽 |\n| 11 | 保留 | 複用開漏 |\n\n**常用組合**\n\n| 用途 | CNF | MODE | 4-bit |\n|---|---|---|---|\n| 復位值：浮空輸入 | 01 | 00 | 0100 = 0x4 |\n| PC13 通用推挽輸出 2 MHz | 00 | 10 | 0010 = 0x2 |\n| PB0 上拉輸入（Step 4） | 10 | 00 | 1000 = 0x8 |\n\n- 復位值 0x4444_4444 = 每個腳位都是 0100 → 開機全部是浮空輸入",
-          "resolved": null
+          "resolved": null,
+          "id": "99438ee6f5"
         },
         {
           "time": "2026-10-22 22:01",
           "type": "筆記",
           "text": "【筆記】GPIO 模式名詞：推挽／開漏、通用／複用、浮空／上拉／下拉／類比\n**一個腳位的設定要回答三件事：方向、誰在控制、電路結構**\n\n**輸出電路結構**：腳位內部有兩個開關，上開關（P-MOS）接 VDD、下開關（N-MOS）接 GND\n\n| 模式 | 輸出 1 | 輸出 0 | 用途 |\n|---|---|---|---|\n| 推挽 Push-Pull | 上開關導通，推到 VDD | 下開關導通，拉到 GND | LED、一般數位輸出 |\n| 開漏 Open-Drain | 放開（懸空），靠外部上拉電阻拉高 | 下開關導通，拉到 GND | I²C、多裝置共用線、不同電壓介面 |\n\n**誰在控制腳位**\n\n| 模式 | 腳位聽誰的 | 例子 |\n|---|---|---|\n| 通用 General Purpose | 程式（ODR、BSRR） | 點 LED |\n| 複用 Alternate Function | 晶片內的周邊硬體 | USART TX、PWM 輸出、SPI SCK |\n\n- 複用模式下寫 ODR 無效（表17 的 PxODR 欄寫「不使用」）\n\n**輸入電路結構**\n\n| 模式 | 腳位內部 | 沒接東西時讀到 |\n|---|---|---|\n| 浮空 Floating | 什麼都不接，像天線 | 不確定，受雜訊亂跳 |\n| 上拉 Pull-up | 內部電阻接 VDD | 1 |\n| 下拉 Pull-down | 內部電阻接 GND | 0 |\n| 類比 Analog | 關閉數位電路，接到 ADC | ADC 使用 |\n                VDD\n                 │\n               [上開關]  ← P-MOS\n                 │\n  腳位 ──┤\n                 │\n               [下開關]  ← N-MOS\n                 │\n                GND\n- 開機預設浮空輸入：腳位不輸出電壓，不會和外部電路衝突，最安全\n- 按鍵 PB0 按下接 GND → 要用上拉，放開時才會穩定讀到 1",
-          "resolved": null
+          "resolved": null,
+          "id": "ef94db6afd"
         },
         {
           "time": "2026-10-22 22:03",
           "type": "問題",
           "text": "【問題】GPIO 設定的兩個誤解\n**L／H 不是速度；LED 一設成輸出就會亮**\n\n| 誤解 | 正確 |\n|---|---|\n| CRL 的 L 代表低速，PC13 不需要高速所以用 CRL | L／H 代表 pin 0～7／pin 8～15；PC13 是 pin 13 → CRH；速度由 MODE 決定 |\n| PC13 設成輸出後 LED 是暗的 | ODR 復位值 0 → 輸出 0 → Active-Low LED 亮 |\n\n- 找不到「PC13」：暫存器圖是 GPIOx 共用格式，要看欄位名稱的數字（MODE13、CNF13）\n- 預測腳位行為時，要同時考慮「設定（CRH）」和「資料（ODR）」兩個暫存器",
-          "resolved": false
+          "resolved": true,
+          "id": "b340479505",
+          "open": false
         },
         {
           "time": "2026-10-22 22:04",
           "type": "筆記",
           "text": "【筆記】ODR 與 PC13 LED 電路\n**輸出模式下，腳位電位 = ODR 對應 bit 的值；PC13 LED 是 Active-Low**\n\n| 項目 | 內容 |\n|---|---|\n| ODR | Output Data Register，bit y 對應 pin y，只用 bit 15:0 |\n| ODR 復位值 | 0 → PC13 一設成輸出就輸出 0 |\n| LED 電路 | 3.3V → 電阻 → LED → PC13 |\n| Active-Low | PC13 輸出 0（接地）才有電流 → 亮；輸出 1 → 暗 |\n| LED 位置 | 板上標示 PC13 的那顆（另一顆是電源燈） |\n\n- 驗證：CRH 設定完成（0x44244444）的瞬間 LED 就亮了，因為 ODR bit13 = 0\n- PC13～PC15 驅動能力弱：速度不超過 2 MHz、不能當電流源 → 板子只能接成 Active-Low\n\n**推挽 vs 開漏（用 PC13 LED 推導）**\n\n| 輸出值 | 推挽 | 開漏 |\n|---|---|---|\n| 0 | 接 GND → 亮 | 接 GND → 亮 |\n| 1 | 接 3.3V → 暗 | 懸空，沒有電流路徑 → 暗 |\n\n- 這個電路兩種都能用：LED 接在 3.3V，等於幫腳位提供上拉\n- LED 改成 Active-High（PC13 → LED → GND）時，開漏無法輸出高電位 → 不能用\n- 選推挽：兩個方向都主動驅動，最通用；開漏用於 I²C 共用線、不同電壓的介面\n- 輸出懸空 = 沒有電流路徑（結果確定）；輸入懸空 = 讀值不確定（兩者不同）",
-          "resolved": null
+          "resolved": null,
+          "id": "70fcdc489a"
         },
         {
           "time": "2026-10-22 22:05",
           "type": "解法",
           "text": "【解法】PC13 設為通用推挽輸出 2 MHz\n**CNF13 + MODE13 是多 bit 欄位 → 先清再設**\n\n```c\n// PC13：CNF13 = 00（通用推挽）、MODE13 = 10（輸出 2 MHz）\nGPIOC->CRH = (GPIOC->CRH & ~(GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk))\n           | GPIO_CRH_MODE13_1;\n```\n\n- 清除：兩個欄位都要清（共 4 bit），設定幾個欄位就清幾個\n- 設定：只需設 MODE13 的 bit 1（GPIO_CRH_MODE13_1 = bit 21），CNF13 = 00 清完就是了\n- 可用巨集：在 stm32f103xb.h 搜尋 GPIO_CRH_MODE13\n- 預測值：0x4444_4444 只改 bit [23:20]，0100 → 0010 → 0x4424_4444\n- 驗證：Debugger 讀到 GPIOC->CRH = 0x44244444，與預測一致；LED 同時亮起",
-          "resolved": null
+          "resolved": null,
+          "id": "607f0d77a8"
         },
         {
           "time": "2026-10-22 22:52",
           "type": "筆記",
           "text": "【筆記】GPIO 資料暫存器：IDR／ODR／BSRR／BRR\n**ODR 儲存輸出值；BSRR、BRR 是「命令」暫存器，只寫不存**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 屬性 | 作用 |\n|---|---|---|---|---|---|\n| GPIOx_IDR | 8.2.3／9.2.3 | 0x08 | 0x0000_XXXX | r | 讀取腳位實際電位 |\n| GPIOx_ODR | 8.2.4／9.2.4 | 0x0C | 0x0000_0000 | rw | 輸出資料，bit y = pin y |\n| GPIOx_BSRR | 8.2.5／9.2.5 | 0x10 | 0x0000_0000 | w | 設定或清除 ODR 的指定 bit |\n| GPIOx_BRR | 8.2.6／9.2.6 | 0x14 | 0x0000_0000 | w | 清除 ODR 的指定 bit |\n\n**BSRR 的兩半**\n\n| 位置 | 名稱 | 寫 1 | 寫 0 |\n|---|---|---|---|\n| bit 15:0 | BSy（Bit Set） | ODR bit y 設為 1 | 沒有效果 |\n| bit 31:16 | BRy（Bit Reset） | ODR bit y 清為 0 | 沒有效果 |\n\n- BRy 位置公式：bit (y + 16)，例如 BR13 = bit 29\n- BRR 只有 BRy（bit 15:0），功能等同 BSRR 的 bit 31:16；BRR 只能清除，不能設定\n- IDR 的 X：沒有固定值，反映腳位實際電位，所以唯讀\n- BSRR、BRR 是寫入專用，讀回來固定是 0（不儲存值）\n  - 寫法用 `=` 不用 `|=`：寫 0 的 bit 沒效果，直接寫入也不會影響其他腳位\n- 與 CRL／CRH 合起來，GPIO 暫存器 offset 依序為：CRL 0x00、CRH 0x04、IDR 0x08、ODR 0x0C、BSRR 0x10、BRR 0x14\n補充：寫入專用的暫存器讀回來是什麼\n\nBSRR、BRR 都是寫入專用（屬性標 w），讀回來固定是 0。原因是它們不儲存任何值：\n\nODR 是「儲存」暫存器：寫進去的值會被記住，讀回來就是那個值。\nBSRR 是「命令」暫存器：寫入的瞬間，硬體依照你寫的 1 去設定或清除 ODR，動作完成後什麼都不留。",
-          "resolved": null
+          "resolved": null,
+          "id": "5be1319a75"
         },
         {
           "time": "2026-10-22 22:52",
           "type": "解法",
           "text": "【解法】用 BSRR／BRR 控制 PC13 LED（Active-Low）\n**LED 亮 = PC13 輸出 0 = 清除 bit 13**\n\n| 動作 | ODR bit 13 | BSRR 寫哪個 bit | BRR 寫哪個 bit |\n|---|---|---|---|\n| LED 亮 | 0 | bit 29（BR13） | bit 13 |\n| LED 暗 | 1 | bit 13（BS13） | 做不到，BRR 只能清除 |\n\n- Active-Low：先想「腳位要輸出 0 還是 1」，再決定用 Set 還是 Reset\n- 名稱別寫錯：BSRR（Bit Set／Reset Register）、BRR（Bit Reset Register），沒有 BSR",
-          "resolved": null
+          "resolved": null,
+          "id": "7972c34673"
         },
         {
           "time": "2026-10-22 22:52",
           "type": "問題",
           "text": "【問題】LED 亮／暗用錯 Set／Reset\n**直覺以為「亮 = Set（寫 1）」，但 PC13 LED 是 Active-Low**\n\n- 錯誤答案：亮 → BS13；暗 → BS13（還把 BSRR 打成 BSR）\n- 正確答案：亮 → 清除 bit 13（BSRR bit 29 或 BRR bit 13）；暗 → 設定 bit 13（BSRR bit 13）\n- 原因：電路是 3.3V → LED → PC13，腳位接地（0）才有電流\n- 預防：寫程式前先畫出電路，確認有效電位（Active-High 或 Active-Low）\n- 後續做法：在 bsp_gpio 裡包成 LED_On()／LED_Off()，把 Active-Low 的細節藏在函式裡，上層不用記",
-          "resolved": false
+          "resolved": true,
+          "id": "072fef0cc6",
+          "open": false
         },
         {
           "time": "2026-10-24 21:54",
           "type": "筆記",
           "text": "【筆記】為什麼 BSRR 比讀改寫 ODR 安全\n**讀改寫 ODR 不是原子操作，中斷會讓副本過時；BSRR 一次寫入、只影響指定腳位**\n\n讀改寫寫法：`GPIOC->ODR &= ~(1U << 13);` 會被拆成「讀出 → 修改 → 寫回」\n\n情境：主程式要清 PC13；ISR 要設 PC14；一開始 ODR = 0x2000\n\n| 時間 | 誰在執行 | 動作 | 主程式的副本 | 實際 ODR |\n|---|---|---|---|---|\n| t1 | 主程式 | 讀出 ODR | 0x2000 | 0x2000 |\n| t2 | 主程式 | 清除 bit 13 | 0x0000 | 0x2000 |\n| t3 | ISR | 設定 bit 14 | 0x0000（不變） | 0x6000 |\n| t4 | 主程式 | 寫回副本 | 0x0000 | 0x0000 ← PC14 被蓋掉 |\n\n- 問題根源：三個步驟可被中斷，副本在中斷後已過時\n- 「寫回前再讀一次」解決不了：重新讀之後還要改、寫，一樣可能被打斷\n\nBSRR 寫法：`GPIOC->BSRR = GPIO_BSRR_BR13_Msk;`\n\n- 原因 1：只有一次寫入，沒有讀出步驟 → 原子操作，不會被打斷\n- 原因 2：寫 0 的 bit 沒效果 → 只影響 PC13，PC14 等其他腳位維持原樣\n- 注意：`=` 寫進 BSRR，不是把 ODR 整個換掉；硬體只處理寫 1 的 bit",
-          "resolved": null
-        },
-        {
-          "time": "2026-10-24 21:54",
-          "type": "解法",
-          "text": "【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證\n**命令暫存器用 = 直接寫入**\n\n```c\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗\nGPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗\nGPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）\n```\n\n| 步驟 | 寫入 | ODR | LED |\n|---|---|---|---|\n| ① | BSRR BS13 | 0x2000 | 暗 |\n| ② | BSRR BR13 | 0x0000 | 亮 |\n| ③ | BSRR BS13 | 0x2000 | 暗 |\n| ④ | BRR BR13 | 0x0000 | 亮 |\n\n- 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義\n- Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值\n- 8192 = 0x2000 = 只有 bit 13 為 1",
-          "resolved": null
-        },
-        {
-          "time": "2026-10-24 22:24",
-          "type": "筆記",
-          "text": "【筆記】上拉輸入為什麼要寫 ODR = 1\n**CNF = 10 只代表「上拉或下拉」，由 ODR 的 bit 決定是哪一個**\n\n| 模式 | CNF | MODE | 4-bit | PxODR |\n|---|---|---|---|---|\n| 上拉輸入 | 10 | 00 | 1000 | 1 |\n| 下拉輸入 | 10 | 00 | 1000 | 0 |\n\n- 輸出模式：ODR bit = 腳位輸出的電位\n- 輸入模式（CNF = 10）：ODR bit = 選擇上拉（1）或下拉（0）\n- PxODR 的 x 是 port 字母（PBODR = GPIOB 的 ODR），不是腳位編號\n- 設定方式：`GPIOB->BSRR = GPIO_BSRR_BS0_Msk;`（用 BSRR，不必讀改寫 ODR）\n\n**電路（按鍵接 PB0 與 GND）**\n\n| 按鍵狀態 | PB0 接到 | IDR bit 0 |\n|---|---|---|\n| 放開 | 經上拉電阻（約 40 kΩ）接 VDD | 1 |\n| 按下 | 經按鍵直接接 GND | 0 |\n\n- 按下時讀到 0 → 按鍵也是 Active-Low\n- 電阻的作用：決定放開時的電位，並在按下時限制電流（否則 VDD 直接短路到 GND）\n\n**忘記寫 ODR = 1 的後果**\n\n- ODR 復位值是 0 → 變成下拉輸入\n- 放開讀到 0、按下也讀到 0 → 按鍵完全沒有作用\n- 程式和 CRL 看起來都正確，很難發現",
-          "resolved": null
+          "resolved": null,
+          "id": "01e743dd6d"
         },
         {
           "time": "2026-10-24 22:25",
           "type": "筆記",
           "text": "【筆記】上拉輸入為什麼要寫 ODR = 1\n**CNF = 10 只代表「上拉或下拉」，由 ODR 的 bit 決定接通哪一顆內部電阻**\n\n| 模式 | CNF | MODE | 4-bit | PxODR |\n|---|---|---|---|---|\n| 上拉輸入 | 10 | 00 | 1000 | 1 |\n| 下拉輸入 | 10 | 00 | 1000 | 0 |\n\n**晶片內部結構**\n\n```\n  VDD ──[上拉電阻]──/ ──┐   ← ODR = 1 時接通\n                        ├── PB0\n  GND ──[下拉電阻]──/ ──┘   ← ODR = 0 時接通\n```\n\n| 模式 | 接通的電阻 | 沒有外力時的電位 |\n|---|---|---|\n| 上拉輸入 | 上拉電阻接 VDD | 1 |\n| 下拉輸入 | 下拉電阻接 GND | 0 |\n| 浮空輸入（CNF = 01） | 兩顆都不接 | 不確定 |\n\n- 輸出模式：ODR bit = 腳位輸出的電位\n- 輸入模式（CNF = 10）：ODR bit = 選擇上拉（1）或下拉（0）\n- PxODR 的 x 是 port 字母（PBODR = GPIOB 的 ODR），不是腳位編號\n- 設定方式：`GPIOB->BSRR = GPIO_BSRR_BS0_Msk;`（用 BSRR，不必讀改寫 ODR）\n\n**按鍵電路（按鍵接在 PB0 與 GND 之間）**\n\n| 按鍵狀態 | PB0 接到 | IDR bit 0 |\n|---|---|---|\n| 放開 | 經上拉電阻（約 40 kΩ）接 VDD | 1 |\n| 按下 | 經按鍵直接接 GND | 0 |\n\n- 按下時讀到 0 → 按鍵也是 Active-Low\n- 電阻的作用：決定放開時的電位；按下時限制電流（否則 VDD 直接短路到 GND）\n\n**忘記寫 ODR = 1 的後果**\n\n- ODR 復位值是 0 → 變成下拉輸入\n- 放開讀到 0、按下也讀到 0 → 按鍵完全沒有作用\n- 程式和 CRL 看起來都正確，很難發現",
-          "resolved": null
+          "resolved": null,
+          "id": "a1ac933701"
         },
         {
           "time": "2026-10-27 22:54",
           "type": "問題",
           "text": "【問題】讀按鍵時沒有 mask，LED 恆暗\n**IDR 包含整個 port 16 隻腳的電位，只判斷一個腳位時必須先 & mask**\n\n- 錯誤寫法：`if (GPIOB->IDR != 0U)`\n- 正確寫法：`if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)`\n- 現象：不論按下或放開，LED 都是暗的\n- Debugger 讀到 `GPIOB->IDR` = 0xFFF3、0xFFF1：bit 0 都是 1（兩次都是放開）；差在 bit 1，PB1 浮空輸入讀值亂跳\n- 原因：其他腳位不一定是 0（浮空亂跳、JTAG 腳位預設帶上拉），整個 IDR 永遠不等於 0\n- PB2 = BOOT1，板上接 GND，所以 bit 2 恆為 0\n\n**判斷單一 bit：一律和 0U 比較**\n\n| 運算 | 結果 |\n|---|---|\n| `IDR & GPIO_IDR_IDR0_Msk` | 0 或 0x0001 |\n| `IDR & GPIO_IDR_IDR13_Msk` | 0 或 0x2000（不是 1） |\n\n- `&` 之後 bit 留在原位置，不會移到 bit 0\n- 寫 `== 1U` 只對 pin 0 有效，換腳位就錯 → 用 `== 0U` 或 `!= 0U`",
-          "resolved": false
+          "resolved": true,
+          "id": "e69c602862",
+          "open": false
         },
         {
           "time": "2026-10-27 22:54",
           "type": "解法",
           "text": "【解法】PB0 上拉輸入讀按鍵、控制 PC13 LED\n**先設 ODR（選上拉），再設 CRL（切成輸入上拉／下拉）**\n\n```c\n// PB0 上拉輸入：先設 ODR 再設 CRL\nGPIOB->BSRR = GPIO_BSRR_BS0_Msk;\nGPIOB->CRL  = (GPIOB->CRL & ~(GPIO_CRL_CNF0_Msk | GPIO_CRL_MODE0_Msk))\n            | GPIO_CRL_CNF0_1;               // CNF0 = 10、MODE0 = 00\n\nfor (;;)\n{\n    if ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) != 0U)\n    {\n        GPIOC->BSRR = GPIO_BSRR_BS13_Msk;    // 放開：PC13 = 1 → LED 暗\n    }\n    else\n    {\n        GPIOC->BSRR = GPIO_BSRR_BR13_Msk;    // 按下：PC13 = 0 → LED 亮\n    }\n}\n```\n\n| 項目 | 預測 | 實測 |\n|---|---|---|\n| GPIOB->CRL | 0x4444_4448 | 一致 |\n| GPIOB->ODR | 0x0000_0001 | 一致 |\n| 按下（PB0 接 GND） | LED 亮 | LED 亮 |\n| 放開 | LED 暗 | LED 暗 |\n\n- 沒有按鍵：用杜邦線一端接 GND、另一端碰 PB0 代替；內部上拉約 40 kΩ，電流約 0.08 mA，安全\n- 杜邦線只能碰 PB0，不要碰 3.3V／5V（會短路）\n- 第一次寫成 `ODR |=`：改成 BSRR，程式裡不再出現 ODR 的讀改寫",
-          "resolved": null
+          "resolved": null,
+          "id": "d33e348156"
         },
         {
           "time": "2026-10-27 22:54",
           "type": "筆記",
           "text": "【筆記】設定順序：先設 ODR，再設 CRL\n**先設資料、再切模式，避免腳位出現短暫的錯誤狀態**\n\n| 順序 | 中間狀態 | 結果 |\n|---|---|---|\n| 先 CRL 後 ODR | CNF = 10 但 ODR = 0 → 短暫下拉輸入 | 讀到 0，誤判為按下 |\n| 先 ODR 後 CRL | 仍是浮空輸入，內部電阻都沒接上 | ODR 沒有作用，也沒有副作用 |\n\n- 本課影響很小（只有幾個時脈週期），但接了外部電路的腳位可能出問題（例如馬達、電源控制）\n- 輸出腳也適用：先用 BSRR 設好初始電位，再把 CRH／CRL 切成輸出，避免輸出瞬間的錯誤電位",
-          "resolved": null
+          "resolved": null,
+          "id": "6bb623bdb6"
         },
         {
           "time": "2026-10-28 22:24",
           "type": "筆記",
           "text": "【筆記】HAL 開時脈巨集 __HAL_RCC_GPIOC_CLK_ENABLE() 拆解\n**設好 bit 後讀回一次，用讀取動作當作延遲**\n\n```c\n#define __HAL_RCC_GPIOC_CLK_ENABLE()   do { \\\n        __IO uint32_t tmpreg; \\\n        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        /* Delay after an RCC peripheral clock enabling */ \\\n        tmpreg = READ_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPCEN); \\\n        UNUSED(tmpreg); \\\n    } while(0U)\n```\n\n| 程式 | 作用 |\n|---|---|\n| `SET_BIT(REG, BIT)` | 開時脈，展開後就是「REG 或等於 BIT」 |\n| `tmpreg = READ_BIT(...)` | 讀回同一暫存器：CPU 必須等前一筆寫入完成才能讀，形成延遲 |\n| `__IO uint32_t tmpreg` | `__IO` = `volatile`，防止編譯器把沒人用的讀取刪掉 |\n| `UNUSED(tmpreg)` | `(void)tmpreg`，消除 set but not used 的 warning |\n| `do { } while(0U)` | 把多行巨集包成「一個敘述」 |\n\n- 為什麼要延遲：開時脈的寫入經過匯流排要幾個週期才生效，馬上設定周邊可能被忽略\n- 讀回的「值」不重要，「讀」這個動作才重要（不是二次確認）\n- 正式記載於 ST Errata Sheet（Delay after an RCC peripheral clock enabling）\n- 自己的寫法：`(void)RCC->APB2ENR;`，整理 bsp_gpio.c 時決定是否加入\n- 定義位置：`SET_BIT`、`READ_BIT` 在 `stm32f1xx.h`；`__IO` 在 `core_cm3.h`；`UNUSED` 是 HAL 專用（`stm32f1xx_hal_def.h`）\n- volatile 的「暫存器」要分清楚：CPU 暫存器（R0～R12）vs 周邊暫存器（RCC->APB2ENR）",
-          "resolved": null
+          "resolved": null,
+          "id": "ffb18855bb"
         },
         {
           "time": "2026-10-28 22:24",
           "type": "筆記",
           "text": "【筆記】F1 GPIO 的 CNF/MODE 4-bit 編碼\n**每個腳位用 4 bit 設定：高 2 bit 是 CNF，低 2 bit 是 MODE**\n\n| 暫存器 | 節號（中／英） | offset | 復位值 | 管哪些腳位 |\n|---|---|---|---|---|\n| GPIOx_CRL | 8.2.1／9.2.1 | 0x00 | 0x4444_4444 | pin 0～7 |\n| GPIOx_CRH | 8.2.2／9.2.2 | 0x04 | 0x4444_4444 | pin 8～15 |\n\n- L／H = Low／High，指「低編號 8 隻腳／高編號 8 隻腳」，跟速度無關\n- 32 bit ÷ 4 bit = 8 個腳位，所以 16 隻腳要兩個暫存器\n- 欄位名稱的數字 = 腳位編號（MODE13、CNF13 = pin 13）；暫存器是 GPIOA～E 共用格式\n- 起始 bit：CRL 為 y × 4，CRH 為 (y − 8) × 4 → PC13 在 CRH 的 bit [23:20]\n\n**MODE（低 2 bit）：決定輸入或輸出，輸出時決定最大速度（表18）**\n\n| MODE | 意義 |\n|---|---|\n| 00 | 輸入模式（復位值） |\n| 01 | 輸出，最大 10 MHz |\n| 10 | 輸出，最大 2 MHz |\n| 11 | 輸出，最大 50 MHz |\n\n**CNF（高 2 bit）：意義依 MODE 而不同（表17）**\n\n| CNF | 輸入模式（MODE = 00） | 輸出模式（MODE 不為 00） |\n|---|---|---|\n| 00 | 類比輸入 | 通用推挽 |\n| 01 | 浮空輸入（復位值） | 通用開漏 |\n| 10 | 上拉／下拉輸入 | 複用推挽 |\n| 11 | 保留 | 複用開漏 |\n\n**常用組合**\n\n| 用途 | CNF | MODE | 4-bit |\n|---|---|---|---|\n| 復位值：浮空輸入 | 01 | 00 | 0100 = 0x4 |\n| PC13 LED：通用推挽輸出 2 MHz | 00 | 10 | 0010 = 0x2 |\n| PB0 按鍵：上拉輸入 | 10 | 00 | 1000 = 0x8 |\n\n- 復位值 0x4444_4444 = 每個腳位都是 0100 → 開機全部是浮空輸入",
-          "resolved": null
+          "resolved": null,
+          "id": "d70ff53d77"
         },
         {
           "time": "2026-10-28 22:24",
           "type": "解法",
           "text": "【解法】用 BSRR／BRR 控制 PC13 LED 的實作與驗證\n**命令暫存器用 = 直接寫入**\n\n```c\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // PC13 = 1 → 暗\nGPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // PC13 = 0 → 亮\nGPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 暗\nGPIOC->BRR  = GPIO_BRR_BR13_Msk;    // 亮（BRR 只能清除）\n```\n\n| 寫入 | 執行後 ODR | LED |\n|---|---|---|\n| BSRR 的 BS13 | 0x2000 | 暗 |\n| BSRR 的 BR13 | 0x0000 | 亮 |\n| BRR 的 BR13 | 0x0000 | 亮 |\n\n- 第一次寫成 `|=`：結果一樣，但 BSRR 讀回恆為 0，多讀一次沒有意義\n- Debugger 觀察 BSRR 恆為 0，證實寫入專用暫存器不儲存值\n- 8192 = 0x2000 = 只有 bit 13 為 1",
-          "resolved": null
+          "resolved": null,
+          "id": "98fe1afe7f"
         },
         {
           "time": "2026-10-28 22:24",
           "type": "筆記",
           "text": "【筆記】Expressions 視窗顯示 Error: Multiple\n**區域變數離開作用範圍後，Debugger 讀不到**\n\n- `count` 是 `Clock_Init()` 裡的區域變數，中斷點停在 `main()` 時它已不存在\n- 要觀察區域變數：中斷點設在該函式內部\n- 全域變數和周邊暫存器（RCC->CR）不受影響，隨時都看得到\n\n**拆出 clock_init.c 後的驗證結果（與 SPRINT-W01-S02 時脈系統一致）**\n\n| 暫存器 | 十六進位 | 解讀 |\n|---|---|---|\n| FLASH->ACR | 0x32 | 2 WS、Prefetch 開啟 |\n| RCC->CR | 0x03038683 | HSEON、HSERDY、PLLON、PLLRDY = 1 |\n| RCC->CFGR | 0x001D040A | SW = SWS = 10（PLL）、×9、APB1 ÷2 |\n| clock_state | 0 | CLOCK_OK |",
-          "resolved": null
+          "resolved": null,
+          "id": "f92fd3601a"
         },
         {
           "time": "2026-10-28 22:25",
           "type": "問題",
           "text": "【問題】PB0 誤寫成 CRH\n**pin 0～7 用 CRL，pin 8～15 用 CRH**\n\n- PB0 是 pin 0 → GPIOB->CRL 的 bit [3:0]\n- 判斷時只看腳位編號，不看 port 字母",
-          "resolved": false
+          "resolved": true,
+          "id": "a598707e62",
+          "open": false
         },
         {
           "time": "2026-10-28 22:25",
           "type": "筆記",
           "text": "【筆記】GPIO 初始化完整流程：為什麼設、設了什麼、為什麼這個順序\n**先開時脈 → 先設資料再切模式 → 設定完成才使用**\n\n```\n上電／Reset：時脈 = HSI 8 MHz、GPIO 時脈關閉、所有腳位浮空輸入\n  ↓\n系統時脈 72 MHz：Clock_Init()（RCC、FLASH）\n  ↓\n開 GPIOB、GPIOC 時脈：RCC->APB2ENR 的 IOPBEN、IOPCEN\n  ↓\n設定 PC13 為輸出：GPIOC->CRH\n  ↓\n選 PB0 上拉：GPIOB->BSRR 的 BS0（ODR bit 0 = 1）\n  ↓\n設定 PB0 為上拉／下拉輸入：GPIOB->CRL\n  ↓\n迴圈：讀 GPIOB->IDR → 寫 GPIOC->BSRR\n```\n\n| 設定 | 值 | 為什麼 |\n|---|---|---|\n| 系統時脈 Clock_Init() | 72 MHz | 開機先把時脈定好是慣例；本課 GPIO 用 8 MHz 也能動 |\n| 開時脈 RCC->APB2ENR | 0x18（bit 3、bit 4） | F1 周邊預設沒時脈，沒開時寫入會被忽略；用或等於，不蓋掉其他周邊 |\n| PC13 模式 GPIOC->CRH | 0x4424_4444（CNF13 = 00、MODE13 = 10） | 推挽最通用；PC13 硬體上限 2 MHz；多 bit 欄位先清再設 |\n| PB0 選上拉 GPIOB->BSRR 的 BS0 | ODR = 0x0001 | CNF = 10 由 ODR 選上拉或下拉，復位值 0 是下拉；用 BSRR 避免讀改寫 |\n| PB0 模式 GPIOB->CRL | 0x4444_4448（CNF0 = 10、MODE0 = 00） | 按鍵接 GND，放開時需要上拉到確定的 1 |\n| 讀按鍵 GPIOB->IDR | 和 IDR0 mask 做且運算後，和 0U 比較 | IDR 含 16 隻腳，其他腳不一定是 0 |\n\n**順序原則**\n\n| 原則 | 本課的例子 |\n|---|---|\n| 先開時脈，才能設定周邊 | 開 GPIO 時脈（RCC->APB2ENR）在設定 CRH、CRL、BSRR 之前 |\n| 先設資料，再切模式 | 選上拉（BSRR 的 BS0）在設定 PB0 模式（GPIOB->CRL）之前 |\n| 設定完成，才開始使用 | CRH、CRL 都設好，迴圈才開始讀 IDR、寫 BSRR |\n\n- 改進方向：PC13 也可以先用 BSRR 的 BS13 設成 1（LED 暗），再切成輸出，避免一切換成輸出 LED 就亮\n- 按鍵和 LED 都是 Active-Low：按下讀到 0，寫 0 點亮",
-          "resolved": null
+          "resolved": null,
+          "id": "f03932bc91"
         },
         {
           "time": "2026-10-28 22:25",
           "type": "問題",
           "text": "【問題】複習時兩個觀念的修正\n**沒開時脈是「寫入被忽略」；浮空輸入是「放開時亂跳」**\n\n| 情境 | 我原本的想法 | 正確 |\n|---|---|---|\n| 開 GPIO 時脈（RCC->APB2ENR）放在設定 PC13 模式（GPIOC->CRH）之後 | 時脈不對，寫入的值不如預期 | 沒時脈時寫入直接被忽略，CRH 保持 0x4444_4444，PC13 從頭到尾都不是輸出，LED 完全不受控制 |\n| PB0 的 CNF0 設成 01（浮空輸入） | 按了沒反應 | 按下穩定讀到 0；放開時沒有電阻拉住，讀值隨雜訊亂跳，LED 可能亂閃或看起來一直是按下 |\n\n- 除錯線索：程式看起來正確，Debugger 卻讀到復位值 → 先懷疑時脈有沒有開\n- 浮空的實例：PB1 的 IDR bit 1 在 0xFFF3、0xFFF1 之間跳動",
-          "resolved": false
+          "resolved": true,
+          "id": "ff9922df54",
+          "open": false
         },
         {
           "time": "2026-10-29 22:25",
           "type": "問題",
           "text": "【問題】main.c 寫成 #include \"bsp_gpio.c\"，連結時 multiple definition\n**.c 交給編譯器編譯，只 include .h**\n\n- 錯誤訊息：`ld.exe: ./Src/main.o: in function 'BSP_GPIO_Init': multiple definition of 'BSP_GPIO_Init'; ./Src/bsp_gpio.o: first defined here`\n- 原因：include 會把檔案內容原封不動貼進來 → main.o 裡也有一份函式本體 → 連結時同一函式出現兩次\n- 解法：改成 `#include \"bsp_gpio.h\"`\n\n**看懂錯誤訊息**\n\n| 階段 | 工具 | 做什麼 |\n|---|---|---|\n| 編譯 | arm-none-eabi-gcc -c | 每個 .c 各自編譯成 .o |\n| 連結 | ld.exe | 合併所有 .o 成 .elf，每個函式只能定義一次 |\n\n- 訊息開頭是 ld.exe → 連結階段錯誤，每個 .c 單獨編譯都沒問題\n- 6 個 error 其實只有一個原因：4 個函式各報一次，加上 collect2、make 各一次",
-          "resolved": false
+          "resolved": true,
+          "id": "de5867ce0a",
+          "open": false
         },
         {
           "time": "2026-10-29 22:25",
           "type": "筆記",
           "text": "【筆記】BSP 介面設計原則\n**.h 是給呼叫者的使用說明書：用功能角色命名，隱藏腳位與 Active-Low**\n\n```c\n#ifndef BSP_GPIO_H_\n#define BSP_GPIO_H_\n\n#include <stdbool.h>\n\nvoid BSP_GPIO_Init(void);              // 初始化 LED 與按鍵\nbool BSP_GPIO_Button_IsPressed(void);  // 按下回傳 true\nvoid BSP_GPIO_Led_On(void);\nvoid BSP_GPIO_Led_Off(void);\n\n#endif /* BSP_GPIO_H_ */\n```\n\n| 原則 | 說明 |\n|---|---|\n| 用功能角色命名 | Led、Button，不用 GPIOC、P13；LED 改接到別的腳時只改 .c |\n| 模組前綴 | 公開函式一律 BSP_GPIO_ 開頭，和檔名一致 |\n| 回傳值表達意義 | 按鍵回傳「按下與否」，不回傳腳位電位 |\n| 是非問句命名 | IsPressed 讀起來像句子：`if (BSP_GPIO_Button_IsPressed())` |\n| 內部函式加 static | 開時脈、設定 LED 腳、設定按鍵腳只在 .c 內使用 |\n| 沒參數寫 (void) | 空括號在 C（C23 以前）代表參數不指定 |\n| 全大寫保留給巨集 | 函式用大小寫混合 |\n| 用到 bool 要 include | `<stdbool.h>`，標頭檔要 self-contained |\n\n**include guard 的慣例順序**\n\n- 檢查（ifndef）下一行緊接著定義（define），之後才放 include 與宣告\n- 「放在 guard 裡面」指的是 ifndef 到 endif 之間，不是緊接在 ifndef 之後\n\n**註解放哪裡**\n\n| 內容 | 放哪裡 |\n|---|---|\n| 做什麼、怎麼用、回傳什麼 | .h |\n| 腳位、Active-Low、暫存器設定的理由 | .c |\n| 改名的理由、學習備忘 | App 筆記（或加上「備忘：」區分） |",
-          "resolved": null
+          "resolved": null,
+          "id": "b8816e09b7"
         },
         {
           "time": "2026-10-29 22:26",
           "type": "問題",
           "text": "【問題】按鍵函式把 Active-Low 洩漏給 main\n**回傳腳位電位時，按下反而是 false**\n\n| 設計 | 按下時回傳 | main 需要知道 Active-Low 嗎 |\n|---|---|---|\n| 輸入 0 回傳 false、1 回傳 true | false | 需要（要記得 false 才是按下） |\n| 按下回傳 true | true | 不需要 |\n\n- 名稱叫 State 或 IsPressed 都可以，關鍵是「行為」要是按下回傳 true\n- 轉換寫在 .c：`return ((GPIOB->IDR & GPIO_IDR_IDR0_Msk) == 0U);`\n- main 裡的 `== true` 可省略：函式本身就回傳 bool",
-          "resolved": false
+          "resolved": true,
+          "id": "961458ed3b",
+          "open": false
         },
         {
           "time": "2026-10-29 22:26",
           "type": "筆記",
           "text": "【筆記】開時脈後的讀回延遲：為什麼不用檢查結果\n**讀回是「時間上的保險」，不是「結果的確認」**\n\n```c\nRCC->APB2ENR |= (RCC_APB2ENR_IOPBEN_Msk | RCC_APB2ENR_IOPCEN_Msk);\n(void)RCC->APB2ENR;   // 讀一次、結果丟掉\n```\n\n| 動作 | 會失敗嗎 | 處理 |\n|---|---|---|\n| 開 HSE、等 HSERDY | 會：石英要時間起振，壞了永遠不 Ready | 等旗標 + timeout |\n| 開 GPIO 時脈（寫 IOPCEN） | 不會：只是打開內部時脈閘門（clock gate），手冊沒有 Ready 旗標 | 讀回一次，等寫入完成即可 |\n\n- 讀回的值一定是 1，檢查沒有意義\n- 不需要變數、回傳值、迴圈；HAL 的 tmpreg 只是寫法比較囉嗦\n- `(void)`：故意丟掉結果，不產生 warning；`RCC` 成員是 volatile，讀取不會被最佳化刪掉\n- 比喻：寄包裹後打電話問物流，重點不是回答（一定收到），而是講完電話時包裹已送達",
-          "resolved": null
+          "resolved": null,
+          "id": "efe466d533"
         },
         {
           "time": "2026-10-29 22:27",
           "type": "解法",
           "text": "【解法】bsp_gpio.c 的結構與初始化順序\n**static 小函式藏起實作，Init 依序呼叫；LED 腳也「先設資料再切模式」**\n\n```c\nstatic void Gpio_Clock_Enable(void);   // RCC->APB2ENR 開 IOPBEN、IOPCEN，讀回一次\nstatic void Led_Pin_Init(void);        // GPIOC->CRH：CNF13 = 00、MODE13 = 10\nstatic void Button_Pin_Init(void);     // GPIOB->BSRR 的 BS0，再 GPIOB->CRL：CNF0 = 10、MODE0 = 00\n\nvoid BSP_GPIO_Init(void)\n{\n    Gpio_Clock_Enable();\n    BSP_GPIO_Led_Off();     // 先設資料：PC13 預先輸出 1\n    Led_Pin_Init();         // 再切模式：切成輸出時 LED 保持暗\n    Button_Pin_Init();\n}\n```\n\n**為什麼設定 LED 腳（GPIOC->CRH）之前要先呼叫 Led_Off**\n\n| 做法 | 切成輸出的瞬間 | LED |\n|---|---|---|\n| 直接切成輸出 | ODR bit 13 是復位值 0 → 輸出 0 | 亮一下才熄滅 |\n| 先寫 BS13 再切 | 寫 BS13 時還是浮空輸入，不影響腳位；切成輸出時輸出 1 | 一直是暗的 |\n\n- 和「選 PB0 上拉（BSRR 的 BS0）在設定 PB0 模式（GPIOB->CRL）之前」同一個原則\n- 控制馬達或電源的腳位，開機多動作一次可能出事\n- static 函式命名：「做什麼 + 對象」，硬體細節寫在註解\n- Init 可以呼叫 Led_Off：.c 第一行 include 了 bsp_gpio.h，宣告已經存在\n\n**main.c 的原則**\n\n- 只 include clock_init.h、bsp_gpio.h，不再需要 stm32f1xx.h\n- 不出現任何 GPIOx->、RCC->\n- 註解只寫「做什麼」，不寫 BSP 內部步驟和 Active-Low\n\n**驗證**：Build 0 errors、0 warnings；初始化後 LED 暗；按下亮、放開暗",
-          "resolved": null
+          "resolved": null,
+          "id": "755dfa179e"
         },
         {
           "time": "2026-11-02 22:05",
           "type": "筆記",
           "text": "【筆記】自寫 bsp_gpio 與 HAL GPIO 比較\n**HAL 是通用驅動（回報電位），BSP 是板級驅動（回報意義）**\n\n| 項目 | HAL | 自寫 bsp_gpio |\n|---|---|---|\n| 選 CRL／CRH | 執行時判斷：pin 小於 8 用 CRL，否則 CRH | 寫程式時就決定：PC13 用 CRH、PB0 用 CRL |\n| 4-bit 位置 | registeroffset = (position − 8) << 2，config << registeroffset | 直接用巨集 GPIO_CRH_MODE13_1 |\n| 寫入設定 | MODIFY_REG（先清再設） | 先清再設 |\n| 上拉的 ODR | GPIOx->BSRR = ioposition（BS0），在 MODIFY_REG 之前 | GPIOB->BSRR 的 BS0，在設定 GPIOB->CRL 之前 |\n| 開時脈 | 不在 HAL_GPIO_Init 裡，由 MX_GPIO_Init 呼叫 __HAL_RCC_GPIOx_CLK_ENABLE | 包在 BSP_GPIO_Init 裡 |\n| 輸出初始電位 | MX_GPIO_Init 先 WritePin 再 Init；CubeMX 預設 Low → LED 亮 | 先 Led_Off 再切輸出 → LED 暗 |\n| 寫腳位 | WritePin：SET 寫 BSRR 前半，RESET 寫後半（pin << 16） | Led_On 寫 BR13、Led_Off 寫 BS13 |\n| 讀腳位 | ReadPin 回傳 GPIO_PIN_SET／RESET（電位） | IsPressed 回傳 true／false（按下與否） |\n| Active-Low 誰記住 | main | bsp_gpio.c |\n\n**PC13 代入 HAL 計算**\n\n- position = 13 → registeroffset = (13 − 8) × 4 = 20（PC13 欄位的起始 bit）\n- config = Speed（GPIO_CRL_MODE0_1 = 0x2）+ CNF_GP_OUTPUT_PP（0x0）= 0x2\n- config << 20 = 0x0020_0000 = bit 21 = GPIO_CRH_MODE13_1 → 和自寫版相同\n\n**巨集後綴**\n\n- `_Msk`：整個欄位；`_0`：欄位內第 0 個 bit；`_1`：欄位內第 1 個 bit\n- GPIO_CRL_MODE0_1 = bit 1 = 0x2（不是 0x1）\n\n**HAL 版 main 判斷按下**\n\n```c\nif (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_0) == GPIO_PIN_RESET)\n{\n    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);\n}\n```\n\n- main 要自己記住「RESET 是按下」、「RESET 是亮」\n- 自寫版：`if (BSP_GPIO_Button_IsPressed()) BSP_GPIO_Led_On();`\n- 實務：BSP 內部可以呼叫 HAL，對上層提供有意義的介面（Driver／BSP／App 分層）\n- CubeMX 讓 LED 初始化後暗：GPIO 設定的 output level 改成 High",
-          "resolved": null
+          "resolved": null,
+          "id": "70a8a53f21"
         },
         {
           "time": "2026-11-02 22:05",
           "type": "問題",
           "text": "【問題】讀 HAL 原始碼時的四個誤解\n**欄位後綴、BSRR 的作用、RESET 的方向、區域變數的可見範圍**\n\n| 誤解 | 正確 |\n|---|---|\n| GPIO_CRL_MODE0_1 是 bit 1:0、值為 1 | _1 是欄位內第 1 個 bit → bit 1、值 0x2 |\n| GPIOx->BSRR = ioposition 是設定 CRL 的 bit 0 | 寫 BSRR 的 BS0 → 把 ODR bit 0 設成 1（CRL 由後面的 MODIFY_REG 寫） |\n| WritePin(GPIO_PIN_RESET) 寫前半、輸出 1、LED 暗 | RESET 走 else 寫後半（BR13）→ 輸出 0 → Active-Low LED 亮 |\n| main 寫 if (bitstatus == 0U) | bitstatus 是 ReadPin 的區域變數，main 看不到；要用回傳值和 GPIO_PIN_RESET 比較 |\n\n- ODR 名稱是 Output，但上拉／下拉輸入時用來選上拉或下拉，所以設定出現在 GPIO_MODE_INPUT 分支\n- 追函式時：先看參數值，再看 if 條件成立與否，一路追到實際寫入的暫存器和 bit",
-          "resolved": false
+          "resolved": true,
+          "id": "f2f1eaee59",
+          "open": false
         },
         {
           "time": "2026-11-02 22:12",
           "type": "筆記",
           "text": "【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值\n**名稱告訴你「哪一格」，數值是「只有那一格是 1」的整數**\n\n```\nbit 位置：            3   2   1   0\nGPIO_CRL_MODE0_0：    0   0   0   1   → 0x1\nGPIO_CRL_MODE0_1：    0   0   1   0   → 0x2\nGPIO_CRL_MODE0_Msk：  0   0   1   1   → 0x3\n```\n\n| 後綴 | 意義 | 定義方式 |\n|---|---|---|\n| _Pos | 欄位的起始 bit | MODE0 為 0、MODE13 為 20 |\n| _Msk | 整個欄位都是 1 | 0x3 << _Pos |\n| _0 | 欄位內第 0 格 | 0x1 << _Pos |\n| _1 | 欄位內第 1 格 | 0x2 << _Pos |\n\n- 第 n 格的數值 = 1 << n，所以第 1 格是 2，不是 1\n- 區分「bit 的值（0 或 1）」和「巨集的數值（整數）」\n- GPIO_CRH_MODE13_1 = 0x2 << 20 = bit 21\n- 驗證：對巨集按 F3，到 stm32f103xb.h 看定義",
-          "resolved": null
+          "resolved": null,
+          "id": "e13513542c"
         },
         {
           "time": "2026-11-02 22:13",
           "type": "筆記",
           "text": "【筆記】ODR 的兩份工作：輸出電位與上拉／下拉選擇\n**ODR 的每個 bit 由模式決定做哪份工作**\n\n輸出模式：ODR bit 接到輸出開關\n\n```\n  ODR = 1 → 上開關導通 → 腳位輸出高電位（VDD）\n  ODR = 0 → 下開關導通 → 腳位輸出低電位（GND）\n\n                 VDD\n                  │\n  ODR bit = 1 ──► [上開關] 導通\n                  │\n                  ├────► 腳位輸出 1\n                  │\n  ODR bit = 0 ──► [下開關] 導通\n                  │\n                 GND\n```\n\n上拉／下拉輸入模式：輸出開關全關，ODR bit 借來當電阻選擇開關\n\n```\n  VDD ──[上拉電阻]──/ ──┐   ← ODR = 1 時接通\n                        ├── 腳位 → IDR\n  GND ──[下拉電阻]──/ ──┘   ← ODR = 0 時接通\n```\n\n| 模式 | ODR bit 接到 | ODR = 1 | ODR = 0 |\n|---|---|---|---|\n| 輸出 | 輸出開關 | 輸出高電位 | 輸出低電位 |\n| 上拉／下拉輸入 | 電阻選擇開關 | 上拉 | 下拉 |\n| 浮空、類比輸入 | 沒接 | 沒作用 | 沒作用 |\n\n- 名稱 Output 來自主要工作；上拉／下拉輸入時是兼差\n- 所以 HAL_GPIO_Init() 把「寫 BSRR 選上拉」放在 case GPIO_MODE_INPUT 的 Pull == GPIO_PULLUP 分支",
-          "resolved": null
+          "resolved": null,
+          "id": "0b592556c9"
         },
         {
           "time": "2026-11-02 22:14",
           "type": "筆記",
           "text": "課題複習：從上電到按鍵控制 LED\n\n上電／Reset：時脈 = HSI 8 MHz、GPIO 時脈關閉、所有腳位浮空輸入（CRL／CRH = 0x4444_4444）\n  ↓\n系統時脈 72 MHz：Clock_Init()（RCC、FLASH）\n  ↓\nBSP_GPIO_Init()\n  ├─ 開 GPIOB、GPIOC 時脈：RCC->APB2ENR 的 IOPBEN、IOPCEN，讀回一次\n  ├─ PC13 預先輸出 1：GPIOC->BSRR 的 BS13\n  ├─ PC13 切成推挽輸出 2 MHz：GPIOC->CRH\n  ├─ PB0 選上拉：GPIOB->BSRR 的 BS0\n  └─ PB0 切成上拉／下拉輸入：GPIOB->CRL\n  ↓\n迴圈：BSP_GPIO_Button_IsPressed() 讀 GPIOB->IDR → BSP_GPIO_Led_On／Off() 寫 GPIOC->BSRR",
-          "resolved": null
+          "resolved": null,
+          "id": "f340f696aa"
         },
         {
           "time": "2026-11-03 00:05",
           "type": "問題",
           "text": "【問題】驗收時的觀念修正：CNF/MODE 與通用／複用\n**L／H 是腳位分組；CNF 高位決定誰控制腳位**\n\n| 誤解 | 正確 |\n|---|---|\n| CRL 管 bit 15～0、CRH 管 bit 31～16 | CRL 管 pin 0～7、CRH 管 pin 8～15（bit 範圍的分法是 BSRR 的兩半） |\n| 通用和複用的差別是「內部或外部」 | 兩者訊號來源都在晶片內；差在誰決定腳位輸出 |\n| 複用時由「外部設備」產生訊號 | 由晶片內的周邊（例如 USART1）產生 |\n\n**輸出模式時 CNF 的兩個 bit**\n\n| CNF bit | 決定什麼 | 0 | 1 |\n|---|---|---|---|\n| 高位 | 誰控制腳位 | 通用（程式透過 ODR） | 複用（周邊硬體） |\n| 低位 | 電路結構 | 推挽 | 開漏 |\n\n```\n  程式 → BSRR／BRR → ODR ──┐\n                            ├─[來源選擇器]→ 輸出開關 → 腳位\n  周邊（USART1 TX）─────────┘\n          CNF 高位：0 選 ODR、1 選周邊\n```\n\n**應用題**\n\n| 設定 | 暫存器與 bit | 4-bit | 暫存器值 |\n|---|---|---|---|\n| PA5 通用推挽 50 MHz | GPIOA->CRL [23:20] | 0011 | 0x4434_4444 |\n| PA9 複用推挽 50 MHz（USART1 TX） | GPIOA->CRH [7:4] | 1011 | 0x4444_44B4 |",
-          "resolved": false
+          "resolved": true,
+          "id": "f64ff39f6f",
+          "open": false
         },
         {
           "time": "2026-11-03 00:05",
           "type": "筆記",
           "text": "【筆記】寫 1 清除旗標的暫存器不能用讀改寫（EXTI_PR）\n**讀到的 1 被寫回，會清掉不相干的旗標，造成漏掉中斷**\n\n- EXTI_PR：每個 bit 是一條外部中斷線的待處理旗標，屬性 rc_w1（寫 1 清除、寫 0 沒作用）\n- 情境：線 0、線 1 同時觸發（PR = 0b11），線 0 的 ISR 只想清 PR0\n\n| 寫法 | 實際寫入 | 結果 |\n|---|---|---|\n| EXTI->PR = EXTI_PR_PR0 | 0b01 | 只清 PR0，PR1 保留 |\n| EXTI->PR 或等於 EXTI_PR_PR0 | 讀到 0b11，OR 後寫回 0b11 | PR0、PR1 都被清掉，線 1 的中斷被漏掉 |\n\n- 這種 bug 只在中斷同時發生時出現，很難重現\n- F1 的 USART、Timer 狀態旗標是「寫 0 清除」（rc_w0），不要搞混\n- 判斷方法：先看手冊的存取屬性；w、rc_w1 一律用等號直接寫；rw 且只改部分 bit 才用讀改寫\n\n**和 BSRR 對照**\n\n| 暫存器 | 屬性 | 讀回 | 用讀改寫的後果 |\n|---|---|---|---|\n| BSRR | w | 永遠 0 | 結果正確，只是多讀一次 |\n| EXTI_PR | rc_w1 | 目前旗標 | 清掉不相干的旗標 |\n\n- 小測驗：PR = 0b0110，線 2 的 ISR 用讀改寫清 PR2 → 線 1、線 2 都被清掉；正確是 EXTI->PR = EXTI_PR_PR2\n- ISR = 中斷服務函式；EXTI = 外部中斷，兩者不同",
-          "resolved": null
+          "resolved": null,
+          "id": "a728ece5f9"
         },
         {
           "time": "2026-11-03 00:06",
           "type": "解法",
           "text": "【解法】LED Toggle 的寫法與風險\n**讀 ODR 決定方向，再用 BSRR 一次寫入**\n\n```c\nvoid BSP_GPIO_Led_Toggle(void)\n{\n    if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)\n    {\n        GPIOC->BSRR = GPIO_BSRR_BR13_Msk;   // 目前 1 → 改成 0\n    }\n    else\n    {\n        GPIOC->BSRR = GPIO_BSRR_BS13_Msk;   // 目前 0 → 改成 1\n    }\n}\n```\n\nHAL 的寫法（stm32f1xx_hal_gpio.c，HAL_GPIO_TogglePin）：\n\n```c\nodr = GPIOx->ODR;\nGPIOx->BSRR = ((odr & GPIO_Pin) << 16u) | (~odr & GPIO_Pin);\n```\n\n- 讀 ODR（命令的輸出值）比讀 IDR（腳位實際電位）更直接\n- Toggle 只是翻轉，和 Active-Low 無關\n- 風險：讀 ODR 到寫 BSRR 之間，若 ISR 也改了 PC13 本身，會根據過時的值翻轉；其他腳位不受影響\n- 原則：同一隻腳只讓一個地方控制，或在這兩步之間關中斷\n\n**我寫錯的地方**\n\n| 錯誤 | 原因 |\n|---|---|\n| GPIOx->IDR | GPIOx 是手冊通用寫法，程式要寫 GPIOC |\n| IDR 不等於 0U，沒有 mask | 和讀按鍵 LED 恆暗是同一個 bug |\n| GPIO_BSRR_BR13_Msk 左移 15 | BR13 是 bit 29，再移 15 會超出 32 bit 變成 0；要用 GPIO_BSRR_BS13_Msk |\n| IDR 且 mask 不等於 0U 沒加括號 | 不等於的優先順序比且運算高，會變成 IDR 且 1，讀到 PC0 |",
-          "resolved": null
+          "resolved": null,
+          "id": "92b9a92cc5"
         },
         {
           "time": "2026-11-03 00:06",
           "type": "筆記",
           "text": "【筆記】按鍵該用上拉還是下拉：彈簧與鐵鍊\n**放開時由電阻決定電位，按下時由按鍵決定；兩種狀態要讀到不同的值**\n\n- 上拉／下拉電阻 = 軟彈簧（往 3.3V／GND 拉）\n- 按鍵按下 = 粗鐵鍊（直接扯到按鍵接的那一邊，一定贏過彈簧）\n\n| 按鍵接法 | 選上拉 | 選下拉 | 結論 |\n|---|---|---|---|\n| 接 GND（PB0） | 放開 1、按下 0 | 放開 0、按下 0 | 用上拉，ODR = 1 |\n| 接 3.3V（PA1） | 放開 1、按下 1 | 放開 0、按下 1 | 用下拉，ODR = 0 |\n\n- 原則：電阻拉向「按鍵的另一邊」\n- PA1 下拉：GPIOA->CRL [7:4] = 1000；ODR bit 1 = 0，寫 GPIOA->BRR = GPIO_BRR_BR1_Msk（或 BSRR 的 BR1 = bit 17）\n- PA1 的 IsPressed：IDR bit 1 不等於 0 時回傳 true\n\n**忘記寫 ODR 的除錯方法**\n\n| 暫存器 | 值 | 判讀 |\n|---|---|---|\n| GPIOB->CRL | 0x4444_4448 | PB0 為 1000，設定正確 |\n| GPIOB->ODR | 0x0000_0000 | bit 0 = 0 → 下拉，問題在這裡 |\n\n- 現象：PB0 放開、按下都讀到 0，IsPressed 永遠 true，LED 恆亮\n- CNF = 10 只說了一半，一定要搭配 ODR 一起看\n- 先寫 CRL 的那一瞬間：PB0 是下拉輸入，IsPressed 回傳 true（誤判按下）",
-          "resolved": null
+          "resolved": null,
+          "id": "f4d70be51c"
         },
         {
           "time": "2026-11-03 00:11",
           "type": "筆記",
           "text": "【筆記】腳位要設輸入還是輸出\n**判斷標準：這條線的電壓由誰決定**\n\n| | 輸出 | 輸入 |\n|---|---|---|\n| 誰決定電壓 | MCU 主動驅動 | 外部決定，MCU 只讀 |\n| 資訊流向 | MCU → 外部 | 外部 → MCU |\n| 腳位內部 | 輸出開關打開 | 輸出開關關閉，高阻抗 |\n| 程式 | 寫 BSRR／BRR | 讀 IDR |\n\n**常見用途**\n\n| 用途 | 設定 |\n|---|---|\n| LED、蜂鳴器、繼電器、SPI／OLED 的 CS | 通用推挽輸出 |\n| 按鍵、開關 | 上拉或下拉輸入（電阻拉向按鍵的另一邊） |\n| 感測器 INT 腳 | 輸入 |\n| UART TX、SPI SCK／MOSI | 複用推挽輸出 |\n| UART RX、SPI MISO | 輸入 |\n| I²C SCL／SDA | 複用開漏輸出 + 上拉電阻 |\n| ADC 量電壓 | 類比輸入 |\n\n- 一條線同時只能有一個輸出：兩邊都輸出且電位相反 → 短路（bus contention）\n- 開機預設浮空輸入：設定好之前不驅動任何線，最安全\n- I²C 用開漏：只能拉低、不會推高，多個裝置共用也不會短路\n- 沒用到的腳位：浮空會亂跳又耗電 → 低功耗產品設成類比輸入，或上拉／下拉固定電位",
-          "resolved": null
+          "resolved": null,
+          "id": "e8c142c6cc"
         },
         {
           "time": "2026-11-03 00:17",
           "type": "筆記",
           "text": "【筆記】上拉輸入的意義：預設為 1 的耳朵\n**平常靠弱上拉維持高電位；外部想傳訊息時把它拉低**\n\n- 上拉輸入時 MCU 沒有輸出，輸出開關是關閉的\n- 高電位來自內部約 40 kΩ 的上拉電阻（軟彈簧），不是 MCU 主動驅動\n\n| | 上拉輸入的「高」 | 輸出模式的「高」 |\n|---|---|---|\n| 來源 | 弱上拉電阻（軟彈簧） | 上開關直接接 VDD（粗鐵鍊） |\n| 外部能不能拉低 | 能，輕鬆就拉下來 | 不該拉，硬拉會短路 |\n| 意義 | 預設值：沒人說話時是 1 | MCU 正在說 1 |\n\n**訊號慣例（Active-Low）**\n\n| 電位 | 意義 |\n|---|---|\n| 高 | 平靜，沒事發生 |\n| 被拉低 | 有事發生：按鍵按下、感測器資料準備好、有人要開始通訊 |\n\n- 常見例子：按鍵、晶片的中斷輸出（INT）、重置（RESET），都是平常高、有事拉低，搭配上拉電阻\n- I²C 同理：線平常靠上拉電阻維持高電位，誰要說話就把它拉低\n- 一句話：上拉輸入 = 預設為 1 的耳朵，外部想說話就把它拉成 0",
-          "resolved": null
+          "resolved": null,
+          "id": "efc31948c6"
         }
       ]
     },
@@ -942,271 +1069,321 @@
           "time": "2026-11-04 16:29",
           "type": "筆記",
           "text": "【筆記】ST 文件編號：RM、PM、DS、ES、AN\n**前綴代表文件類型；ST 周邊查 RM，ARM 核心查 PM**\n\n| 前綴 | 全名 | 內容 | 本板對應 |\n|---|---|---|---|\n| RM | Reference Manual | ST 周邊暫存器（RCC、GPIO、USART…） | RM0008 |\n| PM | Programming Manual | Cortex-M3 核心：指令、NVIC、SysTick、SCB | PM0056 |\n| DS | Datasheet | 腳位、電氣規格、封裝 | STM32F103x8 |\n| ES | Errata Sheet | 晶片已知 bug 與解法 | 開時脈後讀回延遲 |\n| AN | Application Note | 特定主題的實作建議 | |\n\n- SysTick 是 ARM 核心周邊 → 查 PM0056 第 4.5 節，不在 RM0008\n- PM0056 名稱 `STK_CTRL`／`STK_LOAD`／`STK_VAL` ＝ CMSIS 的 `SysTick->CTRL`／`LOAD`／`VAL`（CMSIS 由 ARM 定義，各家共用）\n- 判斷查哪本：周邊是 ST 加的（GPIO、RCC）→ RM；所有 Cortex-M3 都有的（SysTick、NVIC）→ PM",
-          "resolved": null
+          "resolved": null,
+          "id": "5d94a8451e"
         },
         {
           "time": "2026-11-04 16:29",
           "type": "問題",
           "text": "【問題】把 SysTick 的 TICKINT 誤解成「初始化 tick」\n**TICKINT 決定數到 0 時要不要產生中斷，跟初始化無關**\n\n| `STK_CTRL` bit | 名稱 | 0 | 1 |\n|---|---|---|---|\n| 0 | ENABLE | 停止計數 | 開始計數（從 `LOAD` 載入 RELOAD 值往下數） |\n| 1 | TICKINT | 數到 0 只設 COUNTFLAG，要輪詢 | 數到 0 觸發 SysTick 中斷 → `SysTick_Handler` |\n| 2 | CLKSOURCE | （待查） | （待查） |\n| 16 | COUNTFLAG（唯讀） | — | 上次讀取後曾數到 0 |\n\n- 錯在哪：看英文說明時把「SysTick exception request」誤會成初始化\n- 正確理解：要每 1 ms 自動讓 tick 加 1，必須讓它產生中斷",
-          "resolved": false
+          "resolved": true,
+          "id": "f942b1a986",
+          "open": false
         },
         {
           "time": "2026-11-04 16:30",
           "type": "筆記",
           "text": "【筆記】SysTick 1 ms 中斷：為什麼要做、為什麼排在這裡\n**SysTick 是自寫 non-blocking 程式的時間基準，必須在 Clock_Init() 之後、所有 millis() 使用者之前設定**\n\n**為什麼要做**\n- 舊 HAL 版的 `HAL_GetTick()` 背後就是 SysTick；不用 HAL 就要自己建時間基準\n- 沒有它只能用空迴圈延遲：卡住 CPU、讀不到按鍵，延遲長度還會隨時脈與編譯最佳化改變\n- `LOAD` 算錯 → tick 不是 1 ms → LED 週期錯，之後所有 timeout 都跟著錯\n- Handler 名字打錯 → 中斷一來就跳進 startup 檔的 `Default_Handler` 無窮迴圈，看起來像當機\n\n**為什麼排在這裡**\n- 在 `Clock_Init()` 之後：`LOAD` 依 HCLK 計算；8 MHz 時設定、之後才切到 72 MHz → tick 變成 1/9 ms\n- 在所有用到 `millis()` 的程式之前：它們都依賴這個時間基準",
-          "resolved": null
+          "resolved": null,
+          "id": "ed93292136"
         },
         {
           "time": "2026-11-04 16:30",
           "type": "筆記",
           "text": "【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死\n**startup 檔把每個 handler 宣告成 weak 並指向 Default_Handler；自己寫同名函式才會蓋過去**\n\n```asm\n.weak      SysTick_Handler\n.thumb_set SysTick_Handler, Default_Handler\n```\n\n| 情況 | 連結器用哪份 | 中斷發生時 |\n|---|---|---|\n| 有寫 `void SysTick_Handler(void)` | 你的（strong 蓋過 weak） | 執行你的程式 |\n| 沒寫，或拼錯成 `Systick_Handler` | weak 備用 → `Default_Handler` | 跳進 `b Infinite_Loop`，卡死 |\n\n- 向量表只放「名字」，名字對應到哪個位址由連結器決定\n- 拼錯不會有編譯或連結錯誤：拼錯的函式只是一個沒人呼叫的普通函式\n- 除錯方法：程式卡住時按 Pause，停在 `Infinite_Loop` → 檢查 handler 名稱",
-          "resolved": null
+          "resolved": null,
+          "id": "48e58c6bd1"
         },
         {
           "time": "2026-11-04 16:30",
           "type": "筆記",
           "text": "【筆記】SysTick 的時脈來源與 RELOAD = N − 1\n**計數器每個時脈減 1，從 RELOAD 數到 0 共 RELOAD + 1 個時脈，所以要 N 個時脈就填 N − 1**\n\n| CLKSOURCE（`SysTick->CTRL` bit 2） | 來源 | 72 MHz 下 |\n|---|---|---|\n| `0` | AHB / 8 | 9 MHz |\n| `1` | 處理器時脈（HCLK） | 72 MHz |\n\n- 數法：RELOAD = 3 → `3 → 2 → 1 → 0 →（重載）3`，一輪 4 個時脈\n- 1 ms 需要的時脈數 N = 時脈頻率 × 0.001 s\n- RELOAD 欄位 bit 23:0，共 24 bit，最大 `0xFFFFFF`（16,777,215），N − 1 不可超過\n- RM0008 時脈樹：HCLK 旁有一條經過 /8 的線通往 Cortex 系統定時器",
-          "resolved": null
+          "resolved": null,
+          "id": "4efcdcd740"
         },
         {
           "time": "2026-11-04 16:31",
           "type": "筆記",
           "text": "【筆記】SysTick 的 LOAD 與 VAL：起點與計數器\n**LOAD 是每輪的起點（你設定），VAL 是計數器本身（硬體遞減）；只有 VAL 數到 0 才會從 LOAD 重載**\n\n| 暫存器 | 角色 | 誰改 | 讀／寫效果 |\n|---|---|---|---|\n| `SysTick->LOAD` | 每輪起點，決定一輪多長 | 你，寫一次固定 | 讀寫都是設定值 |\n| `SysTick->VAL` | 計數器本身 | 硬體每個時脈減 1 | 讀：目前數到哪；寫任何值：CURRENT 歸 0 並清除 COUNTFLAG |\n\n- 計數器打開後從 `VAL` 目前的值往下數，數到 0 的下一個時脈才載入 `LOAD`，同時（TICKINT = 1 時）觸發中斷\n- field ＝ 欄位，這裡指 `VAL` 的 CURRENT（bit 23:0）\n- 重設值：PM0056 寫 0，ARMv7-M 架構手冊寫 UNKNOWN；debugger 重新下載不一定斷電 → 不要依賴重設值",
-          "resolved": null
+          "resolved": null,
+          "id": "6928545a71"
         },
         {
           "time": "2026-11-04 16:31",
           "type": "問題",
           "text": "【問題】SysTick 時脈來源選 72 MHz 的理由講反了\n**72 MHz 的優點是解析度高，不是「低速用途也能用」；需要長週期時 /8 反而比較有利**\n\n| | CLKSOURCE = 1（72 MHz） | CLKSOURCE = 0（AHB/8 = 9 MHz） |\n|---|---|---|\n| 每數一下 | 13.9 ns | 111 ns |\n| 24 bit 最長一輪 | ≈ 233 ms | ≈ 1.86 s |\n| 1 ms 的 `LOAD` | 71,999 | 8,999 |\n\n- 錯在哪：以為選高速時脈「以後低速也能用」；實際上時脈越快，24 bit 能數的時間越短\n- 正確理由：1 ms 兩種都放得下 → 選 72 MHz 換取高解析度（讀 `VAL` 可做微秒級量測），且和 CMSIS／HAL 慣例一致\n- 一輪要超過 233 ms 時才需要改用 /8",
-          "resolved": false
+          "resolved": true,
+          "id": "42d5e258a9",
+          "open": false
         },
         {
           "time": "2026-11-04 16:32",
           "type": "筆記",
           "text": "【筆記】SysTick 設定順序：LOAD → VAL → CTRL\n**先把設定準備好，最後才寫 CTRL 打開計數器；VAL 在打開前清 0，第一輪才是完整的 1 ms**\n\n| 順序 | 暫存器 | 做什麼 | 跳過或順序錯會怎樣 |\n|---|---|---|---|\n| 1 | `SysTick->LOAD` | 設一輪長度 | 先開 `CTRL` → 載入 0 或不確定值，第一輪長度失控 |\n| 2 | `SysTick->VAL` | 寫任意值 → 歸 0、清 COUNTFLAG | 殘留舊值（例如 `0xABCD`）→ 第一次中斷提早或延後 |\n| 3 | `SysTick->CTRL` | CLKSOURCE、TICKINT、ENABLE 一次設好 | — |\n\n- `LOAD`、`VAL` 都在 `CTRL` 前寫，兩者對調也能動（計數器還沒開）；照 PM0056 4.5.6 與 CMSIS 的順序寫\n- RELOAD = 0 時不產生中斷，計數器只會一直重載 0\n- 和【筆記】設定順序：先設 ODR，再設 CRL 同一個原則：先設好，最後才打開開關",
-          "resolved": null
+          "resolved": null,
+          "id": "3bc4ee54de"
         },
         {
           "time": "2026-11-04 21:03",
           "type": "筆記",
           "text": "【筆記】讀取清除的旗標：先拿到值，再清除\n**讀 `SysTick->CTRL` 會先回傳當下的 COUNTFLAG，讀完硬體才清 0；看到 1 的那次讀取就是清除它的那次**\n\n```c\nwhile ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0U) { }  // 等到數完一輪\n```\n\n- `== 0U` 是「繼續等」的條件：讀到 0 → 繼續空轉；讀到 1 → 跳出迴圈 = 數完一輪\n- 讀取順序：CPU 拿到當下的值 → 讀完後硬體把 COUNTFLAG 清 0\n- 不會漏看：看到 1 的那次讀取同時清掉它；同一個 1 不會被看到兩次\n- 比喻：打開信箱看到信就順手拿走，下次要等郵差（下一次數到 0）再送來\n- 意義：每次讀到的是「從上次讀到現在，有沒有數完過一輪」\n\n| 時間 | 硬體 | 讀到 | 迴圈 |\n|---|---|---|---|\n| 0.2 ms | 還在數 | 0 | 繼續等 |\n| 1.0 ms | 1 → 0，COUNTFLAG = 1 | — | — |\n| 1.0 ms 多一點 | 讀完後清 0 | 1 | 跳出 |",
-          "resolved": null
+          "resolved": null,
+          "id": "dc182d0ef7"
         },
         {
           "time": "2026-11-04 21:38",
           "type": "問題",
           "text": "【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到\n**SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**\n\n| 定義 | 所在檔案 | 寫的人 |\n|---|---|---|\n| `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |\n| `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |\n\n- `stm32f103xb.h` 第 131 行 `#include \"core_cm3.h\"`，所以 include `stm32f1xx.h` 就能用，不必另外 include\n- 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值\n- 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`",
-          "resolved": false
-        },
-        {
-          "time": "2026-11-04 22:10",
-          "type": "問題",
-          "text": "【問題】SysTick 的 CMSIS 巨集在 stm32f103xb.h 找不到\n**SysTick 是 ARM 核心周邊，定義在 CMSIS 的 core_cm3.h，不是 ST 的裝置標頭檔**\n\n| 定義 | 所在檔案 | 寫的人 |\n|---|---|---|\n| `GPIOC`、`RCC`、`GPIO_CRH_MODE13_Msk` | `stm32f103xb.h` | ST |\n| `SysTick`、`SysTick_Type`、`SysTick_CTRL_ENABLE_Msk` | `core_cm3.h` | ARM（CMSIS） |\n\n- `stm32f103xb.h` 第 131 行 `#include \"core_cm3.h\"`，所以 include `stm32f1xx.h` 就能用，不必另外 include\n- 找法：在 `Inc/CMSIS/core_cm3.h` 搜尋 `SysTick_CTRL_`，命名規則同【筆記】巨集後綴 _Pos、_Msk、_0、_1 的數值\n- 判斷原則：周邊屬於 ARM 核心（SysTick、NVIC、SCB）→ `core_cm3.h`；屬於 ST（GPIO、RCC）→ `stm32f103xb.h`",
-          "resolved": false
+          "resolved": true,
+          "id": "08e46d0e25",
+          "open": false
         },
         {
           "time": "2026-11-04 22:15",
           "type": "問題",
           "text": "【問題】想把 SysTick_Handler 加上 static 來「不公開」\n**handler 不能加 static：連結器看不到它，就會改用 weak 的 Default_Handler，中斷一來就卡死**\n\n| 寫法 | 連結器看得到嗎 | 中斷發生時 |\n|---|---|---|\n| `.c` 裡 `void SysTick_Handler(void)`（不加 static） | 看得到，蓋過 weak | 執行你的程式 |\n| `.c` 裡 `static void SysTick_Handler(void)` | 看不到 | 用 weak 備用 → `Default_Handler` 卡死 |\n\n- 「不讓 main 呼叫」靠的是 `.h` 不宣告它，不是加 `static`\n- 正確做法：`.h` 不放 handler 宣告；`.c` 照常定義、不加 `static`\n- 不報錯、只是卡死，和名字拼錯同一種症狀（見【筆記】weak 符號：handler 名字拼錯為什麼不會報錯而是卡死）",
-          "resolved": false
+          "resolved": true,
+          "id": "36adae2b15",
+          "open": false
         },
         {
           "time": "2026-11-04 22:15",
           "type": "筆記",
           "text": "【筆記】handler 就是 ISR，由硬體呼叫\n**中斷發生時 CPU 自己查向量表跳進 handler，不是程式呼叫它；所以不放進公開介面**\n\n| 種類 | CMSIS 命名 | 例子 |\n|---|---|---|\n| 核心系統例外 | `XXX_Handler` | `SysTick_Handler`、`HardFault_Handler` |\n| ST 周邊中斷（經 NVIC） | `XXX_IRQHandler` | `EXTI0_IRQHandler`、`USART1_IRQHandler` |\n\n- ISR ＝ Interrupt Service Routine，中斷服務常式\n- 名字必須和 startup 檔向量表裡的完全一樣\n- main 不會、也不該直接呼叫 handler",
-          "resolved": null
+          "resolved": null,
+          "id": "dc7319b190"
         },
         {
           "time": "2026-11-04 22:16",
           "type": "筆記",
           "text": "【筆記】標頭檔 include 原則：介面要什麼才 include 什麼\n**.h 只 include 公開介面需要的；暫存器定義只在 .c 裡 include，而且用 stm32f1xx.h**\n\n| 檔案 | 用到什麼 | 該 include |\n|---|---|---|\n| `bsp_systick.h` | 只有 `void BSP_SysTick_Init(void);` | 不用 |\n| `bsp_systick.c` | `SysTick->...`、`_Msk`、`uint32_t` | `stm32f1xx.h`、`<stdint.h>` |\n| `main.c` | 只呼叫 `BSP_...()` | BSP 的 `.h` |\n\n- `.h` include 暫存器定義 → `main.c` 跟著拿到 → `main` 可以直接改暫存器，繞過 BSP（違反【筆記】BSP 介面設計原則）\n- `stm32f1xx.h` 是 F1 系列總入口，依專案巨集 `STM32F103xB` 自動選裝置標頭檔；換晶片只改巨集\n- 直接 include `stm32f103xb.h` → 程式綁死在這顆晶片\n- 介面用到 `uint32_t`（例如 `millis()` 回傳值）時，`.h` 才需要 `<stdint.h>`",
-          "resolved": null
+          "resolved": null,
+          "id": "25ddcae419"
         },
         {
           "time": "2026-11-04 22:45",
           "type": "筆記",
           "text": "【筆記】Debugger 停在 SysTick_Handler 時的 CTRL 與 VAL\n**停在 handler 時 CTRL 永遠是 0x10007；VAL 少掉的 18 個時脈就是中斷延遲**\n\n| 觀察 | 值 | 原因 |\n|---|---|---|\n| `SysTick->LOAD` | 71999（`0x1193F`） | 和預期一致，設定後不變 |\n| `SysTick->CTRL`（停在 handler） | `0x10007` | 剛數到 0 → COUNTFLAG = 1；進 handler 不會清，每次 Resume 又被設回 1 |\n| `SysTick->CTRL`（在 main 按 Pause） | `0x7` | debugger 讀取已清掉 COUNTFLAG |\n| `SysTick->VAL`（停在 `tick++`） | 71981 | 從重載到執行 `tick++` 經過 18 個時脈 |\n\n- CPU 停下來時 SysTick 也停止計數，所以 `VAL` 凍結在 handler 那一刻\n- 18 個時脈 ≈ 0.25 µs（72 MHz）＝ 中斷延遲：Cortex-M3 進中斷固定 12 個時脈（硬體推堆疊、查向量表）＋ 函式開頭指令\n- 驗證 tick：中斷點停住時 tick 會一次加 1；拿掉中斷點跑一陣子，數值持續增加（實測 4 → 8306）",
-          "resolved": null
+          "resolved": null,
+          "id": "c815c989d6"
         },
         {
           "time": "2026-11-04 22:46",
           "type": "問題",
           "text": "【問題】以為 ~Msk 的值是 0\n**~SysTick_VAL_CURRENT_Msk = 0xFF000000，不是 0；~Msk 是遮罩，要和原值做 & 才是「清除欄位」的結果**\n\n| 寫法 | 值／意思 |\n|---|---|\n| `SysTick_VAL_CURRENT_Msk` | `0x00FFFFFF` |\n| `~SysTick_VAL_CURRENT_Msk` | `0xFF000000`（bit 31:24 為 1） |\n| `REG & ~Msk` | REG 的這個欄位清 0，其他 bit 保留 |\n| `0U` | 0 |\n\n- 錯在哪：把讀改寫 `(REG & ~Msk) \\| 新值` 裡的 `~Msk` 當成「清 0 的值」\n- 為什麼程式還能動：寫入 `SysTick->VAL` 任何值都會讓 CURRENT 歸 0\n- 為什麼要改：bit 31:24 是保留位元，不該寫 1；`~Msk` 讓讀者誤以為在做位元運算\n- 正確寫法：`SysTick->VAL = 0U;`",
-          "resolved": false
+          "resolved": true,
+          "id": "004cb58765",
+          "open": false
         },
         {
           "time": "2026-11-05 11:01",
           "type": "筆記",
           "text": "【筆記】SysTick 設定對照 CMSIS SysTick_Config() 與 HAL_InitTick()\n**CMSIS 多做了範圍檢查與設最低優先權；HAL 因為切時脈時需要 tick，所以設定兩次**\n\n| 項目 | CMSIS／HAL | 自寫版（修正前） |\n|---|---|---|\n| `LOAD` 來源 | `SystemCoreClock / 1000` 計算 | 寫死 `71999U` |\n| 範圍檢查 | 執行時 `if ((ticks - 1) > 0xFFFFFF) return 1;` | 無 → 改用 `_Static_assert` 編譯時檢查 |\n| 優先權 | `NVIC_SetPriority(SysTick_IRQn, 15)` 最低 | 沒設 → 重設值 0（最高） |\n| `VAL` | 寫 `0UL` | 寫 `~Msk` → 改為 `0U` |\n| 設定次數 | `HAL_Init()`（8 MHz）＋ `HAL_RCC_ClockConfig()` 結尾（72 MHz） | `Clock_Init()` 之後一次 |\n\n- 優先權 0～15，數字越小越優先；F1 用 4 bit，寫在 `SCB->SHP[11]`（SHPR3 bit 31:24）的高 4 bit → 15 寫成 `0xF0`\n- 設最低的理由：tick 晚幾微秒無妨，其他中斷（UART、緊急按鍵）不能被它擋\n- HAL 讓使用者改 tick 優先權的原因：在中斷裡呼叫 `HAL_Delay()`，若 SysTick 優先權較低就插不進去 → tick 不增加 → 死結；根本解法是不要在中斷裡等待\n- HAL 設兩次：`HAL_RCC_OscConfig()` 等 HSE 時用 `HAL_GetTick()` 判斷逾時，所以 8 MHz 時就要有 tick；切到 72 MHz 後 `LOAD` 要重算，否則 tick 快 9 倍\n- 自寫版只設一次：`Clock_Init()` 用迴圈次數 `TIME_OUT` 判斷逾時，不需要 tick",
-          "resolved": null
+          "resolved": null,
+          "id": "fcee6aae16"
         },
         {
           "time": "2026-11-05 11:02",
           "type": "解法",
           "text": "【解法】SysTick 產生 1 ms 中斷（暫存器版）\n**Clock_Init() 之後依序寫 LOAD → 優先權 → VAL → CTRL；LOAD 由 SYSCLK_FREQ_HZ 計算，handler 只做 tick++**\n\n**為什麼**\n- 不用 HAL 就沒有 `HAL_GetTick()`，要自己建 1 ms 時間基準，non-blocking 程式全靠它\n- `LOAD` 錯 → tick 不是 1 ms；handler 名字錯或加 `static` → 掉進 `Default_Handler` 卡死\n\n**設了什麼、代表什麼**\n\n| 暫存器 | 欄位（bit） | 設定值 | 代表什麼 | 為什麼選這個值 |\n|---|---|---|---|---|\n| `SysTick->LOAD` | RELOAD（23:0） | `0x1193F`（71999） | 每輪 72,000 個時脈 | 72 MHz × 1 ms，再 −1 |\n| `SCB->SHP[11]` | PRI_15（31:24 的高 4 bit） | `0xF0` | SysTick 優先權 15（最低） | tick 晚幾 µs 無妨，讓路給其他中斷 |\n| `SysTick->VAL` | CURRENT（23:0） | 寫 `0` | 歸 0、清 COUNTFLAG | 第一輪不受殘留值影響 |\n| `SysTick->CTRL` | CLKSOURCE（2） | `1` | 處理器時脈 72 MHz | 解析度高，與 CMSIS／HAL 一致 |\n| `SysTick->CTRL` | TICKINT（1） | `1` | 數到 0 觸發中斷 | 每 1 ms 自動進 handler |\n| `SysTick->CTRL` | ENABLE（0） | `1` | 開始計數 | 最後才打開 |\n\n- 預期值：`LOAD = 0x0001193F`、`SHP[11] = 0xF0`、`CTRL = 0x7`（停在 handler 時 `0x10007`）\n- Debugger 實測：一致\n\n**程式碼**\n```c\nstatic volatile uint32_t tick = 0U;\n\nvoid BSP_SysTick_Init(void)\n{\n    _Static_assert((SYSCLK_FREQ_HZ / 1000U - 1U) <= SysTick_LOAD_RELOAD_Msk,\n                   \"SysTick LOAD 超過 24 bit\");\n    SysTick->LOAD = (SYSCLK_FREQ_HZ / 1000U) - 1U;\n    NVIC_SetPriority(SysTick_IRQn, 15U);\n    SysTick->VAL  = 0U;\n    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk\n                  | SysTick_CTRL_TICKINT_Msk\n                  | SysTick_CTRL_ENABLE_Msk;\n}\n\nvoid SysTick_Handler(void)          // 不可加 static，名字要和向量表一致\n{\n    tick++;\n}\n```\n\n**為什麼是這個順序**\n- 在 `Clock_Init()` 之後：`LOAD` 依 72 MHz 計算\n- `LOAD`、優先權、`VAL` 都在 `CTRL` 之前：先設好再打開開關，否則第一輪長度與中斷時間點失控\n\n**對照 CMSIS／HAL**\n- `SysTick_Config()` 流程相同（`LOAD` → 優先權 → `VAL` → `CTRL`），範圍檢查在執行時；自寫版用 `_Static_assert` 在編譯時擋\n- HAL 設兩次 SysTick（8 MHz、72 MHz），因為切時脈的逾時判斷要用 tick；自寫版 `Clock_Init()` 用迴圈次數逾時，只設一次",
-          "resolved": null
+          "resolved": null,
+          "id": "26f389e7b0"
         },
         {
           "time": "2026-11-05 11:02",
           "type": "筆記",
           "text": "【筆記】_Static_assert：編譯時期的檢查\n**條件不成立就編譯失敗；只能檢查常數運算式，不產生任何程式碼**\n\n```c\n#define SYSTICK_LOAD_VALUE   ((SYSCLK_FREQ_HZ / 1000U) - 1U)\n\n_Static_assert(SYSTICK_LOAD_VALUE <= SysTick_LOAD_RELOAD_Msk,\n               \"SysTick LOAD 超過 24 bit\");\n```\n\n| 方式 | 檢查時機 | 失敗時 | 適用 |\n|---|---|---|---|\n| `_Static_assert` | 編譯時 | 編譯失敗，無法燒錄 | 巨集、數字、`sizeof` 等常數 |\n| `if (...) return 錯誤碼;` | 執行時 | 回傳錯誤 | 執行時才知道的值（例如 `SystemCoreClock` 變數） |\n\n- C11 關鍵字，可放在函式外（檔案層級）或函式內\n- `LOAD` 完全由巨集決定 → 超過 24 bit 是寫錯，應在編譯時擋下\n- HAL 只能用 `if`：它的 `SystemCoreClock` 是變數\n- 算式定義成 `.c` 內的巨集，斷言和 `SysTick->LOAD` 共用，避免改了一邊忘了另一邊\n- 驗證：暫時把 `1000U` 改成 `1U`（需 72,000,000 > 16,777,215）→ 應出現編譯錯誤",
-          "resolved": null
+          "resolved": null,
+          "id": "c0b3e3871c"
         },
         {
           "time": "2026-11-05 21:37",
           "type": "筆記",
           "text": "【筆記】GCC 最佳化等級與 CubeIDE 設定位置\n**-O0 每次都老實讀寫記憶體；-O2／-Os 會刪掉它認為多餘的讀取，沒加 volatile 的共用變數就會出事**\n\n| 選項 | 意思 | 常見於 |\n|---|---|---|\n| `-O0` | 不最佳化，逐行翻譯 | Debug 組態預設 |\n| `-Og` | 輕度最佳化，方便除錯 | |\n| `-O2` | 積極最佳化：搬動、合併、刪除讀寫 | |\n| `-Os` | 以大小為優先的最佳化（強度近 `-O2`） | Release 組態常用 |\n\n- 設定位置：專案右鍵 → Properties → C/C++ Build → Settings → Tool Settings → MCU/MPU GCC Compiler → Optimization → Optimization level\n- 改完要 Project → Clean 再 Build\n- `-O2` 除錯的正常現象：單步跳行、變數 `<optimized out>`、中斷點位置偏移\n- 危險之處：`-O0` 下缺 `volatile` 往往看起來正常，換成 Release 才出錯\n- 「快取」指放在 CPU 核心暫存器（R0～R12），不是周邊暫存器",
-          "resolved": null
+          "resolved": null,
+          "id": "eee2265fe5"
         },
         {
           "time": "2026-11-05 21:38",
           "type": "問題",
           "text": "【問題】延遲函式用 if，沒有等待\n**if 只判斷一次就往下走；要「一直等到條件不成立」必須用 while**\n\n```c\n// 錯：只檢查一次，立刻返回\nif ((tick - start) < ms) { ; }\n\n// 對：重複檢查，直到經過 ms 個 tick\nwhile ((tick - start) < ms) { }\n```\n\n- 現象：延遲沒有作用，LED 切換太快，看起來常亮或半亮\n- 變數命名：存的是「開始等待的時間點」→ 叫 `start`，不叫 `now`",
-          "resolved": false
+          "resolved": true,
+          "id": "e6a169237c",
+          "open": false
         },
         {
           "time": "2026-11-05 21:39",
           "type": "筆記",
           "text": "【筆記】SysTick 延遲的實測與 tick 量化誤差\n**邏輯分析儀實測 Delay(500) 為 499.925 ms，誤差來自起點落在某個 tick 中間**\n\n| 量測 | 預期 | 實測 |\n|---|---|---|\n| 脈寬 | 500 ms | 499.925 ms |\n| 週期 | 1000 ms | 999.849 ms（1.00015 Hz） |\n\n- `start = tick` 可能發生在某個 1 ms 的中間 → 第一次 tick 加 1 不到 1 ms → 實際等待介於 499～500 ms\n- 量化誤差：以 1 ms 為單位計時，誤差最多 1 個 tick\n- 要保證「至少」N ms → 等 N + 1 個 tick（HAL_Delay 的 `wait += 1`）\n- 剩餘萬分之一級差異：石英振盪器與邏輯分析儀時脈誤差\n- 結論：誤差 0.015%，SysTick 設定正確\n- 工具：LA1010（KingstVIS），5 MSa/s 取樣，量測面板直接讀脈寬、週期、頻率",
-          "resolved": null
+          "resolved": null,
+          "id": "97fd3c9012"
         },
         {
           "time": "2026-11-05 21:53",
           "type": "問題",
           "text": "【問題】改了最佳化等級，LED 現象卻沒變\n**Clean／Build 只在電腦上產生 .elf，沒有按 Debug／Run 下載，晶片跑的還是舊程式**\n\n- 現象：拿掉 `volatile`＋`-O2` 後 LED 照常閃，邏輯分析儀數字和之前幾乎相同\n- 查證：`Debug/SPRINT-W01-S04.list` 裡的延遲函式已經變成無窮迴圈，代表新程式碼是對的，只是沒燒進去\n- 正確做法：改設定 → Clean → Build → **按 Debug 或 Run 下載** → 才觀察現象",
-          "resolved": false
+          "resolved": true,
+          "id": "d76ade2edc",
+          "open": false
         },
         {
           "time": "2026-11-05 21:53",
           "type": "筆記",
           "text": "【筆記】拿掉 volatile＋-O2：延遲迴圈被編譯成無窮迴圈\n**編譯器認為 tick 在迴圈裡不會變，tick - start 恆為 0，整個迴圈化簡成「跳回自己」，連一次 tick 都不讀**\n\n```c\nstatic uint32_t tick = 0U;           // 沒有 volatile\nvoid BSP_SysTick_Delay(uint32_t ms)\n{\n    uint32_t start = tick;\n    while (tick - start < ms) { }\n}\n```\n\n```\n0800020c <BSP_SysTick_Delay>:\n 800020c:  cbnz  r0, 8000210   ; ms != 0 → 跳到 8000210\n 800020e:  bx    lr            ; ms == 0 → 返回\n 8000210:  b.n   8000210       ; 跳回自己：無窮迴圈\n```\n\n- 沒有任何 `ldr` 讀 tick，連 `start = tick` 也被刪掉\n- 中斷照常讓 SRAM 裡的 tick 增加，但迴圈根本不看\n- `-O0` 下不會發生：每行 C 老實翻譯，每圈都從記憶體讀 tick\n- `volatile` 的作用：告訴編譯器這個變數可能被中斷等外部因素改變，每次使用都要重新讀記憶體，不准快取或化簡\n- 查反組譯：`Debug/<專案>.list`，或除錯時開 Disassembly 視窗",
-          "resolved": null
+          "resolved": null,
+          "id": "1ab47743da"
         },
         {
           "time": "2026-11-05 22:02",
           "type": "解法",
           "text": "【解法】BSP_SysTick_GetTick() 與 volatile 的實驗驗證\n**ISR 寫、主程式讀的 tick 必須 volatile：實測 -O2 拿掉 volatile，延遲迴圈被編譯成無窮迴圈**\n\n**為什麼**\n- 編譯器最佳化只分析眼前程式流程，不知道中斷會改 tick\n- 少了 `volatile`：`-O0` 正常、`-O2`／`-Os` 卡死 → Debug 正常、Release 才出事\n\n**程式碼**\n```c\nstatic volatile uint32_t tick = 0U;     // 只在 .c 內可見，外部透過 GetTick 讀\n\nvoid SysTick_Handler(void) { tick++; }\n\nuint32_t BSP_SysTick_GetTick(void) { return tick; }\n```\n\n**實驗結果**\n\n| `volatile` | 最佳化 | LED | 延遲迴圈反組譯 |\n|---|---|---|---|\n| 有 | `-O0` | 1 Hz，脈寬 499.92 ms | — |\n| 無 | `-O0` | 正常 | — |\n| 無 | `-O2` | 卡住；tick 仍在增加 | `b.n 8000210`（跳回自己），無 `ldr` |\n| 有 | `-O2` | 正常 | 每圈 `ldr r3, [r2]` 從 `0x2000001c` 讀 tick |\n\n**跨檔案呼叫 GetTick() 為何通常不會卡**\n- 編譯器一次只編譯一個 `.c`，看不到函式內容 → 當黑盒子，每圈都呼叫\n- 會失效的情況：改成 `.h` 裡的 `static inline`、開 LTO、在同一個 `.c` 內寫等待迴圈\n- 結論：正確性不能靠檔案拆分，`volatile` 要標在變數本身\n\n**面試版**\n- tick 在 SysTick 中斷加 1、主程式讀；編譯器不知道中斷會改它，可能只讀一次放 CPU 暫存器甚至整段刪除\n- 實測 `-O2` 拿掉 `volatile`，延遲迴圈變成跳回自己的無窮迴圈；加回後每圈都有 `ldr` 重讀 SRAM\n- `volatile` 不是關掉最佳化，而是禁止省略或快取對該變數的存取\n- 限制：`volatile` 不保證原子性；這裡安全是因為 32 bit 讀取一道指令完成，且只有 ISR 寫",
-          "resolved": null
+          "resolved": null,
+          "id": "aec0553607"
         },
         {
           "time": "2026-11-07 18:03",
           "type": "問題",
           "text": "【問題】把 BSP_GPIO_Led_Toggle() 寫進 bsp_systick 模組\n**每個 BSP 模組只管自己的硬體；LED 的操作放 bsp_gpio，bsp_systick 只管時間**\n\n- 錯在哪：Toggle 定義在 `bsp_systick.c`、宣告在 `bsp_systick.h`，並在裡面讀 `GPIOC->IDR`\n- 後果：兩個模組都碰 GPIOC；換板子改 LED 腳位時要去改 SysTick 模組，不合理\n- 想重用 `BSP_GPIO_Led_On()`／`Off()` → 放進 `bsp_gpio.c` 同檔案直接呼叫即可，不需跨模組\n- 判斷原則：問「換硬體時要改哪裡」，答案應該只有一個模組\n- 讀 `ODR` 而非 `IDR`：見【解法】LED Toggle 的寫法與風險",
-          "resolved": false
+          "resolved": true,
+          "id": "c53ca9d010",
+          "open": false
         },
         {
           "time": "2026-11-07 18:44",
           "type": "筆記",
           "text": "【筆記】Toggle 讀 ODR 而不是 IDR\n**ODR 是「我命令的輸出」，IDR 是「腳位實際電位」；Toggle 是反轉命令，所以讀 ODR**\n\n| | `ODR` | `IDR` |\n|---|---|---|\n| 代表 | 命令輸出的值 | 腳位實際電位（取樣） |\n| 誰決定 | 程式寫入（BSRR／BRR 改的就是它） | 外部電路＋硬體取樣 |\n| 寫完馬上讀 | 立即反映 | 晚幾個時脈 |\n\n- 推挽輸出時兩者通常相同；不同的情況：\n  - 開漏輸出：`ODR` = 1 只是放手，外部拉低時 `IDR` = 0 → 用 `IDR` 做 Toggle 會永遠卡住（I²C 就是開漏）\n  - 腳位短路或負載過重\n  - 剛寫 BSRR 就讀 `IDR`，可能讀到舊值\n- 原則：寫的是 `ODR` 就讀 `ODR`；`IDR` 用來確認實際結果（如讀按鍵）",
-          "resolved": null
+          "resolved": null,
+          "id": "79397b338d"
         },
         {
           "time": "2026-11-07 18:46",
           "type": "筆記",
           "text": "【筆記】週期任務更新時間：last = now 與 last += 週期\n**last = now 不會補做但會漂移；last += 週期 長期準時但卡太久會連續補做**\n\n範例：週期 500 ms，t = 1000 那次延遲到 1003 才處理\n\n| 第幾次 | `last = now` | `last += 500U` |\n|---|---|---|\n| 2 | 1003（last = 1003） | 1003（last = 1000） |\n| 3 | 1503 | 1500 |\n| 4 | 2003 | 2000 |\n\n卡住 2 秒（t = 1000 → 3000）時，`last += 500U` 會在幾 µs 內連續 toggle 5 次補回進度\n\n| 寫法 | 優點 | 缺點 | 適合 |\n|---|---|---|---|\n| `last = now` | 不會連續補做 | 延遲累積，週期漂移 | 「間隔至少 N ms」：去彈跳、逾時 |\n| `last += 週期` | 長期不漂移 | 卡太久會連續補做 | 取樣、時鐘節拍 |\n| `last += 週期`，落後超過一個週期改 `last = now` | 兼顧兩者 | 較複雜 | 一般週期任務 |\n\n- 主迴圈很快時兩者實測無差別；遇到耗時工作（例如畫 SPI 螢幕 10 ms 以上）才會顯現",
-          "resolved": null
+          "resolved": null,
+          "id": "a8f857b101"
         },
         {
           "time": "2026-11-07 18:47",
           "type": "筆記",
           "text": "【筆記】Debugger 看得到其他檔案的 static 變數，卻看不到巨集\n**debugger 讀 .elf 的除錯資訊找變數位址，不受 C 的 static 範圍限制；巨集在前處理就消失了**\n\n| | 是什麼 | 在除錯資訊裡 | 停在 `main.c` 時 |\n|---|---|---|---|\n| `tick`（`bsp_systick.c` 的 static） | 變數，位址 `0x2000001c` | 有 | 看得到 |\n| `SysTick`、`GPIOC` | 巨集 | 只在 include 它的檔案範圍 | `Error: Multiple errors reported` |\n\n- `static` 限制的是「程式碼能不能用這個名字」，是給編譯器的規則\n- debugger 找名字的順序：區域變數 → 目前檔案 → 整個程式\n- 要看暫存器：用 SFRs 視窗，或停在有 include `stm32f1xx.h` 的檔案裡\n- 停在 `main.c` 看不到暫存器巨集 = `main.c` 沒 include 暫存器定義，分層乾淨的證據",
-          "resolved": null
+          "resolved": null,
+          "id": "28200ff43a"
         },
         {
           "time": "2026-11-07 18:48",
           "type": "筆記",
           "text": "【筆記】Non-blocking：問一下就走，不在原地等\n**時間沒到就立刻離開判斷式去做別的事；主迴圈每圈都很短，多個任務輪流檢查，看起來像同時進行**\n\n```c\nuint32_t now = BSP_SysTick_GetTick();\nif ((now - led_last_toggle) >= 500U)   // 沒到：馬上往下走\n{\n    BSP_GPIO_Led_Toggle();\n    led_last_toggle = now;\n}\nbackground_counter++;                  // 每圈都會執行\n```\n\n| | blocking（`Delay(500)`） | non-blocking |\n|---|---|---|\n| 時間沒到時 | 待在 while 裡等 | 判斷一次就離開 |\n| 一圈主迴圈 | 約 500 ms | 不到 1 µs |\n| 500 ms 內 `background_counter` 增加 | 1 | 約 81 萬（實測 817,711 → 1,635,424） |\n\n- 比喻：煮飯 20 分鐘，blocking 是盯著電鍋；non-blocking 是做家事時每做完一件瞄一眼時鐘\n- 同一個主迴圈可以放多個任務（LED、按鍵、UART），各自記自己的「上次時間」",
-          "resolved": null
+          "resolved": null,
+          "id": "24ec63cfa1"
         },
         {
           "time": "2026-11-07 18:48",
           "type": "筆記",
           "text": "【筆記】SysTick 實測週期誤差來自頻率比例，不是 tick 量化\n**Delay 版與 non-blocking 版都是 499.924 ms／500 ms，固定少約 150 ppm，來自石英與邏輯分析儀時基的誤差**\n\n| 寫法 | 脈寬 | 週期 | 頻率 |\n|---|---|---|---|\n| `BSP_SysTick_Delay(500)` | 499.925 ms | 999.849 ms | 1.00015 Hz |\n| `now - last >= 500` | 499.924 ms | 999.849 ms | 1.00015 Hz |\n\n- 主迴圈很快 → 每次 toggle 緊跟在 tick 加 1 之後，起點都對齊 tick 邊界 → 量化誤差只有 µs 級\n- 固定少 76 µs／500 ms ≈ 150 ppm → 頻率比例誤差：板上 8 MHz 石英＋邏輯分析儀時基，兩者誤差加總\n- 量化誤差（最多 1 tick）只發生在從任意時間點開始等的時候，例如開機後第一次\n- 更正：先前【筆記】SysTick 延遲的實測與 tick 量化誤差把原因歸給量化誤差，是錯的",
-          "resolved": null
+          "resolved": null,
+          "id": "dc4ac057e2"
         },
         {
           "time": "2026-11-08 22:23",
           "type": "筆記",
           "text": "【筆記】HAL 的 tick 實作對照：uwTick、uwTickFreq、HAL_Delay、__weak\n**HAL 的 tick 單位固定是 ms、可降頻省電；HAL_Delay 多等 1 tick 保證至少 N ms；__weak 讓使用者替換時間基準**\n\n| 項目 | HAL | 自寫版 |\n|---|---|---|\n| 計數變數 | `__IO uint32_t uwTick;`（`__IO` = `volatile`，無 static） | `static volatile uint32_t tick;` |\n| 中斷內 | `uwTick += uwTickFreq;` | `tick++;` |\n| 中斷頻率 | 可選 1 kHz／100 Hz／10 Hz | 固定 1 kHz |\n| 函式 | `__weak`，可被覆蓋 | 一般函式 |\n\n**uwTick 沒有 static 的風險**\n- 任何模組都能寫 `uwTick = 0;` → 進行中的逾時計算 `now - start` 變成超大數 → 全部同時逾時\n- 自寫版用 `static` 加上只提供 `GetTick()`：外部只能讀\n\n**uwTickFreq**\n- Hz = 每秒幾次；1 kHz ↔ 每 1 ms、100 Hz ↔ 每 10 ms\n- 值的意義是「每次中斷代表幾 ms」：`1KHZ = 1`、`100HZ = 10`、`10HZ = 100`\n- `uwTick += uwTickFreq` → 不論中斷頻率，`uwTick` 單位永遠是 ms\n- 降頻目的：省電（睡眠時被叫醒的次數變少），代價是解析度變差\n\n**HAL_Delay 的 `wait += uwTickFreq`**\n- 從任意時間點開始等，第一個 tick 可能幾 µs 後就到 → 不加 1 只等 N − 1～N ms\n- 加 1 → N～N + 1 ms，保證「至少」N ms（`HAL_Delay(1)` 不加 1 可能只等 1 µs）\n- `if (wait < HAL_MAX_DELAY)`：`0xFFFFFFFF` 代表永遠等；再加 1 會溢位成 0，變成完全不等\n\n**__weak 的兩種用途**\n\n| | startup handler | HAL 函式 |\n|---|---|---|\n| 備用版本 | `Default_Handler` 無窮迴圈 | 完整可用的實作 |\n| 目的 | 沒寫就卡住，方便抓錯 | 預設可用，允許替換 |\n\n- 用 RTOS 時 SysTick 被拿去排程 → CubeMX 產生 `stm32f1xx_hal_timebase_tim.c` 重新定義 `HAL_InitTick()`，改用 TIM 當時間基準，HAL 原始碼不用改",
-          "resolved": null
+          "resolved": null,
+          "id": "5b920b672e"
         },
         {
           "time": "2026-11-08 22:27",
           "type": "筆記",
           "text": "【筆記】LOAD 決定中斷頻率；uwTickFreq 讓 tick 單位永遠是 ms\n**中斷頻率 = 計數時脈 ÷ (LOAD + 1)；HAL 降頻時每次中斷加「經過的 ms 數」，tick 意義不變**\n\n**LOAD 和 1 kHz 的關係**\n- 計數器每秒數 72,000,000 下（72 MHz），一輪數 72,000 下（`LOAD` = 71,999）\n- 一秒數完 72,000,000 ÷ 72,000 = 1000 輪 → 一秒中斷 1000 次 = 1 kHz = 每 1 ms 一次\n- Hz = 每秒幾次；週期 = 1 ÷ 頻率\n\n| `LOAD` | 一輪多久 | 中斷頻率 |\n|---|---|---|\n| 71,999 | 1 ms | 1 kHz |\n| 719,999（需搭配 /8） | 10 ms | 100 Hz |\n\n**降頻後如果還是 `tick++`**\n- 每 10 ms 才加 1 → tick 不再是毫秒 → `now - last >= 500` 變成等 5 秒\n\n**HAL 的解法：`uwTick += uwTickFreq`**\n\n| 中斷頻率 | 每次經過 | `uwTickFreq` | 1 秒後 `uwTick` |\n|---|---|---|---|\n| 1 kHz | 1 ms | 1 | 1000 |\n| 100 Hz | 10 ms | 10 | 1000 |\n\n- `uwTickFreq` 的值是「每次中斷代表幾 ms」，不是 Hz\n- 比喻：每 1 ms 拿 1 元或每 10 ms 拿 10 元，一秒後都是 1000 元\n- 降頻目的：省電（中斷會把睡眠中的 CPU 叫醒）；代價：解析度變成 10 ms\n- 本課固定 1 kHz，`tick++` 即可",
-          "resolved": null
+          "resolved": null,
+          "id": "f7142caf94"
         },
         {
           "time": "2026-11-08 22:30",
           "type": "問題",
           "text": "【問題】Toggle 用了 ODR 的遮罩，卻還在讀 IDR\n**同一個 bit 的遮罩在 IDR／ODR 數值相同，編譯器抓不到配對錯誤，只能靠人對照**\n\n```c\nif ((GPIOC->IDR & GPIO_ODR_ODR13_Msk) != 0U)   // 錯：暫存器和遮罩不一致\nif ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)   // 對\n```\n\n- `GPIO_ODR_ODR13_Msk` = `GPIO_IDR_IDR13_Msk` = `0x2000` → 程式碼能動，但讀的是腳位電位而非命令\n- 巨集名稱中的 `ODR`／`IDR` 就是給人對照的：寫哪個暫存器，就用哪個暫存器的巨集\n- 前一版的巨集名 `GPIO_ODR_IDR13_Msk` 不存在 → 不確定名稱時，到 `stm32f103xb.h` 搜尋 `GPIO_ODR_` 找",
-          "resolved": false
+          "resolved": true,
+          "id": "dedc722531",
+          "open": false
         },
         {
           "time": "2026-11-08 22:31",
           "type": "解法",
           "text": "【解法】Non-blocking LED：用 BSP_SysTick_GetTick() 每 500 ms 切換\n**每圈讀一次時間，到了才 toggle 並更新上次時間；沒到就離開，主迴圈不被卡住**\n\n**為什麼**\n- `Delay()` 等待時 CPU 什麼都不能做；non-blocking 讓 LED、按鍵、UART 能在同一個主迴圈輪流執行\n- 這是下一步按鍵去彈跳的基礎：同樣是「每圈看時間，到了才做事」\n\n**程式碼**\n```c\n// main.c\nuint32_t led_last_toggle = BSP_SysTick_GetTick();\nfor (;;)\n{\n    uint32_t now = BSP_SysTick_GetTick();\n    if ((now - led_last_toggle) >= 500U)\n    {\n        BSP_GPIO_Led_Toggle();\n        led_last_toggle += 500U;     // 不累積延遲；卡太久會連續補做\n    }\n    background_counter++;\n}\n\n// bsp_gpio.c：寫的是 ODR 就讀 ODR\nvoid BSP_GPIO_Led_Toggle(void)\n{\n    if ((GPIOC->ODR & GPIO_ODR_ODR13_Msk) != 0U)\n    {\n        BSP_GPIO_Led_On();\n    }\n    else\n    {\n        BSP_GPIO_Led_Off();\n    }\n}\n```\n\n**驗證**\n\n| 項目 | 結果 |\n|---|---|\n| 邏輯分析儀 PC13 | 週期 999.849 ms，脈寬 499.924 ms，1.00015 Hz |\n| `background_counter` | 每 500 ms 增加約 81 萬 → 主迴圈未被卡住 |\n\n**為什麼是這個順序**\n- `BSP_SysTick_Init()` 在 `BSP_GPIO_Init()` 前後都可以：handler 只碰 tick\n- `led_last_toggle` 在進入迴圈前取一次時間，第一次 toggle 才是 500 ms 後\n\n**模組分工**\n- Toggle 放 `bsp_gpio`（知道 LED 在 PC13），`bsp_systick` 只管時間\n- `main.c` 不 include 任何暫存器定義 → debugger 停在 `main.c` 看不到 `SysTick` 巨集，是分層乾淨的證據\n\n**對照 HAL**\n\n| 自寫版 | HAL | 差異 |\n|---|---|---|\n| `static volatile uint32_t tick` | `__IO uint32_t uwTick`（無 static） | HAL 任何模組都能改 |\n| `tick++` | `uwTick += uwTickFreq` | HAL 可降頻省電，tick 單位仍是 ms |\n| 不提供 Delay | `HAL_Delay()` 等 N + 1 tick | 保證至少 N ms；`HAL_MAX_DELAY` 不加 1 避免溢位成 0 |\n| 一般函式 | `__weak` | HAL 可被替換成 TIM 時間基準（RTOS 拿走 SysTick 時） |",
-          "resolved": null
+          "resolved": null,
+          "id": "9ead3e4558"
         },
         {
           "time": "2026-11-08 23:05",
           "type": "筆記",
           "text": "【筆記】按鍵彈跳實測與去彈跳時間的選擇\n**杜邦線碰觸 PB0：按下彈跳在 10 ms 內、放開未觀察到彈跳 → 取 20 ms，有兩倍餘裕且人感覺不到延遲**\n\n- 量法：邏輯分析儀接 PB0，下降沿觸發，取樣率調高後放大看邊緣\n- 實測：有時無彈跳，有時多跳幾次，整體都在 10 ms 內；上升沿未見彈跳\n- 一般輕觸按鍵：彈跳 1～10 ms，少數到 20 ms；放開也會彈跳，通常較輕微\n- 杜邦線額外問題：按住時手抖可能短暫斷開，去彈跳一併擋掉\n- 選 20 ms：大於實測最大值的兩倍，又遠低於人感覺「有延遲」的 50～100 ms",
-          "resolved": null
+          "resolved": null,
+          "id": "0594351a4f"
         },
         {
           "time": "2026-11-09 22:05",
           "type": "筆記",
           "text": "【筆記】狀態表怎麼讀：每一列是「離開」的條件\n**一列回答「我現在在這個狀態，遇到什麼情況要去哪」；沒有條件成立就留在原狀態**\n\n- 條件只用兩種資料：這一圈讀到什麼（按下／放開）、從開始驗證經過多久（`now - start`）\n- 一個狀態可以有多條規則\n- 常見錯誤：寫成「怎麼進入這個狀態」→ 方向反了\n- 狀態機只產生事件，不直接控制 LED；事件要做什麼由 `main` 決定\n\n| 狀態 | 條件 → 轉到哪 | 轉換時做什麼 |\n|---|---|---|\n| `LED_OFF` | 經過 ≥ 500 ms → `LED_ON` | 點亮、記時間 |\n| `LED_ON` | 經過 ≥ 500 ms → `LED_OFF` | 熄滅、記時間 |",
-          "resolved": null
+          "resolved": null,
+          "id": "6dc9d63647"
         },
         {
           "time": "2026-11-09 22:05",
           "type": "解法",
           "text": "【解法】按鍵去彈跳狀態機設計：4 個狀態，確認按下時發事件\n**讀到變化先進「驗證中」，彈跳就退回並重新計時；連續穩定 20 ms 才確認；事件只在 PRESS_DEBOUNCE → PRESSED 發出**\n\n| 狀態 | 代表什麼 | 條件 → 轉到哪 | 轉換時做什麼 |\n|---|---|---|---|\n| `RELEASED` | 放開，已確認 | 按下 → `PRESS_DEBOUNCE` | `start = now` |\n| `PRESS_DEBOUNCE` | 按下，驗證中 | 放開 → `RELEASED` | — |\n| | | 按下且 `now - start >= 20` → `PRESSED` | 發出按下事件 |\n| `PRESSED` | 按下，已確認 | 放開 → `RELEASE_DEBOUNCE` | `start = now` |\n| `RELEASE_DEBOUNCE` | 放開，驗證中 | 按下 → `PRESSED` | — |\n| | | 放開且 `now - start >= 20` → `RELEASED` | — |\n\n- 上下兩半對稱；按住不放時停在 `PRESSED`，不會重複發事件\n- 彈跳一次就退回並重新計時 → 必須連續穩定 20 ms\n- 去彈跳 20 ms：實測杜邦線彈跳 < 10 ms，留兩倍餘裕\n- 事件在確認按下時發出（反應快）；確認放開時發出適合需要分辨短按／長按的場合\n\n**時間軸（前 6 ms 有彈跳）**\n\n| 時間 | 讀到 | 狀態 |\n|---|---|---|\n| 0 | 按下 | → `PRESS_DEBOUNCE`，start = 0 |\n| 1 | 放開 | → `RELEASED` |\n| 2～6 | 跳動 | 來回，每次重設 start，最後 start = 6 |\n| 26 | 按下 | 26 − 6 = 20 → `PRESSED`，發事件 |",
-          "resolved": null
+          "resolved": null,
+          "id": "5d5b1e6abc"
         },
         {
           "time": "2026-11-09 22:05",
           "type": "筆記",
           "text": "【筆記】事件 vs 狀態：WasPressed() 要讀取即清除\n**「現在是否按著」是狀態，「剛剛按了一下」是事件；事件被讀到時要清除，一次按下只被看到一次**\n\n| | 狀態 | 事件 |\n|---|---|---|\n| 意思 | 現在是不是按著 | 剛剛發生了一次按下 |\n| 持續 | 按住多久就維持多久 | 只發生一次 |\n| 例子 | `BSP_GPIO_Button_IsPressed()` | `Button_Debounce_WasPressed()` |\n\n- `main` 每秒問約 160 萬次；不清除 → 按一次後每圈都回答「有」→ 速度每秒切換 160 萬次\n- 讀取即清除（read-and-clear）：回傳 `true` 的同時把旗標清 0，即「消費」事件",
-          "resolved": null
+          "resolved": null,
+          "id": "d724537931"
         },
         {
           "time": "2026-11-09 22:10",
           "type": "筆記",
           "text": "【筆記】enum：有名字的整數常數，搭配 switch 寫狀態機\n**變數只會是幾個固定值之一時用 enum；值自動從 0 編號，debugger 直接顯示名稱**\n\n```c\ntypedef enum\n{\n    BUTTON_STATE_RELEASED,          // 0\n    BUTTON_STATE_PRESS_DEBOUNCE,    // 1\n    BUTTON_STATE_PRESSED,           // 2\n    BUTTON_STATE_RELEASE_DEBOUNCE   // 3\n} button_state_t;\n\nstatic button_state_t state = BUTTON_STATE_RELEASED;\n```\n\n| 寫法 | 範例 | 缺點 |\n|---|---|---|\n| 數字 | `state = 2;` | 看不出意思 |\n| `#define` | `#define PRESSED 2` | 彼此無關聯，可能重複；debugger 只顯示 2 |\n| `enum` | `state = BUTTON_STATE_PRESSED;` | — 可讀、debugger 顯示名稱、`switch` 漏 case 有警告 |\n\n- `typedef ... button_state_t;`：替型別取名，`_t` 是型別慣例\n- 加 `BUTTON_STATE_` 前綴：C 的 enum 名稱是全域的，避免撞名\n- 只在模組內用的 enum 放 `.c`，不放 `.h`\n- `switch` 每個 `case` 結尾要 `break`，否則會繼續執行下一個 case\n- `default`：防禦未預期的值，回到安全狀態",
-          "resolved": null
+          "resolved": null,
+          "id": "36f29fdec0"
         },
         {
           "time": "2026-11-09 22:10",
           "type": "筆記",
           "text": "【筆記】為什麼事件不清除，速度會亂掉\n**主迴圈一秒約 160 萬圈，每圈都問 WasPressed()；不清除的話每圈都回答「有」，速度每圈翻一次**\n\n| 主迴圈 | 回答 | `led_period` |\n|---|---|---|\n| 第 1 圈 | 有 | 500 → 100 |\n| 第 2 圈 | 有（未清除） | 100 → 500 |\n| 第 3 圈 | 有 | 500 → 100 |\n\n- 結果：按一下後速度取決於剛好停在哪一圈，等於亂數\n- 清除後：只有第 1 圈回答「有」，速度只切換一次\n- `.h` 介面用到 `uint32_t`、`bool` → 要 include `<stdint.h>`、`<stdbool.h>`",
-          "resolved": null
+          "resolved": null,
+          "id": "227f7584d8"
         },
         {
           "time": "2026-11-09 22:57",
           "type": "問題",
           "text": "【問題】WasPressed() 只回傳沒清除；先清除再回傳也不對\n**讀取即清除要「先存、再清、再回傳存的值」；先清再回傳會永遠回傳 false**\n\n```c\nbool Button_Debounce_WasPressed(void)\n{\n    bool event = press_event;   // 先存清除前的值\n    press_event = false;        // 消費事件\n    return event;               // 回傳原本的值\n}\n```\n\n| 寫法 | 結果 |\n|---|---|\n| 只 `return press_event;` | 不清除 → 每圈都回答「有」，速度亂翻 |\n| 先 `press_event = false;` 再 `return press_event;` | 永遠回傳 false，收不到事件 |\n| 先存、再清、再回傳 | 一次按下只被看到一次 |\n\n- 事件只能由消費者（`WasPressed()`）清除；狀態機在放開時清除 → `main` 還沒來得及問就被吃掉",
-          "resolved": false
+          "resolved": true,
+          "id": "11e593026c",
+          "open": false
         },
         {
           "time": "2026-11-09 22:57",
           "type": "問題",
           "text": "【問題】以為 press_event 要加 volatile\n**判斷依據是執行環境不是檔案：只有中斷（或硬體）與主程式共用的變數才需要 volatile**\n\n| 變數 | 寫入 | 讀取 | `volatile` |\n|---|---|---|---|\n| `tick` | `SysTick_Handler`（中斷） | 主迴圈 | 需要 |\n| `press_event` | `Update()`（主迴圈呼叫） | `WasPressed()`（主迴圈呼叫） | 不需要 |\n\n- 錯在哪：用「在哪個 .c 被寫、main 沒直接讀寫」判斷\n- 正確：同一個執行環境裡依序執行，編譯器的推理不會出錯\n- 不要當保險亂加：面試時全部加 `volatile` 會被認為不懂用途\n- 若改成在中斷裡呼叫 `Update()` → `press_event` 變成中斷寫、主迴圈讀 → 就需要",
-          "resolved": false
+          "resolved": true,
+          "id": "a016d6bb3d",
+          "open": false
         },
         {
           "time": "2026-11-10 23:06",
           "type": "問題",
           "text": "【問題】改變週期後 last += period 連續補做\n**週期從 500 變 100 時，舊時間軸上已落後好幾個新週期，last += period 會在幾 µs 內連續 toggle 多次**\n\n範例：上次 toggle 在 1000，於 1400 按下改成 100\n\n| 圈 | now − last | 動作 | last |\n|---|---|---|---|\n| 1 | 400 | toggle | 1100 |\n| 2 | 300 | toggle | 1200 |\n| 3 | 200 | toggle | 1300 |\n| 4 | 100 | toggle | 1400 |\n| 5 | 0 | — | 1400 |\n\n- 偶數次 → LED 回到按下前狀態；LED 看不出來，但若動作是送 UART 資料會連送 4 筆\n- 調換「判斷 LED」與「處理按鍵」的順序修不好：只是晚一圈開始補做\n- 根本原因：週期變了，`led_last_toggle` 還在舊週期的時間軸上\n- 解法：改週期時 `led_last_toggle = now;`，從現在重新起算",
-          "resolved": false
+          "resolved": true,
+          "id": "f15d55f799",
+          "open": false
         },
         {
           "time": "2026-11-10 23:06",
           "type": "解法",
           "text": "【解法】按鍵去彈跳狀態機：button_debounce 模組\n**每圈 main 傳入 now 讓狀態機前進；確認按下時發事件，WasPressed() 讀取即清除**\n\n**為什麼**\n- 機械接觸會在數 ms 內反覆跳動，不處理的話按一次會被判成多次\n- 寫成獨立模組：`main` 只問「剛剛有沒有按一下」，不管彈跳細節\n\n**介面（button_debounce.h）**\n```c\n#include <stdint.h>\n#include <stdbool.h>\nvoid Button_Debounce_Update(uint32_t now);   // 每圈呼叫一次\nbool Button_Debounce_WasPressed(void);       // 有事件回傳 true 並清除\n```\n\n**實作重點（button_debounce.c）**\n```c\n#define BUTTON_DEBOUNCE_MS   20U\n\ntypedef enum\n{\n    BUTTON_STATE_RELEASED,\n    BUTTON_STATE_RELEASE_DEBOUNCE,\n    BUTTON_STATE_PRESSED,\n    BUTTON_STATE_PRESS_DEBOUNCE\n} button_state_t;\n\nstatic button_state_t state = BUTTON_STATE_RELEASED;\nstatic uint32_t debounce_start = 0U;\nstatic bool press_event = false;            // 主迴圈寫、主迴圈讀 → 不需 volatile\n\nvoid Button_Debounce_Update(uint32_t now)\n{\n    bool is_pressed = BSP_GPIO_Button_IsPressed();   // 一圈只讀一次\n\n    switch (state)\n    {\n        case BUTTON_STATE_RELEASED:\n            if (is_pressed) { debounce_start = now; state = BUTTON_STATE_PRESS_DEBOUNCE; }\n            break;\n        case BUTTON_STATE_PRESS_DEBOUNCE:\n            if (!is_pressed) { state = BUTTON_STATE_RELEASED; }\n            else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)\n            { state = BUTTON_STATE_PRESSED; press_event = true; }\n            break;\n        case BUTTON_STATE_PRESSED:\n            if (!is_pressed) { debounce_start = now; state = BUTTON_STATE_RELEASE_DEBOUNCE; }\n            break;\n        case BUTTON_STATE_RELEASE_DEBOUNCE:\n            if (is_pressed) { state = BUTTON_STATE_PRESSED; }\n            else if ((now - debounce_start) >= BUTTON_DEBOUNCE_MS)\n            { state = BUTTON_STATE_RELEASED; }\n            break;\n        default:\n            state = BUTTON_STATE_RELEASED;\n            break;\n    }\n}\n\nbool Button_Debounce_WasPressed(void)\n{\n    bool event = press_event;\n    press_event = false;\n    return event;\n}\n```\n\n**main.c 使用方式**\n```c\nuint32_t now = BSP_SysTick_GetTick();\nButton_Debounce_Update(now);\nif (Button_Debounce_WasPressed())\n{\n    led_period = (led_period == 500U) ? 100U : 500U;\n    led_last_toggle = now;              // 週期改變時重新起算，避免連續補做\n}\n```\n\n**驗證**\n\n| 項目 | 結果 |\n|---|---|\n| 按一下 | 速度切換一次 |\n| 按住不放 | 只切換一次 |\n| 連按 10 次 | `press_count` = 10 |\n\n**設計決定**\n- 4 個狀態：按下／放開 × 已確認／驗證中；彈跳就退回並重新計時\n- 去彈跳 20 ms：實測彈跳 < 10 ms\n- 確認按下時發事件：反應快；不需分辨短按／長按\n- `now` 由 `main` 傳入：少依賴 `bsp_systick`、各任務共用同一個時間、可餵假時間測試\n- 事件由消費者清除：狀態機自己清會在 `main` 忙碌時吃掉按鍵\n- 不碰暫存器 → 不用 `BSP_` 前綴；HAL 沒有對應的去彈跳函式，`HAL_GPIO_ReadPin()` 只對應 `BSP_GPIO_Button_IsPressed()`",
-          "resolved": null
+          "resolved": null,
+          "id": "f0de8b6da2"
         }
       ]
     },
@@ -1629,7 +1806,8 @@
           "time": "2026-07-24 00:00",
           "type": "筆記",
           "text": "MCU：STM32F103C8T6\n板型：Blue Pill 相容最小系統板\nUSB：Type-C\n板載 ST-LINK：無\n燒錄／除錯介面：外接 ST-LINK，SWD\nSWD 排針：GND、SWCLK、SWDIO、3V3\nBOOT 跳線：已找到，需確認兩個跳線帽都在 0",
-          "resolved": null
+          "resolved": null,
+          "id": "d8613db459"
         }
       ]
     },
@@ -1652,7 +1830,8 @@
           "time": "2026-07-24 00:00",
           "type": "筆記",
           "text": "STM32CubeIDE：可開啟\nSTM32CubeProgrammer：可開啟\nWindows：辨識 STM32 STLink\n驅動狀態：無黃色驚嘆號\nST-LINK 序號：可讀取\n連線介面：SWD\n目前頻率：4000 kHz\nConnect：成功\nTarget voltage：3.26 V\nDevice ID：0x410\nDevice 顯示名稱：STM32F101/F102/F103 Medium-density\nFlash Size：64 KB\nCPU：Cortex-M3\nBlue Pill 供電方式：ST-LINK 3.3 V 供電",
-          "resolved": null
+          "resolved": null,
+          "id": "dc81731886"
         }
       ]
     },
@@ -1675,7 +1854,8 @@
           "time": "2026-07-24 00:00",
           "type": "筆記",
           "text": "已完成 STM32F103C8T6 相關文件整理，包含 DS5319 Datasheet、RM0008 Reference Manual、PM0056 Programming Manual、ES096 Errata、AN2586 Hardware Guide，以及 Blue Pill USB-C 板正反面與板卡資料。\n\n已理解各文件用途：\n1. Datasheet：查晶片規格、腳位、封裝、電氣限制。\n2. Reference Manual：查 GPIO、UART、ADC、I²C 等周邊暫存器與操作方式。\n3. Programming Manual：查 Cortex-M3、NVIC、SysTick、HardFault、堆疊與 CPU 暫存器。\n4. Schematic：查開發板 LED、按鍵、晶振、USB、SWD 等實際接線。\n5. Errata：查晶片已知缺陷與官方 workaround。\n\n查找練習結果：\n- STM32F103C8T6 屬於 STM32F103x8 系列。\n- C 代表 48 pins，T 代表 LQFP，因此為 LQFP48。\n- SWDIO = PA13 / Pin 34。\n- SWCLK = PA14 / Pin 37。\n- Flash 起始位址為 0x08000000。\n- STM32F103C8T6 的 64 KB Flash 結束位址為 0x0800FFFF。\n- PC13 在 LQFP48 封裝中為 Pin 2。\n\n曾混淆的部分：\n- 暫存器 bit 定義應查 Reference Manual，不是 Datasheet。\n- 板載 LED 接到哪一支 GPIO 應查板子 Schematic，不是 MCU Datasheet。",
-          "resolved": null
+          "resolved": null,
+          "id": "1ffd438672"
         }
       ]
     },
@@ -1698,7 +1878,8 @@
           "time": "2026-07-24 00:00",
           "type": "筆記",
           "text": "已完成 STM32-W01-S01。\n使用 STM32CubeMX 選擇 STM32F103C8T6，啟用 SYS Serial Wire，Toolchain 選 STM32CubeIDE，並使用 STM32Cube FW_F1 V1.8.7 產生 C 專案。\n已確認 main.c、startup_stm32f103c8tx.s、STM32F103C8TX_FLASH.ld 與 .ioc 存在。\n第一次 Build 成功，結果為 0 errors、0 warnings，耗時 1.613 秒。\n曾遇到 CubeMX 無法下載 Firmware Package，原因為尚未接受 License Agreement，手動接受授權並安裝套件後已解決。目前無卡關。",
-          "resolved": null
+          "resolved": null,
+          "id": "43b054e876"
         }
       ]
     },
@@ -1721,7 +1902,8 @@
           "time": "2026-07-25 00:00",
           "type": "筆記",
           "text": "已完成 STM32-W01-S02。\n使用外接 ST-LINK，透過 SWD 將 STM32CubeIDE 專案燒錄至 STM32F103C8T6。\nConsole 顯示 Download verified successfully，確認 Flash 寫入與驗證成功。\nDebugger 可正常停在 main()，並完成 Resume、Suspend 與 Terminate，Debug session 正常結束。\n過程中出現 ST-LINK firmware update available，屬更新提示，不影響燒錄與除錯。目前無卡關。",
-          "resolved": null
+          "resolved": null,
+          "id": "db5e472f39"
         }
       ]
     },
@@ -1744,7 +1926,8 @@
           "time": "2026-07-26 00:00",
           "type": "筆記",
           "text": "已完成 STM32-W01-S03。\n使用 STM32CubeMX 將 PC13 設為 GPIO Output，Initial Output Level 設為 High，User Label 設為 LED，並保留 PA13/PA14 作為 SWDIO/SWCLK。\nCubeMX 產生 LED_Pin 與 LED_GPIO_Port 定義後，在 main.c 的 USER CODE BEGIN 3 區段加入 HAL_GPIO_TogglePin() 與 HAL_Delay(500)。\nBuild 結果為 0 errors、0 warnings。透過 ST-LINK 進入 Debug，按 F8 執行後，板載 LED 能以固定週期規律閃爍，確認 GPIO 設定、HAL 控制、燒錄與實機執行皆正常。目前無卡關。",
-          "resolved": null
+          "resolved": null,
+          "id": "1ac1ecee7a"
         }
       ]
     },
@@ -1767,7 +1950,8 @@
           "time": "2026-07-26 00:00",
           "type": "筆記",
           "text": "已完成 STM32-W01-S04。\n使用 Breakpoint 讓程式停在 HAL_GPIO_TogglePin()，並透過 F6 Step Over 觀察 GPIOC->ODR 由 8192（0x2000，PC13=1，LED 滅）切換為 0（PC13=0，LED 亮），確認板載 LED 為 Active-Low。\n\n透過 Expressions 觀察到 PC13 在 GPIOC->CRH 中的設定值為 2（0b0010），代表 General-purpose Output Push-Pull、最大輸出速度 2 MHz；RCC->APB2ENR 的 GPIOC clock enable bit 為 1，確認 GPIOC 周邊時鐘已啟用。\n\n使用 F5 Step Into 進入 HAL_GPIO_TogglePin()，GPIOx 顯示 0x40011000，代表 GPIOC；GPIO_Pin 顯示 8192（0x2000，GPIO_PIN_13）。Call Stack 同時顯示 HAL_GPIO_TogglePin() 與 main()。使用 F7 Step Return 成功返回 main()。返回 main 後 GPIOx 與 GPIO_Pin 顯示錯誤，是因函式參數已離開目前作用域，屬正常現象。目前無卡關。",
-          "resolved": null
+          "resolved": null,
+          "id": "57e69da1ae"
         }
       ]
     },
@@ -1790,7 +1974,8 @@
           "time": "2026-07-26 00:00",
           "type": "筆記",
           "text": "已完成 STM32-W01-S05。\n將原本使用 HAL_Delay(500) 的 blocking LED 程式改為使用 HAL_GetTick() 與時間差判斷的 non-blocking 寫法。led_previous_time 在初始化完成後記錄初始 Tick，while 迴圈中持續取得 current_time，當 current_time - led_previous_time >= 500U 時才更新時間並切換 PC13 LED。\n\n實機測試時 LED 可規律閃爍。Debugger 驗證 background_counter 由 13,908,245 增加至 14,018,628，增加 110,383，證明等待 LED 切換的 500 ms 期間主迴圈仍持續執行；觸發切換時 current_time - led_previous_time 為 500 ms。曾因 Toggle 行仍保留 Breakpoint，導致 CPU 暫停、LED 不閃，移除中斷點並 Resume 後已恢復正常。目前無卡關。",
-          "resolved": null
+          "resolved": null,
+          "id": "1556f3fcd0"
         }
       ]
     },
@@ -1813,7 +1998,8 @@
           "time": "2026-07-26 00:00",
           "type": "筆記",
           "text": "【STM32-W02-S02：Software Debounce 邏輯理解】\n\n本次使用 PB0 作為 GPIO Input Pull-up，並透過 HAL_GetTick() 實作非阻塞式 20 ms Software Debounce。每次穩定按下 PB0 時，切換一次 PC13 LED；持續按住與放開時不重複切換。\n\n一、三個按鍵狀態變數\n\n1. button_current_raw_state\n每一次 while 迴圈直接透過 HAL_GPIO_ReadPin() 讀取到的 PB0 即時狀態。\n\n2. button_last_raw_state\n最近一次偵測到的原始候選狀態，也是目前正在接受 20 ms 穩定度驗證的狀態。它可能尚未通過穩定時間的確認。\n\n3. button_stable_state\n已經持續滿 20 ms、被程式正式接受的按鍵狀態。\n\n可用以下方式理解：\ncurrent_raw：現在讀到什麼？\nlast_raw：目前正在觀察、驗證什麼？\nstable：程式目前正式相信什麼？\n\nbutton_last_raw_state 與 button_stable_state 不能合併，因為 last_raw 可能只是剛讀到的新狀態，尚未通過 20 ms 驗證；stable 才是已確認的正式狀態。\n\n二、程式執行流程\n\n1. 每一圈先取得目前時間，並讀取 PB0：\n\ncurrent_time = HAL_GetTick();\nbutton_current_raw_state = HAL_GPIO_ReadPin(...);\n\n2. 若目前原始狀態與正在觀察的候選狀態不同：\n\nbutton_current_raw_state != button_last_raw_state\n\n代表輸入剛發生變化，因此：\n- 將 button_last_raw_state 更新成目前狀態。\n- 將 button_debounce_start_time 更新成 current_time。\n- 從這一刻重新計算 20 ms。\n\n3. 若候選狀態連續維持滿 20 ms：\n\ncurrent_time - button_debounce_start_time >= 20 ms\n\n才認為這個狀態已經穩定。\n\n4. 當 button_stable_state 與 button_last_raw_state 不同時：\n\nbutton_stable_state != button_last_raw_state\n\n代表這是一個尚未處理過的新穩定狀態，因此將：\n\nbutton_stable_state = button_last_raw_state;\n\n若兩者已經相同，表示這個狀態先前已經處理過，不需要重複處理。\n\n5. PB0 使用 Pull-up，因此：\n- GPIO_PIN_SET：High，未按下。\n- GPIO_PIN_RESET：Low，按下。\n\n只有正式接受的新狀態為 GPIO_PIN_RESET 時，才執行：\n\nHAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);\n\n因此只在「穩定按下」時切換 LED，穩定放開時只更新狀態，不切換 LED。\n\n三、按下流程範例\n\n初始狀態：\ncurrent_raw = SET\nlast_raw = SET\nstable = SET\n\n剛接地時：\ncurrent_raw 變成 RESET，與 last_raw 不同。\n程式將 last_raw 更新為 RESET，並重新開始計時。\n此時尚未滿 20 ms，所以 stable 不更新，LED 不切換。\n\n接地 10 ms：\ncurrent_raw 與 last_raw 都是 RESET，因此不重新計時。\n因為 10 ms 尚未達到 20 ms，stable 不更新，LED 不切換。\n\n接地滿 20 ms：\ncurrent_raw = RESET\nlast_raw = RESET\nstable = SET\n\n時間條件成立，且 stable 與 last_raw 不同，因此：\nstable 更新為 RESET，並切換 LED 一次。\n\n繼續按住：\ncurrent_raw、last_raw、stable 都是 RESET。\n雖然時間條件仍成立，但 stable 與 last_raw 相同，因此不再切換 LED。\n\n放開第一瞬間：\ncurrent_raw 變成 SET，last_raw 仍是 RESET。\n程式將 last_raw 更新為 SET，並重新開始計算 20 ms。\nstable 暫時仍是 RESET，LED 不切換。\n\n放開穩定滿 20 ms：\nlast_raw = SET\nstable = RESET\n\n程式正式接受 SET，將 stable 更新為 SET。\n但因為 SET 代表放開，所以不執行 LED Toggle。\n\n四、接點彈跳範例\n\n假設輸入狀態依序是：\n\n0 ms：RESET\n3 ms：SET\n7 ms：RESET\n27 ms：RESET\n\n每次原始狀態改變時都會重新開始計時，因此最後一次計時從 7 ms 開始。\n\n27 ms - 7 ms = 20 ms\n\nRESET 已連續維持 20 ms，因此正式接受 RESET，並切換 LED 一次。前面 0 ms 與 3 ms 的短暫變化不會被當作正式按鍵事件。\n\n五、核心結論\n\nDebounce 時間判斷負責排除短暫彈跳：\n\ncurrent_time - debounce_start_time >= 20 ms\n\nstable_state != last_raw_state 負責避免持續按住時重複處理。\n\nstable_state == GPIO_PIN_RESET 負責只在穩定按下時切換 LED。\n\n整體演算法可濃縮為：\n\n每圈讀取 PB0；若原始狀態改變，就更新候選狀態並重新計時；候選狀態穩定滿 20 ms 且不同於正式狀態時，才接受新狀態；若接受的是 Low，則切換 LED 一次。\n\n實機結果：\n- 第一次接地：LED 亮。\n- 持續接地：LED 不亂閃。\n- 放開接地：LED 保持原狀。\n- 第二次接地：LED 熄滅。\n- 每次接地只切換一次。\n\nBuild：0 errors、0 warnings。\n\n測試時曾因 Breakpoint 讓 CPU 暫停而誤判功能失效。測試連續執行功能時，需移除或停用 Breakpoint，按 F8 Resume，並確認 Debug 狀態為 Running。",
-          "resolved": null
+          "resolved": null,
+          "id": "f213d2a779"
         }
       ]
     },
@@ -1836,7 +2022,8 @@
           "time": "2026-07-28 00:00",
           "type": "筆記",
           "text": "if (GPIO_Pin == INTERRUPT_BUTTON_Pin)，不是在判斷 PB0 目前是否為低電位，而是在確認這次 Callback 是否由 INTERRUPT_BUTTON_Pin，也就是 PB0 所對應的 EXTI0 中斷所觸發。\nPB0 發生 High → Low\n→ EXTI Line 0 偵測到下降沿\n→ NVIC 接收到 EXTI0 中斷請求\n→ CPU 進入 EXTI0_IRQHandler()\n→ HAL_GPIO_EXTI_IRQHandler(INTERRUPT_BUTTON_Pin)\n→ HAL_GPIO_EXTI_Callback(INTERRUPT_BUTTON_Pin)\nEXTI 模式：決定什麼時候觸發\nGPIO_Pin：指出是哪個 Pin 觸發\nNVIC：管理中斷並通知 CPU",
-          "resolved": null
+          "resolved": null,
+          "id": "9ed4a48077"
         }
       ]
     },
@@ -1875,7 +2062,8 @@
           "time": "2026-07-29 00:00",
           "type": "筆記",
           "text": "TIM2 Clock：8 MHz\nPSC：7999\nARR：499\nTIM2 中斷週期：500 ms\n\nTIM2 global interrupt：已啟用\nHAL_TIM_Base_Start_IT(&htim2)：已啟動\nCallback：只設定事件旗標\nwhile(1)：處理旗標並切換 LED\n\n實機：LED 亮 500 ms、暗 500 ms\nBuild：0 errors、0 warnings\n重新 Generate Code：Period 仍保持 499\n全程未使用 HAL_Delay()\nTIM2 每 500 ms 計數到期\n→ TIM2_IRQHandler()\n→ HAL_TIM_IRQHandler(&htim2)\n→ HAL_TIM_PeriodElapsedCallback()\n→ timer2_period_event = 1U\n→ while(1) 清除事件\n→ 切換 PC13 LED",
-          "resolved": null
+          "resolved": null,
+          "id": "2e833b5546"
         }
       ]
     },
@@ -1898,7 +2086,8 @@
           "time": "2026-07-29 00:00",
           "type": "筆記",
           "text": "Pulse Width Modulation\n脈衝寬度調變\nDuty 0%   ：一直 Low，LED 不亮\nDuty 25%  ：亮的時間較短，看起來較暗\nDuty 50%  ：中等亮度\nDuty 75%  ：亮的時間較長，看起來較亮\nDuty 100% ：一直 High，LED 最亮\n\nPSC：決定 Timer 計數速度\nARR：決定 PWM 的完整週期\nCCR：決定 High 維持多久\n\nTIM2_CH1 在 PA0 輸出 1 kHz PWM\n透過 CCR1 改變 Duty Cycle\n使用 HAL_GetTick()，沒有 HAL_Delay()\n亮度能持續增加與降低\n上限夾制為 1000\n下限夾制為 0\n避免 uint16_t 下溢\n固定參數與執行狀態分開管理",
-          "resolved": null
+          "resolved": null,
+          "id": "38a1a75f09"
         }
       ]
     },
@@ -1921,7 +2110,8 @@
           "time": "2026-07-30 00:00",
           "type": "筆記",
           "text": "完成 USART1 Polling 傳送：CubeMX 設定 USART1 Asynchronous、115200 baud、8N1，PA9 為 TX、PA10 為 RX。使用 CH340G USB-to-TTL，接線為 PA9→RXD、GND↔GND，STM32 維持由 ST-LINK 供電。初次 PuTTY COM5 無資料，發現 CH340G 短路帽接在 VCC↔5V，改為 VCC↔3V3 後成功收到 Hello STM32。使用 HAL_UART_Transmit() 開機傳送一次，並搭配 HAL_GetTick() 每秒輸出遞增的 UART Log，同時 PWM 呼吸燈仍能執行。曾因開啟較舊的 .ioc，導致 PA0／TIM2_CH1 PWM 設定遺失；重新設定 TIM2_CH1、PSC=7、ARR=999、Pulse=0，並關閉 TIM2 global interrupt 後恢復正常。理解固定字串的 sizeof() 包含 \\0，所以長度使用 sizeof(message)-1；snprintf() 回傳的 log_length 本身不包含 \\0，可直接作為 UART 傳送長度。最終 Build 為 0 errors、0 warnings，PC 終端機可穩定接收資料。",
-          "resolved": null
+          "resolved": null,
+          "id": "17503dc4a1"
         }
       ]
     },
@@ -1944,7 +2134,8 @@
           "time": "2026-07-30 00:00",
           "type": "筆記",
           "text": "使用 HAL_UART_Receive(&huart1, &uart_rx_byte, 1U, 0U) 每次輪詢接收 1 byte；Timeout 設為 0U，沒有資料時立即返回，因此不會長時間阻塞主迴圈，PWM 呼吸燈與每秒 UART Log 可繼續運作。\n\n先實作 Echo，收到字元後以 HAL_UART_Transmit() 原樣回傳；初次回傳字元與下一筆 Log 黏在一起，是因為單一字元沒有包含 \\r\\n，後續補上換行字串後顯示正常。完成單一字元命令：輸入 '1' 開啟 PC13 板載 LED、輸入 '0' 關閉 LED、輸入 's' 查詢目前 LED 狀態，其他字元回覆 Invalid command；\\r 與 \\n 視為終端機控制字元並忽略。\n\nPC13 板載 LED 為 Active-Low，因此：\n\nGPIO_PIN_RESET → PC13 Low  → LED ON\nGPIO_PIN_SET   → PC13 High → LED OFF\n\n判斷時必須使用字元常數：\n\nuart_rx_byte == '1'\n\n不能寫成數值 1，因為 '1' 的 ASCII 值為 0x31，而數值 1 是 0x01。合法命令執行後回覆 LED ON 或 LED OFF，讓電腦端能確認 STM32 已執行指令。最終 1、0、s、非法字元與 Enter 測試皆正常，Build 為 0 errors、0 warnings。",
-          "resolved": null
+          "resolved": null,
+          "id": "db3e8267a9"
         }
       ]
     },
@@ -1967,7 +2158,8 @@
           "time": "2026-07-30 00:00",
           "type": "筆記",
           "text": "HAL_UART_Receive_IT()\n不是「等待資料」，\n而是「安排下一筆中斷接收工作」。\n\n在：\nUSART1 → NVIC Settings\n勾選：\nUSART1 global interrupt\n產生程式後，中斷入口會呼叫：\nvoid USART1_IRQHandler(void)\n{\n    HAL_UART_IRQHandler(&huart1);\n}\n\n在初始化完成後、進入 while (1) 前呼叫一次：\nHAL_UART_Receive_IT(&huart1,\n                    &uart_rx_byte,\n                    1U);\n這不是等待資料，而是設定：\n使用 USART1\n→ 接收 1 byte\n→ 存入 uart_rx_byte\n→ 收完後產生中斷\n函式會立即返回，不會卡住 CPU。\n\nCallback 只做兩件事：\n設定事件旗標\n重新啟動下一次 1-byte 接收\n\n流程：\n開機啟動接收\n→ 收到第 1 byte\n→ Callback\n→ 重新啟動接收\n→ 收到第 2 byte\n→ Callback\n→ 持續循環\n\n限制\n目前只有：\n1 個 uart_rx_byte\n1 個 uart_rx_event\n若資料連續快速到達，下一個字元可能在主迴圈處理前覆蓋上一個字元。",
-          "resolved": null
+          "resolved": null,
+          "id": "720ecf597c"
         }
       ]
     },
@@ -1990,7 +2182,8 @@
           "time": "2026-07-31 00:00",
           "type": "筆記",
           "text": "uart_rx_byte\n→ HAL UART 中斷接收的暫存位置\nuart_rx_buffer\n→ 保存尚未由 main() 處理的多筆資料\nuart_rx_write_index\n→ Callback 修改，main() 讀取\nuart_rx_read_index\n→ main() 修改，Callback 讀取\nuart_rx_overflow_count\n→ 記錄 Buffer 滿時丟棄了幾個 byte\n\n加入：\n_Static_assert(\n    (UART_RX_BUFFER_SIZE != 0U) &&\n    ((UART_RX_BUFFER_SIZE &\n      (UART_RX_BUFFER_SIZE - 1U)) == 0U),\n    \"UART_RX_BUFFER_SIZE must be a power of two\");\n判斷 2 的冪次的條件：\n(SIZE & (SIZE - 1U)) == 0U\n_Static_assert(條件, \"錯誤訊息\");\n它是 C11 的編譯期檢查：\n條件成立 → 正常 Build\n條件失敗 → 編譯錯誤\n\n卡關一：保留空位是否固定在某個 index？\n不是。\n保留的是「一個動態空位」，其位置會隨讀寫索引移動。若固定某個 index 永遠不用，只是縮小了循環範圍，仍無法單靠讀寫索引分辨空與滿。",
-          "resolved": null
+          "resolved": null,
+          "id": "40ccfd4cc8"
         }
       ]
     },
@@ -2013,7 +2206,8 @@
           "time": "2026-07-31 00:00",
           "type": "筆記",
           "text": "本節已完成從「UART 單一 Byte 接收」進展到「具備基本命令列介面的韌體系統」\n\n本節完成的命令：\nstatus\nhelp\nget led\nset led on\nset led off\n同時支援：\n無效命令\n命令長度超過限制\n輸入字元即時顯示\n空命令按 Enter 換行\n\n收到的字元不是 '\\r' 或 '\\n' 時：\n確認 Command Buffer 還有空間。\n將字元存入 Buffer。\n命令長度加一。\n將字元 Echo 回終端機。\n\n每一行結束後必須清除：\nuart_command_overflow = 0U;\nuart_command_length = 0U;\n否則發生一次 Overflow 後，後續正常命令也可能持續被判斷成過長。",
-          "resolved": null
+          "resolved": null,
+          "id": "acaca1819a"
         }
       ]
     },
@@ -2036,7 +2230,8 @@
           "time": "2026-08-04 00:00",
           "type": "筆記",
           "text": "PA1 類比電壓\n→ ADC1_IN1\n→ ADC Raw（0～4095）\n→ 換算為毫伏\n→ 顯示成 0.000～3.300 V\n→ USART1 輸出\n\n本節使用：\nPA1 → ADC1_IN1\n各部分意義：\nPA1   → MCU 的 GPIO 腳位\nADC1  → 第 1 組 ADC 周邊\nIN1   → ADC1 的輸入通道 1\nIN1 是 Input Channel 1，不是 1 V\n\nSampling Time\n原本設定：\n\n1.5 Cycles\n後來改為：\n55.5 Cycles\n原因是 ADC 內部有取樣電容，需要時間讓它充電至輸入電壓。\n較長的 Sampling Time：\n優點：對較高阻抗訊號較穩定\n缺點：單次轉換時間稍長\n\nSTM32F103 的 ADC 為 12-bit：\n2¹² = 4096 種輸出值\n輸出的數字範圍：\n0～4095\n理想對應關係：\nADC Raw = 0       → 0 V\nADC Raw ≈ 2048    → 約 1.650 V\nADC Raw = 4095    → 約 3.300 V\n\n因為：\nContinuous Conversion Mode = Disabled\n所以每次量測都需要重新啟動 ADC。\n基本流程：\n1. HAL_ADC_Start()\n2. HAL_ADC_PollForConversion()\n3. HAL_ADC_GetValue()\n4. HAL_ADC_Stop()\n\nPA1 / ADC1_IN1 單次取樣\n→ ADC 校正\n→ HAL_ADC_Start()\n→ 等待轉換完成\n→ 讀取 12-bit Raw 值\n→ 換算成 mV\n→ 四捨五入\n→ 顯示為 0.000～3.300 V\n→ Start／Poll 失敗檢查\n→ 資料有效旗標\n→ ADC Stop\n→ UART 錯誤訊息\n\n整數除法要做到四捨五入，可以在分子加上：\n除數的一半\n目前除數：\n4095\n整數的一半：\n4095 / 2 = 2047\n\n不使用浮點數顯示電壓\n系統內部儲存：\nadc_voltage_mv = 1650\n要顯示為：\n1.650 V\n可使用整數除法和餘數。\n整數部分：\nadc_voltage_mv / 1000U\n小數部分：\nadc_voltage_mv % 1000U\n例如：\n1650 / 1000 = 1\n1650 % 1000 = 650\n→ 1.650 V",
-          "resolved": null
+          "resolved": null,
+          "id": "817bfc4fd3"
         }
       ]
     },
@@ -2059,7 +2254,8 @@
           "time": "2026-08-04 00:00",
           "type": "筆記",
           "text": "adc_raw_sum 應該累加 ADC Raw，不是換算後的電壓。\n而且電壓換算不需要每一筆都做，應等 16 筆 Raw 平均完成後，再換算一次。這樣可避免每一筆整數四捨五入造成額外誤差。\n\n目前的四捨五入補償值需要修正。\n你現在寫的是：\n+ (ADC_MAX_RAW_VALUE / 2U)\n原本單次取樣的除數只有：\nADC_MAX_RAW_VALUE\n所以加它的一半是正確的。\n但現在真正的除數是：\nadc_valid_sample_count * ADC_MAX_RAW_VALUE\n四捨五入時，應該加上「目前完整除數的一半」\n\n這行在「16 筆全部成功」時結果正確，但變數選錯了：\n(ADC_SAMPLE_COUNT / 2U)\n平均值真正的除數是：\nadc_valid_sample_count\n因為某些 ADC 取樣可能失敗，成功筆數不一定永遠是 16\n例如只有 10 筆成功時：\n實際除數 = 10\n四捨五入補償應為 10 / 2 = 5\n但使用 ADC_SAMPLE_COUNT 會加：\n16 / 2 = 8\n\n16 次 ADC 取樣\n→ 統計成功筆數\n→ 累加 Raw\n→ 計算平均 Raw\n→ 計算平均電壓\n→ 顯示有效筆數\n→ 資料不足時輸出錯誤",
-          "resolved": null
+          "resolved": null,
+          "id": "1080cd407a"
         }
       ]
     },
@@ -2082,7 +2278,8 @@
           "time": "2026-08-06 00:00",
           "type": "筆記",
           "text": "可以把它理解成：\nCPU：主管\nDMA：搬運工\nADC：資料生產者\n記憶體陣列：倉庫\n沒有 DMA：\n主管每生產一件貨，都要親自搬進倉庫\n使用 DMA：\n主管先交代搬運規則\n搬運工自動把每件貨放進倉庫\n全部完成後再通知主管\n\nDMA 的主要優點\n1. 減少 CPU 負擔\nCPU 可以同時執行：\nUART 命令解析\nPWM 呼吸燈\n按鍵事件\n其他週期任務\n2. 適合大量或連續資料\n例如：\nADC 連續取樣\nUART 接收大量資料\nSPI 感測器資料\nI²C 資料\n音訊取樣\n3. 降低遺漏資料的機率\n資料產生速度較快時，CPU 若來不及逐筆讀取，新的資料可能覆蓋舊資料。DMA 能依硬體要求迅速搬移。\n\nSTM32 內部不只有 CPU 和記憶體，還有許多硬體功能模組：\nCPU\nSRAM\nFlash\nGPIO\nADC\nTIM\nUSART\nSPI\nI²C\nDMA\n其中 ADC、GPIO、TIM、USART 等都稱為：\nPeripheral\n周邊設備／周邊模組\n它們不是一般資料儲存空間，而是各自負責特定硬體功能。\n例如：\nADC   → 將類比電壓轉成數位值\nTIM   → 計時、PWM\nUSART → 串列通訊\nGPIO  → 控制或讀取腳位\n\nDR 是 ADC 內部的資料暫存器\nDR 是：\nData Register\n資料暫存器\nADC 完成轉換後，硬體會將 12-bit 結果放入：\nADC1->DR\n概念上：\nPA1 類比電壓\n→ ADC1 轉換\n→ 結果寫入 ADC1->DR\n\n每一次 ADC 轉換結果都放在同一個硬體暫存器：\nADC1->DR\nDMA 每次都從同一個來源位址讀取：\n第 1 筆：ADC1->DR → adc_buffer[0]\n第 2 筆：ADC1->DR → adc_buffer[1]\n第 3 筆：ADC1->DR → adc_buffer[2]\n因此來源位址不可以遞增：\nPeripheral Increment = Disable\n\nNormal Mode\nDMA 填滿一次陣列後就停止：\nadc_buffer[0]\n→ adc_buffer[1]\n→ ...\n→ adc_buffer[15]\n→ DMA 停止\n要取得下一批 16 筆，CPU 必須重新啟動 DMA。\nCircular Mode\nDMA 填滿陣列後，自動回到開頭：\nadc_buffer[0]\n→ ...\n→ adc_buffer[15]\n→ adc_buffer[0]\n→ ...\n新資料會逐步覆蓋舊資料，正好符合：\n舊的 16 筆已處理或不再需要\n→ 可以被下一批資料取代\n因此本節希望 ADC 持續取樣時，設定為：\nDMA Mode = Circular\n\ncontinuous Conversion Mode = Enabled\n代表 ADC 被啟動一次後，會自動持續進行下一次轉換。\nDisabled 時\nW06-S02 使用的是單次轉換模式：\nCPU 呼叫 HAL_ADC_Start()\n→ ADC 轉換一次\n→ 結果放入 ADC1->DR\n→ ADC 停止\n若還要下一筆，CPU 必須再次呼叫：\nHAL_ADC_Start(&hadc1);\n即使設定為 Enabled，程式仍然要先呼叫啟動函式，例如之後會使用：\nHAL_ADC_Start_DMA(...);\n設定的意義是：\n尚未啟動：\nADC 不工作\n啟動一次後：\nADC 自動連續轉換\n\n勾選：\nDMA1 channel1 global interrupt\n這個中斷的用途是：\nDMA 搬完指定數量的資料\n→ 產生完成中斷\n→ HAL 呼叫 ADC DMA 完成回呼函式\n→ CPU 得知 adc_buffer[] 已填滿\n\n這次最重要的順序\nMX_DMA_Init()\n→ MX_ADC1_Init() : 設定 ADC 如何工作\n→ HAL_ADC_Start_DMA() : 真正開始 ADC 轉換與 DMA 搬運\n原因是 MX_DMA_Init() 會先開啟 DMA1 的時脈並設定 DMA 中斷。之後 MX_ADC1_Init() 執行 ADC 的底層初始化時，才會設定並連結：\nADC1 ↔ DMA1 Channel 1\n如果反過來：\nMX_ADC1_Init();\nMX_DMA_Init();\nADC 初始化期間可能需要操作 DMA 暫存器，但 DMA 時脈尚未開啟，可能導致初始化失敗或 DMA 無法正常工作。\n\nif (HAL_ADC_Start_DMA(&hadc1,\n                      (uint32_t *)adc_dma_buffer,\n                      ADC_SAMPLE_COUNT) != HAL_OK)\n&hadc1\n→ 使用 ADC1\n(uint32_t *)adc_dma_buffer\n→ DMA 搬入的目的地陣列\nADC_SAMPLE_COUNT\n→ 每輪搬移 16 筆資料\n\n建立 CPU 專用的快照陣列\n目前有同步風險：\nDMA 正在寫 adc_dma_buffer[]\nCPU 同時讀 adc_dma_buffer[]\nCPU 可能讀到：\n前半部＝新一輪資料\n後半部＝上一輪資料\n\nNormal Mode 自動停止「DMA 搬運」\nHAL_ADC_Stop_DMA() 停止「ADC + DMA 功能」\n\nADC1 連續產生轉換結果\n→ DMA1 Channel 1 自動搬入 adc_dma_buffer[]\n→ Normal Mode 搬滿 16 筆後停止\n→ DMA 完成回呼只設定 ready 旗標\n→ 主迴圈建立穩定快照\n→ 重新啟動下一批 DMA\n→ 計算 16 筆平均值\n→ UART 每秒輸出\n\n本節的重要觀念：\nADC 負責產生資料\nDMA 負責搬運資料\nCPU 負責處理資料\n\nDMA 搬運完成\n≠ ADC 數值一定符合真實電壓\n\nNormal Mode\n→ 每批填滿後停止\nCircular Mode\n→ 填滿後自動覆蓋舊資料",
-          "resolved": null
+          "resolved": null,
+          "id": "5b23f9bd98"
         }
       ]
     },
@@ -2105,7 +2302,8 @@
           "time": "2026-08-09 00:00",
           "type": "筆記",
           "text": "UART DMA 傳送：\nCPU 準備字串\n→ 啟動 UART TX DMA\n→ DMA 將字串逐 Byte 搬到 USART1\n→ CPU 繼續處理 PWM、UART RX、ADC 等工作\n→ 傳送完成後進入回呼函式\n\nUART Log 的資料來源是：uart_log_buffer[]\n它位於 SRAM，屬於 Memory。\n資料目的地是：USART1->DR\n它是 USART1 的硬體暫存器，屬於 Peripheral。\n\nPeripheral Increment = Disable\n因為每個 Byte 都寫到固定的 UART 資料暫存器：\nuart_log_buffer[0] → USART1->DR\nuart_log_buffer[1] → USART1->DR\nuart_log_buffer[2] → USART1->DR\nPeripheral 位址始終不變。\n\nUART 每次傳送的是一個 uint8_t：\nuart_log_buffer[0] → 1 Byte\nuart_log_buffer[1] → 1 Byte\nuart_log_buffer[2] → 1 Byte\n例如字串：ABC\nDMA 會依序搬運：\n'A' → USART1->DR\n'B' → USART1->DR\n'C' → USART1->DR\n\n若選 Circular，DMA 傳完 log_length 個 Byte 後，會自動回到 Buffer 開頭，再把同一段字串重複傳送：\nABC\\r\\nABC\\r\\nABC\\r\\n……\n而 UART Log 每次內容可能不同，所以應該是：\n準備一段新 Log\n→ DMA 傳送一次\n→ 傳完停止\n→ 等待下一段 Log\n\nDMA1 Channel 4 global interrupt\n→ 處理 USART1_TX DMA 搬運完成\nUSART1 global interrupt\n→ 保留 UART RX 中斷，並處理 UART 最後一個位元真正送完的事件\n\n__HAL_LINKDMA(huart, hdmatx, hdma_usart1_tx);\n是本節的 UART TX DMA 連結：\nhuart1\n→ hdmatx\n→ hdma_usart1_tx\n→ DMA1 Channel 4\n資料方向：\nuart_log_buffer[] → USART1->DR\n\nUART TX DMA 的完成流程其實分成兩個階段：\nDMA1 Channel 4 中斷 → 代表 DMA 已把最後一個 Byte 搬到 USART1->DR\nUSART1 中斷\n→ 代表 UART 已把最後一個 Byte 的停止位真正送出 TX 腳\n→ HAL 才將 UART 傳送狀態恢復為 Ready\n→ 呼叫 UART TX 完成回呼\n所以兩個中斷都需要保留：\nDMA1_Channel4_IRQHandler()\nUSART1_IRQHandler()\n\nvoid HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)\n{\n    if (huart->Instance == USART1)\n    {\n        uart_tx_dma_busy = 0U;\n    }\n}\n流程會是：\nUART TX DMA 開始\n→ uart_tx_dma_busy = 1U\n→ DMA 搬完資料\n→ UART 最後一個 Byte 真正送完\n→ HAL_UART_TxCpltCallback()\n→ 確認是 USART1\n→ uart_tx_dma_busy = 0U\n\n假設 HAL_UART_Transmit_DMA() 回傳：\nHAL_BUSY\n或：\nHAL_ERROR\n代表 DMA 根本沒有成功開始。\n這時候：\nuart_tx_dma_busy 已經 = 1\n但 DMA 沒有在傳\n→ 不會出現 TX Complete Callback\n→ busy 永遠不會被清回 0\n之後所有週期 Log 都會被卡住。\n\nif (uart_status != HAL_OK)\n{\n    uart_tx_dma_busy = 0U;\n}\n不需要 else。\n原因是成功時：\nHAL_OK\n→ uart_tx_dma_busy 保持 1\n→ DMA 背景傳送\n→ HAL_UART_TxCpltCallback()\n→ uart_tx_dma_busy = 0\n失敗時：\nHAL_BUSY / HAL_ERROR\n→ 沒有成功開始這次 DMA\n→ 不一定會有完成 Callback\n→ 必須自己 uart_tx_dma_busy = 0\n\nstatic volatile uint8_t uart_tx_dma_busy = 0U;\n意義：\n0U → UART TX DMA 空閒\n1U → UART TX DMA 正在傳送\n需要 volatile，因為：\nmain()                  → 讀 / 寫\nUART TX Complete ISR    → 寫\n變數會跨 Main Context 與 Interrupt Context 使用。\n\nUART TX DMA 與原本 Command Response 共用：\nUSART1 TX\n目前：\nPeriodic ADC Log\n→ HAL_UART_Transmit_DMA()\nCommand Response\n→ HAL_UART_Transmit()\n例如：\nHAL_UART_Transmit(&huart1,\n                  (uint8_t *)uart_status_message,\n                  sizeof(uart_status_message) - 1U,\n                  100U);\n若 DMA 正在使用 USART1：\nADC Log DMA 傳送中\n→ status command 到達\n→ Blocking HAL_UART_Transmit()\n→ UART TX State Busy\n→ 可能回傳 HAL_BUSY\n而原本沒有檢查回傳值，因此 Command Response 可能直接消失\n\nCommand Response > Periodic Debug Log\n理由：\nPeriodic ADC Log\n→ 少一筆通常沒關係\nCommand Response\n→ 使用者主動要求\n→ 無回覆容易被認為指令失敗\n但不是強制中止正在傳的 DMA。\n而是：\nDMA Log 已經開始\n→ 讓它完成\n→ 記錄 Command Pending\n→ DMA 空閒後優先送 Command\n\nstatic uint8_t uart_status_response_pending = 0U;\n這個變數目前只在 main() 使用，所以不需要 volatile。\n收到：\nstatus\n時：\nif (uart_tx_dma_busy == 0U)\n{\n    HAL_UART_Transmit(...);\n}\nelse\n{\n    uart_status_response_pending = 1U;\n}\n代表：\nUART 空閒\n→ 立即回覆\nUART DMA 忙\n→ 先記住 Pending\n\nPending 處理必須放在：\nif ((current_time - uart_previous_time) >= UART_LOG_INTERVAL_MS)\n之前。\nPending Command Response\n        ↓\nPeriodic ADC Log",
-          "resolved": null
+          "resolved": null,
+          "id": "8cb9b25436"
         }
       ]
     },
@@ -2128,7 +2326,8 @@
           "time": "2026-07-01 00:00",
           "type": "筆記",
           "text": "SCL = Serial Clock\nSDA = Serial Data\nSCL → 主要由 Master 產生時脈\nSDA ↔ 雙向傳資料\n\nI²C 的 SDA / SCL 不是一般 Push-Pull 輸出，而是 Open-Drain。\n這代表裝置通常只會主動做兩件事：\n拉低 → 0\n放開 → 由 Pull-up resistor 拉成 1\n不會像一般 GPIO 那樣主動輸出 High。\n\nOpen-Drain 輸出只有兩種動作：\n1. 拉低\n   SDA ──→ GND\n   結果 = 0\n2. 放開\n   SDA 不主動輸出電壓\n   交給 Pull-up 拉高\n   結果 = 1\n\n為什麼 I²C 不直接用 Push-Pull？\n因為 SDA 是多個裝置共用的一條線。\n假設用 Push-Pull：\nSTM32 主動輸出 3.3V\nMPU6050 同時主動輸出 0V\n就會形成輸出打架，甚至可能產生很大的電流。\n但 Open-Drain 不會有「有人硬推 High」：\nSTM32 放開\nMPU6050 拉低\n→ SDA = 0\n所以 I²C 可以讓多個裝置安全共用 SDA。\n\nOpen-Drain：只能主動拉 Low；High 是靠 Pull-up 得到的。\n\n只要總線上任何一個裝置拉 Low，整條 SDA 就會是 Low。\n可以記成：\n沒有人拉低 → Pull-up 拉成 1\n有人拉低   → 變成 0\n\nI²C 在閒置時通常：\nSCL = 1\nSDA = 1\n當 SCL 維持 High 時：\nSDA：1 → 0\n這代表 START。\n而：\nSDA：0 → 1\n則代表 STOP。\n\nI²C idle：\nSCL = 1\nSDA = 1\nSTART：\nSCL 保持 1\nSDA：1 → 0\nSTOP：\nSCL 保持 1\nSDA：0 → 1\n\nSTART 之後，Master 通常第一個送的是：\n7-bit Slave Address + 1-bit R/W\nMPU-6050 常見 7-bit address 是：\n0x68\n如果 AD0 = 0。\n真正送到 I²C Bus 上的第一個 Byte 是：\n[ 7-bit Address ][ R/W ]\n\nR/W = 0 → Write\nR/W = 1 → Read\n\n用 HAL 很容易踩到的點：\n在 STM32 HAL 裡，很多 I²C API 的 DevAddress 參數要傳的是已經左移 1 bit 的位址。\n也就是 MPU-6050 常會寫成：\n#define MPU6050_ADDR (0x68U << 1)\n這樣 MPU6050_ADDR 就是：\n0xD0\n之後，會多出第 9 個 Clock。\n這第 9 個 Clock 不是資料 bit，而是讓 Slave 回：\nACK / NACK\n\nACK  = Slave 在第 9 個 Clock 主動把 SDA 拉低\nNACK = Slave 不拉低 SDA，讓 Pull-up 維持 High\n所以你可以把 ACK 想成：\nSlave 說：「這個 Address 是我的，我有收到。」\n流程會像：\nSTART\n→ 0xD0\n→ 第 9 個 Clock\n→ MPU-6050 拉低 SDA\n→ ACK\n如果地址錯了，例如 Master 送到不存在的 Slave：\nSTART\n→ Address\n→ 第 9 個 Clock\n→ 沒有人拉低 SDA\n→ SDA 被 Pull-up 拉成 High\n→ NACK\n\n第 1 層：I²C Slave Address\n0x68\n→ 找到「哪一顆裝置」\n第 2 層：Register Address\n例如 WHO_AM_I\n→ 找到「這顆裝置裡面的哪個暫存器」\n所以一筆典型的寫入會長得像：\nSTART\n→ Slave Address + Write\n→ ACK\n→ Register Address\n→ ACK\n→ Data\n→ ACK\n→ STOP\n\n假設我們要讀 MPU-6050 的 WHO_AM_I。\nMaster 必須先告訴 MPU-6050：\n「我等等要讀的是 WHO_AM_I 這個 Register。」\n所以通常流程不是一開始就直接 Read，而是：\n先 Write Register Address\n再 Read Register Data\n\n之後看 Datasheet 會遇到的細節：很多 I²C 裝置內部其實有一個 Register Pointer，所以如果直接 Read，它可能會從「目前 Pointer 指到的位置」開始讀，而不是完全不知道要讀什麼。\n因此要可靠地指定某一個 Register，典型做法仍然是：\nSTART\n→ Slave Address + Write\n→ ACK\n→ Register Address\n→ ACK\n→ ...\n這時 MPU-6050 內部就知道：\nRegister Pointer = 我們指定的 Register\n接下來我們不是立刻 STOP 再重新開始，而常會看到一個非常重要的 I²C 動作：\nRepeated START\n流程會變成：\nSTART\n→ Slave Address + Write\n→ ACK\n→ Register Address\n→ ACK\n→ Repeated START\n→ Slave Address + Read\n→ ACK\n→ Data\n→ ...\n\n一般重新開始一筆交易：\nSTART\n→ ...\n→ STOP\n→ START\n→ ...\nRepeated START：\nSTART\n→ ...\n→ Repeated START\n→ ...\n→ STOP\nRepeated START 的意義是：\nMaster 還沒有把這次 Bus Transaction 結束，而是在同一筆交易中切換方向或切換操作。\n這對「先指定 Register，再讀資料」很常見。\n例如讀 MPU-6050 某個 Register：\nSTART\n→ 0xD0          // Slave Address + Write\n→ ACK\n→ Register Addr\n→ ACK\n→ Repeated START\n→ 0xD1          // Slave Address + Read\n→ ACK\n→ Data\n→ NACK\n→ STOP\n\n前面 Address / Register Address 階段：\nMaster 傳\nSlave 回 ACK/NACK\n進入 Read Data 階段：\nSlave 傳 Data\nMaster 回 ACK/NACK\n如果 Master 還想繼續讀下一個 Byte，就回：\nACK\n意思是：\n我還要，請繼續送。\n如果 Master 已經讀到最後一個 Byte，就回：\nNACK\n意思是：\n這是最後一個，不要再送了。\n所以讀 1 Byte 的完整流程可以先記成：\nSTART\n→ Slave Address + Write\n→ ACK\n→ Register Address\n→ ACK\n→ Repeated START\n→ Slave Address + Read\n→ ACK\n→ Data\n→ NACK\n→ STOP\n\n關鍵不是「ACK 永遠由 Slave 回」，而是看現在是誰在接收資料：\n誰接收 Byte\n→ 誰負責在第 9 個 Clock 回 ACK / NACK\n所以：\nMaster 傳 Address / Register\n→ Slave 接收\n→ Slave 回 ACK/NACK\nSlave 傳 Data\n→ Master 接收\n→ Master 回 ACK/NACK\n\nSTART\n→ 0xD0        Master 送\n→ ACK         Slave 回\n→ 0x75        Master 送\n→ ACK         Slave 回\n→ Repeated START\n→ 0xD1        Master 送\n→ ACK         Slave 回\n→ 0x68        Slave 送   ← WHO_AM_I Data\n→ NACK        Master 回\n→ STOP        Master\n\nSTM32                    MPU-6050\nMaster                    Slave\nPB6 / SCL  ------------> SCL\nPB7 / SDA  <-----------> SDA\n3.3V      -------------> VCC\nGND       -------------- GND\nGND       -------------- AD0\n\nHAL_StatusTypeDef mpu6050_ready_status =\n    HAL_I2C_IsDeviceReady(&hi2c1,\n                          MPU6050_I2C_ADDRESS,\n                          3U,\n                          100U);\n四個參數的意思是：\n&hi2c1               → 使用 I2C1\nMPU6050_I2C_ADDRESS   → 找 0x68 這顆 Slave\n3U                    → 最多嘗試 3 次\n100U                  → 每次等待 Timeout 100 ms\n\nHAL_I2C_IsDeviceReady(\n    I2C控制器,\n    Slave位址,\n    嘗試次數,\n    Timeout\n);\n\n初次訪問 MPU 6050 不是回傳 HAL_ERROR 就是 HAL_TIMEOUT\n解法 (部前沒有100%確定是這個問題) : \n訪問前須先喚醒 MPU 6050\n#define MPU6050_I2C_ADDRESS (0x68U << 1)\n#define MPU6050_WHO_AM_I_REG 0x75\n#define MPU6050_PWR_MGMT_1_REG 0x6B\nvoid wake_up(void){\n        uint8_t wake_value = 0x00U;\n        HAL_I2C_Mem_Write(\n            &hi2c1,   // I2C\n            MPU6050_I2C_ADDRESS,   // Slave\n            MPU6050_PWR_MGMT_1_REG,   // Register\n            I2C_MEMADD_SIZE_8BIT,   // Register address size\n            &wake_value,   // 要寫出去的資料在哪裡\n            1U ,   // 寫幾 Byte\n            100U// Timeout\n        );\n}\n\ni2c_mem_read_status = HAL_I2C_Mem_Read(\n    &hi2c1,   // 哪個 I2C\n    MPU6050_I2C_ADDRESS,   // 哪個 Slave\n    MPU6050_WHO_AM_I_REG,   // 哪個 Register\n    I2C_MEMADD_SIZE_8BIT,   // Register address 是 8-bit 還是 16-bit\n    &mpu6050_who_am_i,   // 資料要放哪，傳入接收變數的地址\n    1U,   // 讀幾 Byte\n    100U    // Timeout\n);\n\nMPU-6050 的加速度資料從 ACCEL_XOUT_H 開始，X/Y/Z 三軸各 16-bit，一共 6 Bytes。\n#define MPU6050_ACCEL_XOUT_H_REG    0x3BU\nstatic uint8_t accel_raw_buffer[6] = {0};\n為什麼是 6？\nX軸 → High + Low = 2 Bytes\nY軸 → High + Low = 2 Bytes\nZ軸 → High + Low = 2 Bytes\n總共 = 6 Bytes\n這一次我們不需要分別讀：\n0x3B\n0x3C\n0x3D\n0x3E\n0x3F\n0x40\n而是利用 I²C Register 的連續讀取：\n從 0x3B 開始\n↓\n一次讀 6 Bytes\n↓\nbuffer[0] ~ buffer[5]\n這就是 Burst Read。\n\nHAL_I2C_Mem_Read(\n    &hi2c1,\n    MPU6050_I2C_ADDRESS,\n    MPU6050_ACCEL_XOUT_H_REG,\n    I2C_MEMADD_SIZE_8BIT,\n    accel_raw_buffer,\n    6U,\n    100U\n);\n不用寫 &accel_raw_buffer。因為陣列名稱 accel_raw_buffer 傳進函式時，本身就會轉成指向第一個元素的指標，相當於：\n&accel_raw_buffer[0]\n所以 HAL 會依序把 6 Bytes 寫進：\nbuffer[0] ← 0x3B  ACCEL_XOUT_H\nbuffer[1] ← 0x3C  ACCEL_XOUT_L\nbuffer[2] ← 0x3D  ACCEL_YOUT_H\nbuffer[3] ← 0x3E  ACCEL_YOUT_L\nbuffer[4] ← 0x3F  ACCEL_ZOUT_H\nbuffer[5] ← 0x40  ACCEL_ZOUT_L\n\nMPU-6050 很重要的一個觀念：每一軸不是 8-bit，而是 signed 16-bit。\n例如 X 軸：\nHigh Byte = buffer[0] = 0x03\nLow  Byte = buffer[1] = 0x74\n要組成：\n0x03 74\n   ↓\n0x0374\n做法不是相加：\nhigh + low \n而是：\nHigh Byte 左移 8 bit\n        ↓\nXXXX XXXX 0000 0000\n        ↓\n再把 Low Byte 放進低 8 bit\n\n加速度可能是負值，因此最後變數不能使用：\nuint16_t\n而要用：\nint16_t\n\naccel_x_raw =\n    (int16_t)(((uint16_t)accel_raw_buffer[0] << 8U)\n              | (uint16_t)accel_raw_buffer[1]);\naccel_y_raw =\n    (int16_t)(((uint16_t)accel_raw_buffer[2] << 8U)\n              | (uint16_t)accel_raw_buffer[3]);\naccel_z_raw =\n    (int16_t)(((uint16_t)accel_raw_buffer[4] << 8U)\n              | (uint16_t)accel_raw_buffer[5]);\n比原本：\n(int16_t)((accel_raw_buffer[0] << 8) | accel_raw_buffer[1])\n更嚴謹\n\n要確認目前 MPU-6050 是 ±2g / ±4g / ±8g / ±16g，最直接的方法是：讀 ACCEL_CONFIG 暫存器。\nMPU-6050 支援這四種加速度量測範圍。\n先知道要看哪個 Register\nACCEL_CONFIG 的位址是：\n#define MPU6050_ACCEL_CONFIG_REG    0x1CU\n這個 Register 裡面，我們關心的是：\nbit 4:3 = AFS_SEL\n也就是只看這兩個 bit：\nAFS_SEL = 00 → ±2g\nAFS_SEL = 01 → ±4g\nAFS_SEL = 10 → ±8g\nAFS_SEL = 11 → ±16g\n對應的 sensitivity 之後換算會用到：\n±2g  → 16384 LSB/g\n±4g  → 8192  LSB/g\n±8g  → 4096  LSB/g\n±16g → 2048  LSB/g",
-          "resolved": null
+          "resolved": null,
+          "id": "9039a8cde5"
         }
       ]
     },
@@ -2151,7 +2350,8 @@
           "time": "2026-07-01 00:00",
           "type": "筆記",
           "text": "STM32\n │\n ├── SCLK ───────── Sensor A\n │              └── Sensor B\n │\n ├── MOSI ───────── Sensor A\n │              └── Sensor B\n │\n ├── MISO ───────── Sensor A\n │              └── Sensor B\n │\n ├── CS_A ───────── Sensor A\n │\n └── CS_B ───────── Sensor BSTM32 想跟 Sensor A 通訊時：\nCS_A = LOW\nCS_B = HIGH\n代表：\nSensor A：你被選中了，要注意 SCLK/MOSI\nSensor B：你沒被選中，不要理這次通訊\n很多 SPI 裝置的 CS 是 Active Low\n\nCPOL = 0 → SCLK idle LOW\nCPOL = 1 → SCLK idle HIGH\nCPHA = 0 → First Edge Sampling\nCPHA = 1 → Second Edge Sampling\n\nCPOL\n→ 決定第一個 Edge 是 Rising 還是 Falling\nCPHA\n→ 決定在第一個 Edge 還是第二個 Edge Sampling\n\nSPI Mode        CPOL        CPHA\nMode 0                 0        0\nMode 1                 0        1\nMode 2                 1        0\nMode 3                 1        1\n\nGPIO output level = High\n因為 W25Q32 的 CS 是 Active Low：\nCS = HIGH\n→ W25Q32 未選取\nCS = LOW\n→ W25Q32 被選取\n所以 STM32 開機初始化完成時，我們希望 Flash 預設是：\nCS = HIGH\n而不是一開機就處於選取狀態。\n\nCubeMX 裡找這兩個選項：\nClock Polarity (CPOL)\n→ Low\nClock Phase (CPHA)\n→ 1 Edge\n注意 CubeMX 的名稱不是直接寫：\nCPHA = 0\n而是：\n1 Edge\n它們的對應關係是：\nCPHA = 0 → 1 Edge\nCPHA = 1 → 2 Edge\n\nPrescaler (for Baud Rate) = 2\nBaud Rate                 = 4.0 MBit/s\n這代表目前：\nSPI Clock Source\n      ↓\n   ÷ Prescaler\n      ↓\nSPI1 SCLK = 4 MHz\n你的 Prescaler 是：\n2\n所以反推目前提供給 SPI1 的 clock 大約是：\n8 MHz ÷ 2 = 4 MHz\n\nSPI_HandleTypeDef hspi1;\n先理解這個：\nSPI_HandleTypeDef\n→ HAL 用來描述一組 SPI 周邊的結構\nhspi1\n→ SPI1 的 Handle\n可以先把它想成：\nhspi1\n  │\n  ├─ 我是哪個 SPI？ → SPI1\n  ├─ Master / Slave？\n  ├─ CPOL？\n  ├─ CPHA？\n  ├─ Data Size？\n  ├─ First Bit？\n  └─ Prescaler？\n所以未來我們呼叫：\nHAL_SPI_Transmit(&hspi1, ...);\nHAL 才知道：\n「你是要操作 SPI1，而且要依照 SPI1 的設定來傳資料。」\n\n為什麼不能只送 0x9F？\n因為 SPI Slave 不會自己產生 Clock。\n你現在 STM32 是：\nMaster\nW25Q64 是：\nSlave\n只有 STM32 可以產生：\nSCLK\n假設你只做：\n送 0x9F\n會發生：\nCS = LOW\nMOSI:\n1 0 0 1 1 1 1 1\n└──── 0x9F ─────┘\nSCLK:\n8 clocks\nW25Q64 經過這 8 個 Clock 才完整知道：\n「喔，Master 要執行 Read JEDEC ID。」\n可是問題來了：\nW25Q64 接下來準備回：\nEF 40 17\n但是 STM32已經停止產生 Clock。\n結果：\nSTM32：我送完 0x9F 了，停止 SCLK\nW25Q64：\n好，我準備把 EF 送出去……\nW25Q64：\n？？ Clock 呢？\n沒有 Clock，Slave 就沒有辦法把資料一個 bit 一個 bit shift 出來。\n所以 STM32 必須再製造 24 個 Clock\nJEDEC ID 有：\nEF\n40\n17\n共：\n3 bytes × 8\n= 24 clocks\n因此 STM32還必須繼續進行三個 byte 的 SPI transfer。\n但是 SPI 是 Full-Duplex：\n要 Receive，就一定同時也正在 Transmit。\n所以為了拿回：\nEF 40 17\nSTM32必須在 MOSI 上「隨便送三個 byte」來換取 Clock。\n用 Clock 看會更清楚\n整個 transaction 是：\n\n              第 1 byte            第 2 byte     第 3 byte     第 4 byte\n\nSCLK       8 clocks              8 clocks       8 clocks      8 clocks\n             │                      │              │             │\n\nMOSI        0x9F                   0xFF           0xFF          0xFF\n             │                      │              │             │\n             ▼                      ▼              ▼             ▼\nW25Q64    收到 Command          不在乎          不在乎        不在乎\n\n\nMISO        無效                   0xEF           0x40          0x17\n                                      │              │             │\n                                      └──── JEDEC ID ──────────────┘\n\n為什麼 Dummy 是 0xFF？\n其實對 0x9F Read JEDEC ID 這個階段而言，後面的 MOSI 資料 Flash 並不拿來當新的 command。\n我們只是需要：\n產生 SCLK\n所以理論概念上 dummy 可以是例如：\n0x00U\n或：\n0xFFU\n但 SPI Flash 通訊很常看到：\n0xFFU\n作為 dummy byte，因此我們目前使用 0xFFU。\n真正重要的不是：\n「一定必須送 FF 才能讀到資料。」\n而是：\nMaster 必須繼續進行 transfer，才會有 Clock 讓 Slave 把資料送回來。\n\nSPI Receive 本身也需要 Master 提供 Clock。\n所以：\n要從 Slave 收 3 bytes\n→ Master 還是必須做 3 bytes 的 transfer\n→ MOSI 同時送 dummy data\n→ MISO 同時取得真正資料\n\n目前實際讀到：\nManufacturer ID = 0xEF\nMemory Type     = 0x40\nCapacity ID     = 0x17\n前兩個先當成識別碼；這一步專注在：\ncapacity_id = 0x17;\n0x17 不是直接代表 64\n先轉成十進位：\n0x17 = 23\nJEDEC Flash 的這個容量編碼可以理解成：\n容量（Bytes） = 2 ^ capacity_id\n因此你的 Flash：\n2^23 Bytes\n接著換算：\n2^23 Bytes\n= 8,388,608 Bytes\n= 8 MiB\n再乘上：\n1 Byte = 8 bits\n所以：\n8 MiB × 8\n= 64 Mbit\n因此：\nCapacity ID = 0x17\n        ↓\ndecimal 23\n        ↓\n2^23 Bytes\n        ↓\n8 MiB\n        ↓\n64 Mbit\n        ↓\nW25Q64\n\n0x16 → W25Q32\n0x17 → W25Q64\n0x18 → W25Q128\n會發現 capacity code 每增加 1：\n2^22 → 2^23 → 2^24\n容量就會：\n4 MiB → 8 MiB → 16 MiB\n\nFlash 的寫入與擦除不是瞬間完成。\n之後流程會像：\n送 Write Enable\n      ↓\n確認 WEL = 1\n      ↓\n送 Page Program\n      ↓\nFlash 內部開始寫入\n      ↓\nBUSY = 1\n      ↓\n等待\n      ↓\nBUSY = 0\n      ↓\n寫入完成\n\nW25Q64 的指令：\nRead Status Register-1\nCommand = 0x05\n我們這堂課先只管最低兩個 bit：\n\nbit 7                     bit 2   bit 1   bit 0\n ────────────────────────┬───────┬───────\n           其他狀態             │  WEL  │ BUSY\n                                └───────┴───────\nBUSY：bit 0\nBUSY = 0\n→ Flash Ready\n→ 沒有正在 Program / Erase\nBUSY = 1\n→ Flash Busy\n→ 內部正在 Program / Erase 等操作\nWEL：bit 1\nWEL = Write Enable Latch\nWEL = 0\n→ 不允許寫入\nWEL = 1\n→ 已經執行 Write Enable\n→ 可以進行 Program / Erase\n\n指令\n0x06\n→ 改變狀態：WEL = 1\n0x05\n→ 讀狀態：現在 WEL/BUSY 是多少？\n0x9F\n→ 讀身份：你是哪一顆 Flash？\n\n三個 SPI Command 目前看起來被包在同一次 CS = LOW 裡面了。\n這對 W25Q64 不行。它會把 CS LOW 之後收到的第一個 Byte 當成 Command，直到 CS 再次 HIGH，這個 instruction 才結束。\n正確做法：每個 Command 都要有自己的 CS LOW → HIGH\n\nSPI Flash 跟 RAM 很不一樣。如果直接開始 Page Program，很容易誤以為「想寫什麼就寫什麼」。\nW25Q64 最重要的規則：寫入只能把 1 → 0\nPage Program 可以把部分 1 改成 0：\n原本：1111 1111\n寫入：1010 1010\n結果：1010 1010\n這沒問題。\n但是假設現在 Flash 裡已經是：\n1010 1010\n你想直接改成：\n1111 1111\n就不行，因為那需要：\n0 → 1\n而 Page Program 做不到 0 → 1\n要把 bit 恢復成 1，必須先做：\nErase\n擦除後才重新變成：\n1111 1111\n所以整個邏輯是：\nErase\n→ 把很多 bit 恢復成 1\nProgram\n→ 選擇性把某些 1 寫成 0\n\nW25Q64 的基本儲存階層\n1 Byte   = 8 bits\n1 Page   = 256 Bytes\n1 Sector = 4096 Bytes\n         = 16 Pages\nPage Program 是一次最多寫：\n256 Bytes\n但是 Sector Erase 一次會擦掉：\n4096 Bytes\n「我要改一個 byte，所以只擦一個 byte。」\nFlash 通常不是這樣。\n你若做 Sector Erase：\nAddress 0x000000\n        ↓\n整個 Sector\n0x000000 ~ 0x000FFF\n這 4096 bytes 全部會被擦成 0xFF。\n\nW25Q64 是：\n8 MiB\n= 8,388,608 Bytes\n所以 byte address 範圍是：\n0x000000\n~\n0x7FFFFF\n需要 24-bit address，也就是 3 bytes。\n因此之後如果要讀：\nAddress = 0x001234\nSPI 線上會送：\nAddress Byte 1 = 0x00\nAddress Byte 2 = 0x12\nAddress Byte 3 = 0x34\n順序是高位先送：\n0x00 → 0x12 → 0x34\n MSB            LSB\n\n0x012345\nW25Q64 的 SPI 指令 Address 是從高位往低位送：\nA23~A16\n   ↓\nA15~A8\n   ↓\nA7~A0\n所以：\n0x012345\n高位                      低位\n ↓                          ↓\n01          23          45\n│           │           │\nA23~16      A15~8       A7~0\nSPI MOSI 上就會是：\n0x01 → 0x23 → 0x45\n這和我們前面設定：\nMSB First\n有關聯，但要注意兩個不同層次：\nAddress Byte 順序：\n01 → 23 → 45\n每一個 Byte 裡面的 bit 順序：\nbit7 → bit6 → ... → bit0\n例如 0x23：\n0x23 = 0010 0011\n在線上會：\n0 → 0 → 1 → 0 → 0 → 0 → 1 → 1\n↑                               ↑\nbit7                           bit0\n\n要讀：\nAddress = 0x012345\nRead Data command 是：\n0x03\n那 STM32 在 MOSI 上首先會送：\nCS LOW\n0x03        ← Read Data Command\n0x01        ← Address A23~A16\n0x23        ← Address A15~A8\n0x45        ← Address A7~A0\n接著繼續產生 Clock\n↓\nW25Q64 從 MISO 傳回資料\nCS HIGH\n\nFlash 內部就會去：\nFlash Memory\n...\n0x012343\n0x012344\n0x012345 ← 從這裡開始讀\n0x012346\n0x012347\n...\n而且如果你繼續給 Clock，它會自動往下一個 Address 讀：\n0x012345\n↓\n0x012346\n↓\n0x012347\n↓\n...\n不需要每讀一個 Byte 就重新傳一次 Address。",
-          "resolved": null
+          "resolved": null,
+          "id": "f15bd7a761"
         }
       ]
     },
@@ -2190,7 +2390,8 @@
           "time": "2026-07-01 00:00",
           "type": "筆記",
           "text": "為什麼要自己定義？\n想像有一天你不是使用：\nHAL_I2C_Mem_Read()\n而是改成：\nLL Driver\n自己操作 Register\nRTOS Driver\n甚至另一顆 MCU\n底層可能根本沒有：\nHAL_OK\nHAL_TIMEOUT\n但 Application 還是可以繼續看：\nDRIVER_OK\nDRIVER_TIMEOUT\n所以：\nHAL_StatusTypeDef\n是：\nSTM32 HAL 的語言\n而我們準備建立的：\nDriverStatus\n是：\n我們自己韌體架構的共同語言\n這就是 W09-S02 的核心。\n\n如果未來有\nMPU6050 Driver\nSPI Driver\nUART Driver\nFlash Driver\n它們都要使用同一組：\nDRIVER_OK\nDRIVER_BUSY\nDRIVER_TIMEOUT\nDRIVER_ERROR\n那這個定義就不應該放在：\nmain.c\n也不應該放在：\nmpu6050.h\n因為它不是 MPU6050 專屬，而是所有 Driver 共用的狀態型別。\n所以我們建立：\nCore/Inc/driver_status.h\n這是你自己建立的檔案，不是 CubeMX 自動產生的\n\nStep 1：建立 driver_status.h\n在 STM32CubeIDE：\nCore\n└─ Inc\n   └─ Header File\n檔名：\ndriver_status.h\n先建立 Header Guard：\n#ifndef DRIVER_STATUS_H\n#define DRIVER_STATUS_H\n檔案最後：\n#endif /* DRIVER_STATUS_H */\n中間才放我們的 enum。\n\nStep 2：建立 DriverStatus\n你剛才自己定義了四個狀態，所以寫：\ntypedef enum\n{\n    DRIVER_OK = 0,\n    DRIVER_BUSY,\n    DRIVER_TIMEOUT,\n    DRIVER_ERROR\n} DriverStatus;\n\n為什麼 DRIVER_OK = 0，其他卻沒指定？\nC 的 enum 會自動往下加：\nDRIVER_OK      = 0\nDRIVER_BUSY    = 1\nDRIVER_TIMEOUT = 2\nDRIVER_ERROR   = 3\n所以：\nDRIVER_OK = 0,\nDRIVER_BUSY,\nDRIVER_TIMEOUT,\nDRIVER_ERROR\n其實等價於：\nDRIVER_OK      = 0,\nDRIVER_BUSY    = 1,\nDRIVER_TIMEOUT = 2,\nDRIVER_ERROR   = 3\n我刻意讓：\nDRIVER_OK = 0\n明確寫出來，是因為在韌體裡常希望：\n0 → Success / No Error\n非 0 → 某種異常狀態\n\nDriver 內部轉換\n概念上：\nHAL_I2C_Mem_Read()\n        ↓\nHAL_TIMEOUT\n        ↓\nDriver 內部轉換\n        ↓\nDRIVER_TIMEOUT\n        ↓\nApplication\n這樣上層只看到：\nDriverStatus\n它不需要知道底層到底使用：\nSTM32 HAL\nLL\nRegister\nRTOS API\n例如未來底層從：\nHAL_I2C_Mem_Read()\n換成別的方法，只要 Driver 最後仍然回：\nDRIVER_TIMEOUT\nApplication 就不需要跟著修改。\n\n目前的命名風格：\n檔名       → snake_case\ndriver_status.h\ni2c_driver.c\n型別名稱   → PascalCase\nDriverStatus\nenum 成員  → UPPER_CASE\nDRIVER_OK\nDRIVER_BUSY\n\n為什麼這裡需要 prototype？\n假設之後檔案排列：\n某個 driver function\n{\n    convert_hal_status(...);\n}\n\n/* 很下面才寫 */\nstatic DriverStatus convert_hal_status(...)\n{\n    ...\n}\n編譯器從上往下讀程式時，在第一次看到：\nconvert_hal_status(...)\n之前，就必須先知道：\n這個函式存在\n輸入是 HAL_StatusTypeDef\n回傳是 DriverStatus\n所以先放 prototype。\n\n為什麼還需要 default？\n我們雖然知道 HAL_StatusTypeDef 正常只有：\nHAL_OK\nHAL_ERROR\nHAL_BUSY\nHAL_TIMEOUT\n但這個函式宣告：\nstatic DriverStatus convert_hal_status(...)\n代表：\n不管傳進來什麼，函式最後都應該回傳一個 DriverStatus。\n假設某些異常情況傳進來不是這四種值，而 switch 沒有任何 case 命中",
-          "resolved": null
+          "resolved": null,
+          "id": "12a4d1e0dc"
         }
       ]
     },
