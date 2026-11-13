@@ -111,3 +111,7 @@
 - tick 溢位實驗：讓 tick 從溢位前 2 秒開始
 - SPRINT-W01-S04 總整理：從頭到尾每一步
 
+## 待學清單（1 項還沒學）
+
+- [ ] exception stack frame（進中斷時硬體自動存的 8 個暫存器）：學 HardFault 除錯時再學（SPRINT-W01-S05）
+
