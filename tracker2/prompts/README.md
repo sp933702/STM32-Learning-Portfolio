@@ -22,6 +22,7 @@
 | `style.md` | 全部 | 寫法規則（語言、不用編號指涉） |
 | `stuck.md` | 求助 | 卡關時 Claude 的處理方式 |
 | `review.md` | 複習 | 已完成課題的口頭測驗：Claude 當面試官出 5 到 8 題，最後給總評與面試卡 |
+| `cards.md` | 產生面試卡 | 已完成的課題：依筆記寫 5 到 8 則【面試】卡，給翻卡自測用 |
 | `backfill.md` | 補做總整理 | 已完成但沒有總整理筆記的課題：依當時的筆記整理，不重新上課 |
 
 每個課題的類型記在 `learning/progress.json` 的 `kind` 欄位（register、driver、arch、debug、concept、career、prep）。

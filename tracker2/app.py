@@ -17,6 +17,7 @@
 import hashlib
 import json
 import os
+import random
 import re
 import socket
 import subprocess
@@ -372,12 +373,14 @@ def _title_key(text):
     return re.sub(r"\s+", "", _entry_title({"text": text}))
 
 
-def save(db):
+def save(db, export=True):
+    prune_cards(db)
     tmp = DATA + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DATA)
-    export_markdown(db)
+    if export:
+        export_markdown(db)
 
 
 def find(db, tid):
@@ -452,6 +455,10 @@ def export_markdown(db):
     due = [t for t in sprint if (review_info(t) or {}).get("due")]
     if due:
         lines.append(f"- 待複習：{len(due)} 課（" + "、".join(t["title"] for t in due[:8]) + ("…" if len(due) > 8 else "") + "）")
+    cs = card_summary(db)
+    if sum(cs["total"][k] for k in CARD_DEFAULT_KINDS):
+        lines.append("- 翻卡自測：" + "、".join(f"{CARD_KIND_NAMES[k]} {cs['total'][k]} 張" for k in CARD_DEFAULT_KINDS)
+                     + f"；產生這一頁時有 {sum(cs['due'][k] for k in CARD_DEFAULT_KINDS)} 張到期")
     lines += [f"- 最後更新：{now()}", "", "- [全部問題整理（複習用）](QUESTIONS.md)", "- [面試準備（面試卡與面試版說明）](INTERVIEW.md)", ""]
     stage = None
     for t in sprint:
@@ -940,6 +947,7 @@ def _rules(t, opening):
 
 
 REVIEW_WRAP = 5000           # 複習提示詞附上的總整理筆記字數上限
+CARDS_WRAP = 8000            # 產生面試卡提示詞附上的總整理筆記字數上限
 BACKFILL_SOLUTIONS = 9000    # 補做總整理：【解法】筆記全文的字數上限
 BACKFILL_MISTAKES = 7000     # 補做總整理：踩過的錯全文的字數上限
 WRAPUP_EXTRA = "收尾總整理時另外附上"
@@ -1012,7 +1020,7 @@ def _wrapup_extra(t):
 
 def prompt_kind(t, kind="start"):
     """start 會依有沒有筆記自動分成 new（新課題）或 continue（同一課換新對話）。"""
-    if kind in ("new", "continue", "stuck", "review", "backfill"):
+    if kind in ("new", "continue", "stuck", "review", "backfill", "cards"):
         return kind
     has_notes = any(not e["text"].startswith(STUCK_TAG) for e in t.get("entries", []))
     return "continue" if has_notes else "new"
@@ -1052,7 +1060,7 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
                  intro, "", "## 複習的課題"] + _task_block(t) + _must_block(t)
         lines += _titles_block("我在這一課踩過的錯", _mistakes(t), gist=True) + _blockers_block(t)
         lines += _titles_block("這一課已經有的面試卡", [e for e in t.get("entries", []) if e.get("type") == "面試"])
-        lines += _reviews_block(t)
+        lines += _reviews_block(t) + _weak_cards_block(db, t)
         wrap = wrapup_note(t)
         if wrap:
             lines += ["", "### 本課的總整理筆記（給你出題和對答案用，不要直接唸給我聽）", _clip(wrap["text"], REVIEW_WRAP)]
@@ -1073,6 +1081,22 @@ def build_prompt(db, tid, kind="start", stuck_text=""):
         lines += _blockers_block(t) + _titles_block("其他筆記", other, limit=60) + _code_list_block(tid)
         lines += [""] + tpl("backfill") + [""] + tpl("wrapup") + _wrapup_extra(t) + [""] + tpl("notes") + [""] + tpl("style")
         lines += ["", "先告訴我你打算把這堂課分成哪幾步，並列出資訊不夠、需要我補充的地方，等我回答後再開始整理。"]
+    elif kind == "cards":
+        if t.get("plan") != "SPRINT" or task_kind(t) not in TECH_KINDS or not t.get("entries"):
+            raise ValueError("這個課題沒有可以整理的筆記。")
+        ents = t.get("entries", [])
+        lines = [f"我要為 STM32 學習課題 {tid}「{t['title']}」整理面試卡，之後用來翻卡自測。請根據下面我的筆記來寫。",
+                 intro, "", "## 課題"] + _task_block(t) + _must_block(t)
+        lines += _titles_block("我在這一課踩過的錯", _mistakes(t), gist=True)
+        lines += _titles_block("這一課已經有的面試卡（不要重複）", [e for e in ents if e.get("type") == "面試"])
+        wrap = wrapup_note(t)
+        if wrap:
+            lines += ["", "### 本課的總整理筆記", _clip(wrap["text"], CARDS_WRAP)]
+        else:
+            lines += _full_notes_block("我記下的【解法】", [e for e in ents if e.get("type") == "解法"], BACKFILL_SOLUTIONS)
+            lines += _titles_block("其他筆記", [e for e in ents if e.get("type") == "筆記"], limit=60, gist=True)
+        lines += [""] + tpl("cards") + [""] + tpl("notes") + [""] + tpl("style")
+        lines += ["", "先列出你打算出的題目（一行一題，標明對應哪個必學項目），我確認後再寫成面試卡。"]
     else:
         skip = STUCK_TAG + stuck_text.strip()
         lines = [f"我在 STM32 學習課題 {tid}「{t['title']}」卡關了，需要協助。", intro, "",
@@ -1141,6 +1165,7 @@ def forecast(db, today=None):
     remaining = round(sum(weight(t) for t in tech if t["status"] != "已完成"), 1)
     recent = {d for t in sp for d in study_dates(t) | {r["date"][:10] for r in t.get("reviews") or [] if r.get("date")}
               if 0 <= (today - _date(d)).days < 28}
+    recent |= {d for d in (db.get("card_log") or {}) if 0 <= (today - _date(d)).days < 28}
     eta = None
     if avg and remaining:
         eta = (today + timedelta(days=round(remaining * avg))).strftime("%Y-%m-%d")
@@ -1199,6 +1224,9 @@ def nudges(db):
     for t in sorted(db["tasks"], key=lambda t: t.get("order", 0)):
         if can_review(t) and task_kind(t) in HANDS_ON_KINDS and t.get("entries") and not wrapup_note(t):
             out.append({"kind": "backfill", "task": t["id"], "title": t["title"]})
+    for t in sorted(db["tasks"], key=lambda t: t.get("order", 0)):
+        if can_review(t) and t.get("entries") and sum(1 for e in t["entries"] if e.get("type") == "面試") < FEW_CARDS:
+            out.append({"kind": "cards", "task": t["id"], "title": t["title"]})
     return out
 
 
@@ -1222,6 +1250,201 @@ def act_review(db, body):
     info = review_info(t)
     when = "明天" if info["in_days"] == 1 else f"{info['in_days']} 天後"
     return [f"已記錄複習：{REVIEW_RESULTS[result]}。下次複習 {info['next']}（{when}）。"]
+
+
+# ---------------------------------------------------------------- cards
+# 翻卡自測：卡片不另外存，每次由筆記與必學項目組出來；progress.json 最上層的 cards 只記每張卡的排程。
+CARD_KINDS = ("card", "must", "mistake", "note")
+CARD_KIND_NAMES = {"card": "面試卡", "must": "必學項目", "mistake": "踩過的錯", "note": "筆記與解法"}
+CARD_DEFAULT_KINDS = ("card", "must", "mistake")
+CARD_BATCH = 10                      # 一次自測幾張
+FEW_CARDS = 3                        # 已完成的課題面試卡少於這個數量時，提醒可以補
+MUST_SECTION = "必學範圍對照"          # 總整理筆記裡逐項寫出必學重點的那一段
+MUST_SKIP = re.compile(r"驗收|總整理")  # 這類必學項目是流程，不是可以口頭回答的題目
+
+
+def _split_title(text):
+    """筆記的第一行當題目（去掉【】開頭），其餘當答案。"""
+    rows = text.strip().splitlines()
+    if not rows:
+        return "", ""
+    title = HEAD_RE.sub("", rows[0].strip().lstrip("#").strip(), count=1).strip().strip("*").strip()
+    return title, "\n".join(rows[1:]).strip()
+
+
+def _bigrams(text):
+    text = re.sub(r"[\s`*|｜、，。；：:;,.()（）「」／/\-]+", "", text).lower()
+    return {text[i:i + 2] for i in range(len(text) - 1)}
+
+
+def must_answer(wrap, item):
+    """從總整理筆記的「必學範圍對照」找出這個必學項目對應的那幾行。回傳 (答案, 整段)；找不到就是空字串。"""
+    if not wrap:
+        return "", ""
+    rows = wrap["text"].splitlines()
+    start = next((i for i, x in enumerate(rows) if MUST_SECTION in x), None)
+    if start is None:
+        return "", ""
+    bullet, sec = rows[start].startswith(("- ", "* ")), []
+    for x in rows[start + 1:]:
+        head = x.lstrip().startswith("#") or re.match(r"^\s*\*\*[^*]+\*\*\s*[:：]?\s*$", x)
+        if head or (bullet and x.startswith(("- ", "* "))):
+            break
+        sec.append(x)
+    want = _bigrams(item)
+    filled = [x for x in sec if x.strip()]
+    top = min((len(x) - len(x.lstrip()) for x in filled), default=0)
+    best, score = None, 0.0
+    for i, x in enumerate(sec):
+        # 只比對最外層的項目（縮排在底下的是它的補充）；比的是每一行「：」之前或表格第一格的項目名稱
+        if not x.strip() or len(x) - len(x.lstrip()) != top or re.match(r"^\s*\|?[\s:|-]+\|?\s*$", x):
+            continue
+        name = x.strip().strip("|").split("|")[0] if x.lstrip().startswith("|") else re.split(r"[:：]", x, maxsplit=1)[0]
+        cand = _bigrams(name)
+        sc = len(want & cand) / max(3, min(len(want), len(cand)))
+        if sc > score:
+            best, score = i, sc
+    whole = "\n".join(sec).strip()
+    if best is None or score < 0.5:
+        return "", whole
+    line = sec[best]
+    if line.lstrip().startswith("|"):                       # 表格：帶上表頭
+        top = best
+        while top > 0 and sec[top - 1].lstrip().startswith("|"):
+            top -= 1
+        head = sec[top:top + 2] if top + 1 < best else []
+        return "\n".join(head + [line]).strip(), whole
+    indent = len(line) - len(line.lstrip())
+    out = [line.strip()]
+    for x in sec[best + 1:]:                                # 帶上縮排在它底下的幾行
+        if not x.strip() or len(x) - len(x.lstrip()) <= indent:
+            break
+        out.append(x[indent:])
+    return "\n".join(out), whole
+
+
+def build_deck(db):
+    """所有卡片（不含排程）。來源：【面試】卡、踩過的錯、已完成課題的必學項目、筆記與解法。"""
+    deck = []
+    for t in plan_tasks(db, "SPRINT"):
+        if t.get("priority") == "merged":
+            continue
+        base = {"task": t["id"], "task_title": t["title"]}
+        for e in t.get("entries", []):
+            typ = e.get("type")
+            kind = "card" if typ == "面試" else "mistake" if (typ == "問題" and not is_open(e)) else \
+                   "note" if typ in ("筆記", "解法") else None
+            if not kind or not e.get("id"):
+                continue
+            title, body = _split_title(e["text"])
+            if not title or not body or (kind == "note" and "總整理" in title):
+                continue
+            deck.append(dict(base, key="e:" + e["id"], kind=kind, eid=e["id"], front=title, back=body, ref="",
+                             hint="當時錯在哪？正確的做法是什麼？" if kind == "mistake" else "", born=e["time"][:10]))
+        if can_review(t):
+            wrap = wrapup_note(t)
+            for m in t.get("must") or []:
+                if not m.get("id") or MUST_SKIP.search(m.get("text") or ""):
+                    continue
+                ans, whole = must_answer(wrap, m["text"])
+                ref = "" if ans else (whole or (wrap["text"] if wrap else ""))
+                deck.append(dict(base, key=f"m:{t['id']}:{m['id']}", kind="must", eid=None, front=m["text"], back=ans, ref=ref,
+                                 hint="不看筆記，口頭解釋這一項", born=t["finished_at"]))
+    return deck
+
+
+def card_info(db, card, today=None):
+    """一張卡的排程。沒有紀錄的卡在進卡堆的隔天到期。"""
+    today = today or datetime.now().date()
+    st = (db.get("cards") or {}).get(card["key"]) or {}
+    nxt = st.get("next") or (_date(card["born"]) + timedelta(days=1)).strftime("%Y-%m-%d")
+    return {"lv": st.get("lv", 0), "next": nxt, "due": _date(nxt) <= today, "n": st.get("n", 0),
+            "miss": st.get("miss", 0), "last": st.get("last")}
+
+
+def card_summary(db, today=None):
+    """各類卡片的總數與到期數，以及每個課題各有幾張。"""
+    today = today or datetime.now().date()
+    total, due, nxt, tasks = {k: 0 for k in CARD_KINDS}, {k: 0 for k in CARD_KINDS}, {k: None for k in CARD_KINDS}, {}
+    for c in build_deck(db):
+        info = card_info(db, c, today)
+        row = tasks.setdefault(c["task"], {"id": c["task"], "title": c["task_title"],
+                                           "total": {k: 0 for k in CARD_KINDS}, "due": {k: 0 for k in CARD_KINDS}})
+        total[c["kind"]] += 1
+        row["total"][c["kind"]] += 1
+        if info["due"]:
+            due[c["kind"]] += 1
+            row["due"][c["kind"]] += 1
+        elif nxt[c["kind"]] is None or info["next"] < nxt[c["kind"]]:
+            nxt[c["kind"]] = info["next"]
+    return {"total": total, "due": due, "next": nxt, "tasks": list(tasks.values()), "names": CARD_KIND_NAMES, "batch": CARD_BATCH}
+
+
+def _spread(cards):
+    """相鄰兩張盡量來自不同課題（交錯練習），其餘順序不變。"""
+    rest, out = list(cards), []
+    while rest:
+        i = next((k for k, c in enumerate(rest) if not out or c["task"] != out[-1]["task"]), 0)
+        out.append(rest.pop(i))
+    return out
+
+
+def pick_cards(db, mode="due", kinds=None, task="", limit=CARD_BATCH, today=None):
+    """挑出這一輪要翻的卡。due：到期的，先面試卡、再依到期日；free：自由練習，隨機、不看到期日。"""
+    kinds = [k for k in (kinds or CARD_DEFAULT_KINDS) if k in CARD_KINDS]
+    deck = [dict(c, **card_info(db, c, today)) for c in build_deck(db) if c["kind"] in kinds and (not task or c["task"] == task)]
+    if mode == "free":
+        random.shuffle(deck)
+    else:
+        deck = [c for c in deck if c["due"]]
+        deck.sort(key=lambda c: (c["kind"] != "card", c["next"], c["key"]))
+    picked = _spread(deck[:limit] if limit else deck)
+    return picked, len(deck)
+
+
+def prune_cards(db):
+    """筆記或必學項目已經不存在的卡，把排程紀錄清掉。"""
+    cards = db.get("cards")
+    if not cards:
+        return
+    valid = {"e:" + e["id"] for t in db["tasks"] for e in t.get("entries", []) if e.get("id")} | \
+            {f"m:{t['id']}:{m['id']}" for t in db["tasks"] for m in t.get("must") or [] if m.get("id")}
+    for key in [k for k in cards if k not in valid]:
+        del cards[key]
+
+
+def _weak_cards_block(db, t):
+    """翻卡自測時答不出來、到現在還沒補回來的卡：帶進複習提示詞，請 Claude 優先考。"""
+    st = db.get("cards") or {}
+    weak = [c for c in build_deck(db) if c["task"] == t["id"] and c["kind"] in CARD_DEFAULT_KINDS
+            and st.get(c["key"], {}).get("miss") and not st[c["key"]].get("lv")]
+    if not weak:
+        return []
+    return ["", "### 翻卡自測時答不出來的（優先再考）"] + [f"- {c['front']}（{CARD_KIND_NAMES[c['kind']]}）" for c in weak[:20]]
+
+
+def act_card_rate(db, body):
+    """記錄一張卡的自評。記得 → 換下一個間隔；模糊 → 同樣的間隔；忘了 → 回到隔天。同一天只算第一次。"""
+    key, result = body.get("key") or "", body.get("result")
+    if result not in REVIEW_RESULTS:
+        raise ValueError("自評結果不正確。")
+    card = next((c for c in build_deck(db) if c["key"] == key), None)
+    if not card:
+        raise ValueError("找不到這張卡（對應的筆記可能已經刪除）。")
+    today = datetime.now().date()
+    day = today.strftime("%Y-%m-%d")
+    cards = db.setdefault("cards", {})
+    st = cards.get(key) or {"lv": 0, "n": 0, "miss": 0}
+    if st.get("last") == day:
+        return {"messages": [], "counted": False, "card": card_info(db, card, today)}
+    lv = st.get("lv", 0) + 1 if result == "good" else (0 if result == "weak" else st.get("lv", 0))
+    gap = REVIEW_INTERVALS[lv] if lv < len(REVIEW_INTERVALS) else REVIEW_KEEP
+    cards[key] = {"lv": lv, "next": (today + timedelta(days=gap)).strftime("%Y-%m-%d"), "last": day,
+                  "n": st.get("n", 0) + 1, "miss": st.get("miss", 0) + (result == "weak")}
+    log_ = db.setdefault("card_log", {})
+    log_[day] = log_.get(day, 0) + 1
+    save(db, export=False)             # 一輪要評很多張，不必每張都重新產生所有筆記頁
+    return {"messages": [], "counted": True, "card": card_info(db, card, today)}
 
 
 # ---------------------------------------------------------------- actions
@@ -1501,6 +1724,7 @@ ACTIONS = {
     "/api/todo": act_todo,
     "/api/must": act_must,
     "/api/review": act_review,
+    "/api/card/rate": act_card_rate,
     "/api/open-folder": act_open_folder,
     "/api/file/delete": act_delete_file,
 }
@@ -1536,7 +1760,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"tasks": db["tasks"], "git": git_info(), "now": now(),
                                    "todos": all_todos(db), "later": all_later(db), "forecast": forecast(db),
                                    "review": {t["id"]: r for t in db["tasks"] for r in [review_info(t)] if r},
-                                   "nudges": nudges(db),
+                                   "nudges": nudges(db), "cards": card_summary(db),
                                    "sync_error": STATE.get("sync_error"),
                                    "sync_msg": STATE.pop("sync_msg", "") or ""})
         if u.path == "/api/ping":
@@ -1556,6 +1780,18 @@ class Handler(BaseHTTPRequestHandler):
             except (KeyError, ValueError) as e:
                 return self.send(400, {"error": str(e)})
             return self.send(200, {"prompt": text, "kind": kind})
+        if u.path == "/api/cards":
+            q = parse_qs(u.query)
+            try:
+                with LOCK:
+                    db = load()
+                mode = "free" if q.get("mode", ["due"])[0] == "free" else "due"
+                kinds = [k for k in q.get("kinds", [""])[0].split(",") if k]
+                limit = max(0, int(q.get("limit", [str(CARD_BATCH)])[0] or 0))
+                cards, total = pick_cards(db, mode, kinds, q.get("task", [""])[0], limit)
+            except (KeyError, ValueError) as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(200, {"cards": cards, "total": total, "mode": mode})
         if u.path == "/api/files":
             tid = parse_qs(u.query).get("id", [""])[0]
             try:

@@ -23,10 +23,10 @@ ROOT = os.path.dirname(HERE)
 RESULTS = []
 KINDS = ("register", "driver", "arch", "debug", "concept", "career", "prep")
 PROMPT_FILES = ("teach_new", "teach_continue", "teach_common", "scope", "hal", "wrapup", "refs", "notes", "style", "stuck",
-                "review", "backfill") + \
+                "review", "backfill", "cards") + \
     tuple("kind_" + k for k in KINDS)
 FORBIDDEN = ("對應的舊 HAL 版任務", "預定 10-", "4.5 ", "目標次數")     # 不應該出現在提示詞裡的文字
-LIMITS = {"new": 10000, "continue": 10000, "review": 12000, "backfill": 30000}   # 提示詞字數上限（求助提示詞另外算，因為含程式碼）
+LIMITS = {"new": 10000, "continue": 10000, "review": 12000, "backfill": 30000, "cards": 30000}   # 提示詞字數上限（求助提示詞另外算，因為含程式碼）
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -176,10 +176,11 @@ def _():
             if len(text) > worst.get(kind, (0, ""))[0]:
                 worst[kind] = (len(text), t["id"])
         extra = (["review"] if app.can_review(t) else []) + \
-                (["backfill"] if t.get("entries") and app.task_kind(t) in app.TECH_KINDS else [])
+                (["backfill", "cards"] if t.get("entries") and app.task_kind(t) in app.TECH_KINDS else [])
         for kind in extra:
             text = app.build_prompt(db, t["id"], kind)
-            need = ("## 請這樣考我", "## 結束時給我") if kind == "review" else ("## 請這樣整理", "## 收尾總整理", "收尾總整理時另外附上")
+            need = {"review": ("## 請這樣考我", "## 結束時給我"), "cards": ("## 請這樣整理", "【面試】"),
+                    "backfill": ("## 請這樣整理", "## 收尾總整理", "收尾總整理時另外附上")}[kind]
             for must in need + ("## 寫法規則", "## 筆記格式"):
                 assert must in text, f"{t['id']} 的 {kind} 提示詞缺少「{must}」"
             assert len(text) <= LIMITS[kind], f"{t['id']} 的 {kind} 提示詞有 {len(text)} 字，超過上限 {LIMITS[kind]}"
@@ -287,10 +288,11 @@ def _():
            "entries": [], "sessions": []}
     dep["title"] = "陀螺儀"
     kinds = [(x["kind"], x["task"]) for x in app.nudges({"tasks": [dep, nxt]})]
-    assert kinds == [("start", "B"), ("backfill", "A")], kinds
+    assert kinds == [("start", "B"), ("backfill", "A"), ("cards", "A")], kinds
     dep["entries"].append({"type": "解法", "text": "【解法】A 總整理：從頭到尾每一步", "time": "2026-01-10 11:00"})
     nxt["status"] = "進行中"
-    assert app.nudges({"tasks": [dep, nxt]}) == [], "有總整理、後續課題已開始之後就不再提醒"
+    left = [x["kind"] for x in app.nudges({"tasks": [dep, nxt]})]
+    assert left == ["cards"], f"有總整理、後續課題已開始之後，只剩面試卡的提醒：{left}"
 
 
 @check("面試準備頁的彙整")
@@ -324,6 +326,61 @@ def _():
         assert must in text, f"面試準備頁缺少「{must}」"
     assert "無關的筆記" not in text and "只有一般筆記" not in text and "T3" not in text, "面試準備頁放進了無關的內容"
     assert "面試卡 1 則" in text
+
+
+@check("翻卡自測：卡片組成與排程")
+def _():
+    import datetime as dt
+    app = load_app()
+    D0 = dt.date(2026, 1, 10)
+    day = lambda n: (D0 + dt.timedelta(days=n)).strftime("%Y-%m-%d")
+    note = lambda i, typ, text, **kw: dict({"id": f"n{i}", "type": typ, "text": text, "time": day(0) + " 10:00", "resolved": None}, **kw)
+    wrap = "\n".join(["【解法】T1 總整理：從頭到尾每一步", "**重點**", "", "## 必學範圍對照", "",
+                      "- 為什麼要先開周邊時脈：沒有時脈，寫入會被忽略", "  - 補充：RCC_APB2ENR",
+                      "- BSRR 和讀改寫 ODR 的差異：BSRR 是單一寫入", "", "## 其他", "- 不相關"])
+    t1 = {"id": "T1", "plan": "SPRINT", "title": "GPIO", "status": "已完成", "kind": "register", "priority": "core", "order": 1,
+          "finished_at": day(0), "sessions": [],
+          "must": [{"id": "m1", "text": "為什麼要先開周邊時脈（RCC_APB2ENR）", "done": day(0)},
+                   {"id": "m2", "text": "上拉輸入為什麼要寫 ODR = 1", "done": day(0)},
+                   {"id": "m3", "text": "完成驗收與收尾總整理", "done": day(0)}],
+          "entries": [note(1, "面試", "【面試】BSRR 和直接寫 ODR 差在哪？\n**單一寫入**\n- 說明"),
+                      note(2, "問題", "【問題】PB0 誤寫成 CRH\n- pin 0～7 用 CRL", open=False, resolved=True),
+                      note(3, "問題", "【待解決】還沒有答案的問題\n- 內容", open=True, resolved=False),
+                      note(4, "筆記", "【筆記】只有標題"), note(5, "解法", wrap), note(6, "進度", "【本次進度】做到這\n下一步"),
+                      note(7, "筆記", "【筆記】CNF 與 MODE\n- 內容")]}
+    t2 = {"id": "T2", "plan": "SPRINT", "title": "SysTick", "status": "進行中", "kind": "register", "priority": "core", "order": 2,
+          "sessions": [], "must": [{"id": "m1", "text": "某個必學項目", "done": None}],
+          "entries": [note(8, "問題", "【問題】延遲函式用 if\n- 沒有等待", open=False, resolved=True)]}
+    db = {"tasks": [t2, t1]}
+    deck = {c["key"]: c for c in app.build_deck(db)}
+    assert sorted(deck) == ["e:n1", "e:n2", "e:n7", "e:n8", "m:T1:m1", "m:T1:m2"], sorted(deck)
+    assert [deck[k]["kind"] for k in ("e:n1", "e:n2", "e:n7", "m:T1:m1")] == ["card", "mistake", "note", "must"]
+    assert deck["e:n1"]["front"] == "BSRR 和直接寫 ODR 差在哪？" and deck["e:n1"]["back"].startswith("**單一寫入**")
+    m1, m2 = deck["m:T1:m1"], deck["m:T1:m2"]
+    assert "沒有時脈，寫入會被忽略" in m1["back"] and "補充：RCC_APB2ENR" in m1["back"] and "BSRR 是單一寫入" not in m1["back"], m1["back"]
+    assert m2["back"] == "" and "BSRR 是單一寫入" in m2["ref"] and "不相關" not in m2["ref"], "找不到對應的那一行時，應該附上整段必學範圍對照"
+    table = dict(note(9, "解法", "【解法】T1 總整理\n\n**必學範圍對照**\n\n| 必學項目 | 重點 |\n|---|---|\n| 上拉輸入為什麼要寫 ODR = 1 | ODR 選上拉或下拉 |\n| 其他 | 無關 |"))
+    ans, _whole = app.must_answer(table, "上拉輸入為什麼要寫 ODR = 1")
+    assert ans.splitlines()[0].startswith("| 必學項目") and "ODR 選上拉或下拉" in ans and "無關" not in ans, ans
+    # 排程
+    info = lambda key, n: app.card_info(db, deck[key], today=D0 + dt.timedelta(days=n))
+    assert info("e:n1", 0)["next"] == day(1) and not info("e:n1", 0)["due"] and info("e:n1", 1)["due"], "沒有紀錄的卡在進卡堆的隔天到期"
+    picked, total = app.pick_cards(db, "due", ["card", "must", "mistake"], today=D0 + dt.timedelta(days=1))
+    assert total == 5 and picked[0]["kind"] == "card", [c["key"] for c in picked]
+    assert all(c["kind"] != "note" for c in picked), "沒有勾選的類型不應該出現"
+    assert [c["key"] for c in app.pick_cards(db, "due", ["mistake"], task="T2", today=D0 + dt.timedelta(days=1))[0]] == ["e:n8"]
+    assert app.pick_cards(db, "due", ["card"], today=D0)[1] == 0 and app.pick_cards(db, "free", ["card"], today=D0)[1] == 1
+    seq = app._spread([{"task": "A"}, {"task": "A"}, {"task": "B"}, {"task": "A"}])
+    assert [c["task"] for c in seq] == ["A", "B", "A", "A"], "相鄰兩張應該盡量來自不同課題"
+    s = app.card_summary(db, today=D0 + dt.timedelta(days=1))
+    assert s["total"] == {"card": 1, "must": 2, "mistake": 2, "note": 1} and s["due"]["card"] == 1, s
+    # 複習提示詞帶入翻卡答不出來的卡；筆記刪除後紀錄被清掉
+    db["cards"] = {"e:n2": {"lv": 0, "next": day(2), "last": day(1), "n": 1, "miss": 1}, "e:gone": {"lv": 1}, "m:T1:m9": {"lv": 1}}
+    assert "PB0 誤寫成 CRH（踩過的錯）" in "\n".join(app._weak_cards_block(db, t1))
+    app.prune_cards(db)
+    assert sorted(db["cards"]) == ["e:n2"], "已經不存在的卡，排程紀錄應該被清掉"
+    assert app.forecast({"tasks": [t1], "card_log": {day(3): 5}}, today=D0 + dt.timedelta(days=4))["study_days_28"] == 2, "翻卡的日子應該算進學習日"
+    assert [x["task"] for x in app.nudges(db) if x["kind"] == "cards"] == ["T1"], "面試卡不到 3 則的已完成課題應該提醒"
 
 
 @check("TODO 會帶進提示詞")
@@ -544,6 +601,29 @@ def _():
                 call("/api/review", {"id": rid, "undo": True})
                 assert call("/api/state")["review"][rid]["count"] == n, "撤銷複習紀錄沒有生效"
             assert refused("/api/review", {"id": fresh, "result": "good"}), "還沒完成的課題不應該能記錄複習"
+            # 翻卡自測：取卡、自評、同一天只算第一次、自由練習不改排程、刪除筆記後紀錄清掉
+            st = call("/api/state")
+            assert set(st["cards"]["total"]) == {"card", "must", "mistake", "note"}, "狀態裡沒有卡片統計"
+            got = call("/api/cards?mode=due&kinds=mistake,note&limit=3")
+            if got["cards"]:
+                c0 = got["cards"][0]
+                assert c0["front"] and c0["due"] and len(got["cards"]) <= 3 and got["total"] >= len(got["cards"])
+                r1 = call("/api/card/rate", {"key": c0["key"], "result": "weak"})
+                assert r1["counted"] and not r1["card"]["due"] and r1["card"]["miss"] == 1, r1
+                r2 = call("/api/card/rate", {"key": c0["key"], "result": "good"})
+                assert not r2["counted"] and r2["card"]["lv"] == 0, "同一天對同一張卡評第二次不應該算"
+                again = call("/api/cards?mode=due&kinds=mistake,note&limit=0")
+                assert all(c["key"] != c0["key"] for c in again["cards"]) and again["total"] == got["total"] - 1, "評過的卡今天不應該再到期"
+                assert any(c["key"] == c0["key"] for c in call("/api/cards?mode=free&kinds=mistake,note&limit=0")["cards"]), "自由練習應該包含還沒到期的卡"
+                saved = json.load(open(os.path.join(tmp, "learning", "progress.json"), encoding="utf-8"))
+                assert c0["key"] in saved["cards"] and sum(saved["card_log"].values()) == 1, "翻卡的排程沒有存進 progress.json"
+                if c0["task"] in st["review"]:
+                    assert "翻卡自測時答不出來的" in call("/api/prompt?id=" + c0["task"] + "&kind=review")["prompt"]
+                call("/api/entry/delete", {"id": c0["task"], "eid": c0["eid"]})
+                saved = json.load(open(os.path.join(tmp, "learning", "progress.json"), encoding="utf-8"))
+                assert c0["key"] not in saved["cards"], "筆記刪除後，卡片的排程紀錄應該清掉"
+            assert refused("/api/card/rate", {"key": "e:沒有這張", "result": "good"}), "不存在的卡不應該能自評"
+            assert call("/api/prompt?id=" + (rid or tid) + "&kind=cards")["kind"] == "cards"
             if hal:
                 assert refused("/api/review", {"id": hal, "result": "good"}), "舊計畫不應該能記錄複習"
             # 完成課題：排入複習並帶出複習提示詞（暫存資料夾不是 Git repo 才測，避免真的 commit）

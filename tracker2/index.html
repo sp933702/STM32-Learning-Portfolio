@@ -90,6 +90,15 @@ textarea{min-height:90px;resize:vertical}
 .dash .tile.wide{flex:2;min-width:260px}
 .pill.opt{background:var(--view);color:#fff}
 .pill.due{background:var(--warn);color:#fff}
+.kinds{margin:8px 0}
+.kinds label{display:inline-flex;gap:5px;align-items:center;margin-right:16px;cursor:pointer}
+select.sel{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:100%}
+.quiz .front{font-size:19px;font-weight:700;line-height:1.5;margin:18px 0 4px}
+.quiz .front p{margin:0}
+.quiz .ans{border-top:1px dashed var(--line);margin-top:16px;padding-top:12px;max-height:50vh;overflow:auto}
+.quiz .rate button{min-width:104px;padding:9px 14px}
+.quiz .rate .good{border-color:var(--ok);color:var(--ok)} .quiz .rate .weak{border-color:var(--bad);color:var(--bad)}
+.quiz .sum b{font-size:20px}
 .rev{display:flex;gap:8px;align-items:baseline;padding:4px 0}
 .must{margin:6px 0 10px}
 .must label{display:flex;gap:8px;align-items:baseline;padding:2px 0;cursor:pointer}
@@ -161,6 +170,7 @@ window.addEventListener("error", function(ev){
         <button data-plan="HAL" title="以前用 HAL 做的課題，已封存，只能查看">舊紀錄（HAL，唯讀）</button>
       </div>
     </div>
+    <div id="quizBox"></div>
     <div id="remindBox"></div>
     <div id="todoBox"></div>
     <div id="laterBox"></div>
@@ -260,6 +270,8 @@ window.addEventListener("error", function(ev){
       <span class="muted">Claude 給的面試卡，到這一課的「＋ 新增筆記到這一課」貼上</span></div>
   </div>
 </div></div>
+
+<div class="modal" id="quizModal"><div class="card wide" id="quizCard"></div></div>
 
 <div class="modal" id="stuckModal"><div class="card">
   <div class="title">卡關求助</div>
@@ -362,7 +374,7 @@ function md(text){
   }
   return html;
 }
-let S = {tasks:[], git:{}, todos:[], later:[], review:{}, nudges:[]}, showDoneTodo = false, showDoneLater = false, editing = null, plan = "SPRINT", typeFilter = "", entryType = "問題", open = new Set(), busy = false;
+let S = {tasks:[], git:{}, todos:[], later:[], review:{}, nudges:[], cards:null}, showDoneTodo = false, showDoneLater = false, editing = null, plan = "SPRINT", typeFilter = "", entryType = "問題", open = new Set(), busy = false;
 
 async function api(path, body){
   const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
@@ -398,7 +410,7 @@ function render(){
     : `<span>⎇ ${esc(g.branch)}</span>` + (g.web ? `<a href="${esc(g.web)}" target="_blank">GitHub</a>` : "<span>（未設定 remote）</span>")
       + (g.dirty ? `<span title="有尚未 commit 的變更">●</span>` : "");
   $("#syncBtn").disabled = !g.remote;
-  renderSyncError(); renderDash(); renderActive(); renderRemind(); renderTodos(); renderLater(); renderTasks(); renderReview();
+  renderSyncError(); renderDash(); renderActive(); renderQuizBox(); renderRemind(); renderTodos(); renderLater(); renderTasks(); renderReview();
 }
 
 // ---------- 進度儀表：不設每課次數，只依實際速度推算完成日
@@ -453,16 +465,128 @@ function renderRemind(){
 function reviewHtml(t){
   const r = rv(t), revs = t.reviews || [];
   const canBack = TECH_KINDS.includes(t.kind) && t.entries.length && !hasWrapup(t);
-  if (!r && !revs.length && !canBack) return "";
-  return `<h4>複習${r ? `（下次：${esc(r.next)}${r.due ? "，已到複習日" : ""}）` : ""}</h4>
+  const canCards = TECH_KINDS.includes(t.kind) && t.entries.length > 0;
+  if (!r && !revs.length && !canBack && !canCards) return "";
+  return `<h4>複習與面試卡${r ? `（下次複習：${esc(r.next)}${r.due ? "，已到複習日" : ""}）` : ""}</h4>
     ${revs.map(x => `<div>${esc(x.date)}　${RESULT_TEXT[x.result] || ""}${x.note ? `　<span class="muted">還不穩：${esc(x.note)}</span>` : ""}</div>`).join("")
       || (r ? `<div class="muted">還沒有複習紀錄。</div>` : "")}
     <div class="row" style="margin:6px 0">
       ${r ? `<button class="small" onclick="showPromptFor('${t.id}','review')">複習（取得提示詞、記錄結果）</button>` : ""}
       ${canBack ? `<button class="small" onclick="showPromptFor('${t.id}','backfill')">補做總整理提示詞</button>` : ""}
+      ${canCards ? `<button class="small" onclick="showPromptFor('${t.id}','cards')">產生面試卡提示詞</button>` : ""}
       ${revs.length ? `<button class="small" onclick="if(confirm('撤銷最後一次複習紀錄？'))act('/api/review',{id:'${t.id}',undo:true})">撤銷最後一次紀錄</button>` : ""}
     </div>`;
 }
+
+// ---------- 翻卡自測：看題目先自己講，再翻答案自評。卡片由筆記與必學項目組成，排程存在 progress.json 的 cards。
+const KIND_NAME = {card:"面試卡", must:"必學項目", mistake:"踩過的錯", note:"筆記與解法"};
+const RATE_KEY = {"1":"good", "2":"ok", "3":"weak"};
+let quizKinds = ["card"], quizTask = "", quiz = null;
+try { const k = JSON.parse(localStorage.getItem("quizKinds") || "null");
+      if (Array.isArray(k) && k.some(x => KIND_NAME[x])) quizKinds = k.filter(x => KIND_NAME[x]); } catch {}
+function setQuizKind(k, on){
+  quizKinds = Object.keys(KIND_NAME).filter(x => x === k ? on : quizKinds.includes(x));
+  try { localStorage.setItem("quizKinds", JSON.stringify(quizKinds)); } catch {}
+  renderQuizBox();
+}
+function quizCount(what, kinds){              // what: due 或 total；依目前選的課題加總
+  const c = S.cards; if (!c) return 0;
+  const rows = quizTask ? c.tasks.filter(t => t.id === quizTask) : c.tasks;
+  return rows.reduce((n, t) => n + kinds.reduce((m, k) => m + (t[what][k] || 0), 0), 0);
+}
+function renderQuizBox(){
+  const c = S.cards, box = $("#quizBox");
+  if (!c){ box.innerHTML = ""; return; }
+  if (quizTask && !c.tasks.some(t => t.id === quizTask)) quizTask = "";
+  const due = quizCount("due", quizKinds), total = quizCount("total", quizKinds), batch = c.batch || 10;
+  const few = (S.nudges || []).filter(x => x.kind === "cards");
+  const nexts = quizKinds.map(k => c.next[k]).filter(Boolean).sort();
+  box.innerHTML = `<div class="card" style="margin-bottom:12px">
+    <div class="row"><b>翻卡自測</b><span class="muted">看題目先自己講一次，再翻答案自評。不用開 Claude，一次 ${batch} 張約 5 分鐘。</span></div>
+    <div class="kinds">${Object.keys(KIND_NAME).map(k => `<label><input type="checkbox" ${quizKinds.includes(k) ? "checked" : ""}
+        onchange="setQuizKind('${k}', this.checked)"><span>${KIND_NAME[k]}</span><span class="muted">到期 ${quizCount("due", [k])}／共 ${quizCount("total", [k])}</span></label>`).join("")}</div>
+    <div class="row"><select class="sel" onchange="quizTask=this.value;renderQuizBox()">
+        <option value="">全部課題</option>${c.tasks.map(t => `<option value="${esc(t.id)}" ${t.id === quizTask ? "selected" : ""}>${esc(t.id.replace("SPRINT-", ""))}　${esc(t.title)}</option>`).join("")}</select>
+      <span class="muted">${!quizKinds.length ? "請至少勾選一種卡片" : !total ? "勾選的範圍還沒有卡片" : due ? "" : nexts.length ? `目前沒有到期的卡，下一張 ${esc(nexts[0])} 到期` : ""}</span><span class="sp"></span>
+      <button ${total ? "" : "disabled"} title="隨機抽 ${batch} 張，不看到期日，也不改變排程。面試前想整批重翻時用" onclick="startQuiz('free')">自由練習</button>
+      <button class="primary" ${due ? "" : "disabled"} onclick="startQuiz('due')">開始自測（${due} 張到期${due > batch ? `，先翻 ${batch} 張` : ""}）</button></div>
+    ${few.length ? `<div class="row" style="margin-top:8px"><span class="muted">面試卡還不到 3 則的課題，按名稱取得「產生面試卡」提示詞：</span>
+      ${few.map(x => `<button class="small" onclick="showPromptFor('${x.task}','cards')">${esc(x.title)}</button>`).join("")}</div>` : ""}
+  </div>`;
+}
+async function startQuiz(mode){
+  if (!quizKinds.length){ toast("請至少勾選一種卡片"); return; }
+  let j;
+  try { j = await api(`/api/cards?mode=${mode}&kinds=${quizKinds.join(",")}&task=${encodeURIComponent(quizTask)}`); }
+  catch(e){ toast("⚠ " + e.message, 6000); return; }
+  if (!j.cards.length){ toast(mode === "due" ? "勾選的類型目前沒有到期的卡，可以用「自由練習」。" : "勾選的範圍沒有卡片。"); return; }
+  quiz = {mode, cards:j.cards, i:0, shown:false, done:false, busy:false, count:{good:0, ok:0, weak:0}, missed:[], left:j.total - j.cards.length};
+  $("#quizModal").classList.add("on"); renderQuiz();
+}
+function quizAnswer(c){
+  if (c.back) return md(c.back);
+  if (c.ref) return `<div class="muted" style="margin-bottom:8px">這一項在總整理裡沒有單獨的答案。下面是這一課總整理的相關內容，請自己對照：</div>` + md(c.ref);
+  return `<div class="muted">這一課還沒有總整理筆記，沒有現成的答案。請按「打開這一課」到筆記裡對照；補做總整理之後這裡就會有答案。</div>`;
+}
+function renderQuiz(){
+  const q = quiz, el = $("#quizCard"); if (!q) return;
+  if (q.done){
+    const n = q.count;
+    el.innerHTML = `<div class="quiz"><div class="title">這一輪結束</div>
+      <div class="row sum" style="margin:12px 0;gap:26px"><span><b>${n.good}</b> 記得</span><span><b>${n.ok}</b> 模糊</span><span><b>${n.weak}</b> 忘了</span></div>
+      ${q.mode === "free" ? `<div class="muted">自由練習不會改變排程。</div>` : ""}
+      ${q.missed.length ? `<div class="detail"><h4>忘了的卡（明天會再出現）</h4>${q.missed.map(c => `<div class="md">${mdInline(c.front)} <span class="muted">${esc(c.task.replace("SPRINT-", ""))}・${KIND_NAME[c.kind]}</span></div>`).join("")}</div>` : ""}
+      <div class="row" style="margin-top:16px"><span class="muted">${q.mode === "due" ? (q.left > 0 ? `勾選的類型還有 ${q.left} 張到期。` : "勾選的類型今天到期的都翻完了。") : ""}</span><span class="sp"></span>
+        <button onclick="endQuiz()">關閉</button>
+        ${q.mode === "free" || q.left > 0 ? `<button class="primary" onclick="startQuiz('${q.mode}')">再來一輪</button>` : ""}</div></div>`;
+    return;
+  }
+  const c = q.cards[q.i];
+  el.innerHTML = `<div class="quiz">
+    <div class="row"><span class="pill">${KIND_NAME[c.kind]}</span><span class="code">${esc(c.task)}</span><span class="muted">${esc(c.task_title)}</span>
+      ${c.again ? `<span class="pill due">剛才忘了，再一次</span>` : ""}<span class="sp"></span>
+      <span class="muted">${q.i + 1} / ${q.cards.length}${q.mode === "free" ? "　自由練習" : ""}</span><button class="small" onclick="endQuiz()">結束</button></div>
+    <div class="front md">${md(c.front)}</div>
+    ${c.hint ? `<div class="muted">${esc(c.hint)}</div>` : ""}
+    ${q.shown ? `<div class="ans md">${quizAnswer(c)}</div>
+      <div class="row rate" style="margin-top:14px">
+        <button class="good" onclick="rateQuiz('good')" title="不看答案就講得出重點">記得（1）</button>
+        <button onclick="rateQuiz('ok')" title="講得出一部分，或想很久">模糊（2）</button>
+        <button class="weak" onclick="rateQuiz('weak')" title="講不出來">忘了（3）</button><span class="sp"></span>
+        ${c.eid ? `<button class="small" onclick="quizEdit('${c.task}','${c.eid}')">編輯這則筆記</button>` : `<button class="small" onclick="quizOpen('${c.task}')">打開這一課</button>`}</div>`
+    : `<div class="row" style="margin-top:26px"><span class="sp"></span><button class="primary" style="padding:10px 26px" onclick="revealQuiz()">顯示答案（空白鍵）</button><span class="sp"></span></div>`}
+  </div>`;
+}
+function revealQuiz(){ if (quiz && !quiz.done && !quiz.shown){ quiz.shown = true; renderQuiz(); } }
+async function rateQuiz(res){
+  const q = quiz; if (!q || q.done || !q.shown || q.busy) return;
+  const c = q.cards[q.i]; q.busy = true;
+  if (!c.again){                                  // 忘了的卡在這一輪最後再出現一次，那一次不計分
+    q.count[res]++;
+    if (res === "weak"){ q.missed.push(c); q.cards.push({...c, again:true}); }
+    if (q.mode === "due"){ try { await api("/api/card/rate", {key:c.key, result:res}); } catch(e){ toast("⚠ 沒有存到：" + e.message, 6000); } }
+  }
+  if (quiz !== q) return;
+  q.busy = false; q.i++; q.shown = false; q.done = q.i >= q.cards.length; renderQuiz();
+}
+function endQuiz(){ $("#quizModal").classList.remove("on"); quiz = null; return refresh().catch(() => {}); }
+function quizEdit(tid, eid){                       // 到複習分頁編輯這張卡對應的筆記
+  editing = tid + "|" + eid; $("#q").value = ""; typeFilter = "";
+  document.querySelectorAll("#typeSeg button").forEach(x => x.classList.toggle("on", x.dataset.type === ""));
+  document.querySelector('nav button[data-tab="review"]').click();
+  endQuiz().then(() => document.querySelector("#reviewList textarea.edit")?.scrollIntoView({block:"center"}));
+}
+function quizOpen(tid){
+  plan = "SPRINT"; open.add(tid); document.querySelector('nav button[data-tab="tasks"]').click();
+  endQuiz().then(() => [...document.querySelectorAll("#taskList .task")].find(x => x.querySelector(".code")?.textContent === tid)?.scrollIntoView({block:"start"}));
+}
+document.addEventListener("keydown", ev => {
+  if (!quiz || !$("#quizModal").classList.contains("on") || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (ev.key === "Escape"){ endQuiz(); return; }
+  if (quiz.done) return;
+  if (ev.key === " " || ev.key === "Enter"){ ev.preventDefault(); revealQuiz(); }
+  else if (quiz.shown && RATE_KEY[ev.key]){ ev.preventDefault(); rateQuiz(RATE_KEY[ev.key]); }
+});
 
 // ---------- 同步衝突警告
 function renderSyncError(){
@@ -858,6 +982,7 @@ const PROMPT_TEXT = {
   continue: ["接續提示詞（換新對話時用）", "同一個對話隔天繼續時不用再貼，直接接著聊就好。只有開新對話時才貼這份：它會帶上你的上次進度和已經記下的筆記標題。"],
   stuck: ["求助提示詞", "複製後貼到 Claude。已附上課題資訊、筆記標題與程式碼；如果有錯誤訊息截圖或波形，也一起貼上。"],
   review: ["複習提示詞（口頭測驗，約 15 分鐘）", "複製後貼到 Claude 的新對話。Claude 會當面試官一次問一題，請不看筆記回答。結束後回到這個視窗（關掉了就再按一次「複習」）記錄結果。"],
+  cards: ["產生面試卡提示詞", "複製後貼到 Claude 的新對話。Claude 會先列出打算出的題目讓你確認，再依你的筆記寫成 5 到 8 則【面試】卡。寫好之後，到這一課的「＋ 新增筆記到這一課」貼上，就能在翻卡自測裡用。"],
   backfill: ["補做總整理提示詞", "這一課還沒有收尾總整理。複製後貼到 Claude 的新對話，Claude 會依你當時的筆記整理出一則【解法】總整理和面試卡；整理好之後，到這一課的「＋ 新增筆記到這一課」貼上。"]};
 let promptTask = null;
 function showPrompt(text, kind, tid){
