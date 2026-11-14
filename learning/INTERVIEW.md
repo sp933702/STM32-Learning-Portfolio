@@ -91,6 +91,12 @@
 
 - 以為 press_event 要加 volatile
 
+### [SPRINT-W01-S05](notes/SPRINT-W01-S05.md) Startup 與 Linker Script
+
+其他提到面試的筆記（全文在這一課的筆記頁）：
+
+- Cortex-M3 暫存器與常見縮寫的全名
+
 ## 還沒有面試卡的已完成課題
 
 到 App 對這些課題按「複習」，複習結束時 Claude 會把題目整理成面試卡。
@@ -99,5 +105,4 @@
 - SPRINT-W01-S02 時脈系統（暫存器）
 - SPRINT-W01-S03 GPIO（暫存器重做）
 - SPRINT-W01-S04 SysTick 與 non-blocking（暫存器）
-- SPRINT-W01-S05 Startup 與 Linker Script
 

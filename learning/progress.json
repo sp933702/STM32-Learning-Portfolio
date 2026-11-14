@@ -1608,8 +1608,8 @@
       "content": "用 debugger 從 Reset_Handler 單步：複製 .data、清 .bss、SystemInit、進 main；讀 .ld 的 MEMORY/SECTIONS；在 .map 找出某全域變數位址與 Flash/RAM 用量",
       "output": "筆記：上電到 main() 流程圖",
       "criteria": "能 3 分鐘口述「上電到 main」；能指出有初值的全域變數在 Flash 與 RAM 各放哪裡",
-      "status": "已完成",
-      "finished_at": "2026-11-14",
+      "status": "進行中",
+      "finished_at": null,
       "orig": "W00-S03",
       "period": "",
       "sessions": [
@@ -1624,6 +1624,12 @@
           "end": "2026-11-14 20:07",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-14 20:31",
+          "end": "2026-11-14 21:51",
+          "prev_status": "進行中",
+          "prev_finished": "2026-11-14"
         }
       ],
       "entries": [
@@ -1663,6 +1669,49 @@
           "text": "【問題】以為 SRAM 就是 stack\n**SRAM 是整塊 20 KB 的 RAM，stack 只是其中最高處的一段**\n\n- 錯在哪：把 SRAM 和 stack 當成同一個東西\n- 正確觀念：SRAM（`0x20000000`～`0x20004FFF`）由低到高依序放 .data → .bss → heap，stack 從最高處 `0x20005000` 往下長\n- 各區段的實際範圍，之後讀 `.ld` 和 `.map` 時再確認",
           "open": false,
           "resolved": true
+        },
+        {
+          "id": "9e40e7d169",
+          "time": "2026-11-14 20:33",
+          "type": "筆記",
+          "text": "【筆記】Cortex-M3 暫存器與常見縮寫的全名\n**SP = Stack Pointer（R13）、LR = Link Register（R14）、PC = Program Counter（R15）**\n\n| 縮寫 | 全名 | 中文 | 用途 |\n|---|---|---|---|\n| R0–R12 | General-purpose registers | 通用暫存器 | 計算、傳參數（R0–R3 傳函式參數和回傳值） |\n| SP（R13） | Stack Pointer | 堆疊指標 | 指向 stack 目前用到的位址 |\n| MSP | Main Stack Pointer | 主堆疊指標 | 重置後使用的 SP，從向量表第一格載入 |\n| PSP | Process Stack Pointer | 行程堆疊指標 | 給 RTOS 的工作用，裸機程式不用 |\n| LR（R14） | Link Register | 連結暫存器 | 存函式的返回位址；重置值 `0xFFFFFFFF` |\n| PC（R15） | Program Counter | 程式計數器 | 下一條要執行的指令位址 |\n| xPSR | Program Status Register | 程式狀態暫存器 | 運算旗標、T bit（bit 24）、目前的例外編號 |\n| T bit | Thumb state bit | Thumb 狀態位元 | 1 = Thumb 狀態；Cortex-M3 必須一直是 1 |\n| SRAM | Static Random Access Memory | 靜態隨機存取記憶體 | 晶片內的 RAM，斷電就消失 |\n| ISR | Interrupt Service Routine | 中斷服務函式 | 向量表每一格指向的函式 |\n\n- 一定要記的：SP、LR、PC 三個的全名和編號，面試常問\n- 查文件：PM0056「The Cortex-M3 processor」→「Core registers」",
+          "resolved": null
+        },
+        {
+          "id": "56a52026eb",
+          "time": "2026-11-14 20:35",
+          "type": "筆記",
+          "text": "【筆記】連結器會丟掉沒人引用的函式與變數：--gc-sections 與 KEEP\n**CubeIDE 預設讓每個函式和變數各占一個區段，連結時沒有人引用的區段整個丟掉，-O0 也一樣**\n\n| | 編譯器最佳化（-O2） | 連結器 gc-sections |\n|---|---|---|\n| 誰做的 | 編譯器（`.c` → `.o`） | 連結器（`.o` → `.elf`） |\n| 刪什麼 | 函式內多餘的讀寫、迴圈 | 整個沒人引用的函式或變數 |\n| 開關 | `-O0` / `-O2` | `-ffunction-sections -fdata-sections` + `--gc-sections` |\n\n- 只宣告、沒用到的全域變數 → 從 `.map` 消失 → 測試時要在程式裡讀它一次\n- 向量表沒有程式用名字引用（是硬體去讀的）→ `.ld` 要寫 `KEEP(*(.isr_vector))`，否則會被丟掉\n- CubeIDE 查看位置：專案 Properties → C/C++ Build → Settings → MCU GCC Compiler → Optimization；MCU GCC Linker → General\n- 和 -O2 的關係：兩者疊加；-O2 刪函式內的程式碼，gc-sections 刪整個沒用到的東西",
+          "resolved": null
+        },
+        {
+          "id": "a853d8724d",
+          "time": "2026-11-14 20:39",
+          "type": "筆記",
+          "text": "【筆記】Reset_Handler 用到的組合語言指令\n**ldr 讀、str 寫、mov 複製、b／bl 跳、cmp＋bcc 比較後條件跳躍**\n\n| 指令 | 全名 | 意思 | 啟動檔裡的例子 |\n|---|---|---|---|\n| `ldr r0, =符號` | Load Register | 把符號的**值**（位址）放進 r0 | `ldr r0, =_estack` → r0 = `0x20005000` |\n| `ldr r4, [r2, r3]` | Load Register | 到記憶體位址 `r2 + r3` **讀**一個 word 放進 r4 | 從 Flash 讀初值 |\n| `str r4, [r0, r3]` | Store Register | 把 r4 **寫**到記憶體位址 `r0 + r3` | 寫進 RAM |\n| `mov sp, r0` | Move | 把 r0 複製到 sp | 設定堆疊指標 |\n| `movs r3, #0` | Move（s = 更新旗標） | r3 = 0 | 計數器歸零 |\n| `adds r3, r3, #4` | Add | r3 = r3 + 4 | 往下一個 word |\n| `cmp r4, r1` | Compare | 比較 r4 和 r1，結果記在旗標 | 檢查是否搬到結尾 |\n| `bcc 標籤` | Branch if Carry Clear | 上一次 cmp 結果是「小於」（無號數）就跳 | 還沒到結尾就繼續 |\n| `b 標籤` | Branch | 無條件跳躍 | `b LoopForever` |\n| `bl 函式` | Branch with Link | 跳到函式，並把返回位址存進 LR | `bl main` |\n\n- `#` 開頭是常數；`[ ]` 代表「到這個位址去讀寫記憶體」\n- `ldr r0, =_estack` 在反組譯（`.list`）裡會變成 `ldr r0, [pc, #52]`：組譯器把常數存在程式碼附近，再用 PC 相對位址讀出來\n- 查文件：PM0056「The Cortex-M3 instruction set」",
+          "resolved": null
+        },
+        {
+          "id": "558f69c429",
+          "time": "2026-11-14 20:55",
+          "type": "筆記",
+          "text": "【筆記】本專案的 SystemInit 被換成 nop：weak 符號沒有定義\n**啟動檔宣告 `.weak SystemInit` 但專案沒有 system_stm32f1xx.c，連結器把 `bl SystemInit` 換成 `nop.w`，什麼都沒做**\n\n| 檔案 | 看到什麼 |\n|---|---|\n| `startup_stm32f103c8tx.s` 第 61 行 | `bl  SystemInit` |\n| `startup_stm32f103c8tx.s` 第 423 行 | `.weak\tSystemInit`（只宣告，沒有定義） |\n| `.map` | 搜尋不到 `SystemInit` |\n| `.list` 的 `<Reset_Handler>:` | `800059c: f3af 8000  nop.w` |\n\n- 一般符號沒定義 → 連結錯誤 `undefined reference`\n- weak 符號沒定義 → 不報錯，值當作 0；`bl` 到它的指令被換成 `nop`\n- weak 有人定義 → 用那個定義（例如自己寫的 `SysTick_Handler` 覆蓋 `Default_Handler`）\n- `SystemInit` 是 CMSIS 規定的名稱，用來放「進 main 前的晶片初始化」；用 HAL／CubeMX 的專案會由 `system_stm32f1xx.c` 提供\n- 本專案的時脈設定由 `main()` 裡的 `Clock_Init()` 負責，所以 `SystemInit` 沒做事也正常\n- 除錯應用：懷疑某個函式「根本沒被呼叫」時，到 `.list` 看呼叫處實際編出了什麼指令",
+          "resolved": null
+        },
+        {
+          "id": "af406f1b4d",
+          "time": "2026-11-14 20:57",
+          "type": "問題",
+          "text": "【問題】以為未初始化的 RAM 會是某個有意義的值\n**剛上電時 SRAM 內容不確定；debugger 重新執行時沒斷電，RAM 還留著上一次的值**\n\n- 錯在哪：猜複製 .data 前 `g_test_data` 會是 `0x080005D9`（Default_Handler 位址 + 1）\n- 原因：把 Flash 裡的向量表和 RAM 混在一起\n- 正確觀念：SRAM 上電後是亂碼，要靠 Reset_Handler 複製 .data、清 .bss 才有正確初值\n- 實驗陷阱：debugger 重新開始 ≠ 斷電，RAM 會保留上次的值；觀察前先在 Memory 視窗手動填入 `DEADBEEF`",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "ddef618141",
+          "time": "2026-11-14 20:59",
+          "type": "筆記",
+          "text": "【筆記】STM32F103 的記憶體種類與記憶體映像\n**Flash 斷電保留、放程式與初值；SRAM 斷電消失、放變數與 stack；周邊暫存器也有位址，用讀寫記憶體的方式操作**\n\n| 種類 | 位址（記憶體映像） | 斷電後 | 寫入方式 | 放什麼 |\n|---|---|---|---|---|\n| 主 Flash（64 KB） | `0x08000000`～`0x0800FFFF` | 保留 | 要先整頁擦除再寫，慢 | 向量表、程式碼（.text）、常數（.rodata）、.data 的**初值** |\n| 系統記憶體 | `0x1FFFF000` 起 | 保留（出廠燒好） | 不能改 | ST 的 bootloader（BOOT0 = 1 時執行） |\n| SRAM（20 KB） | `0x20000000`～`0x20004FFF` | **消失** | 隨時讀寫，快 | .data、.bss、heap、stack |\n| 周邊暫存器 | `0x40000000` 起 | — | 讀寫位址就是操作硬體 | `RCC`、`GPIOC`、`FLASH->ACR`…… |\n| Cortex-M3 核心周邊 | `0xE0000000` 起 | — | 同上 | SysTick、NVIC |\n\n- 有初值的全域變數有兩份：初值存在 Flash（斷電要保留），執行時的變數在 SRAM（要能改）→ 啟動時由 Reset_Handler 從 Flash 複製到 SRAM\n- 查文件：RM0008「儲存器和匯流排架構」→「儲存器映像」；容量看《STM32F103x8 Datasheet》",
+          "resolved": null
         }
       ],
       "stage": "基礎",
