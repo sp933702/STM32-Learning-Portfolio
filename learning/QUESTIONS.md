@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（49）
+## 踩過的錯（51）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -69,6 +69,11 @@
 - 以為 press_event 要加 volatile
 - 改變週期後 last += period 連續補做
 - 以為 now >= last + period 溢位時只是「不 toggle」
+
+### [SPRINT-W01-S05](notes/SPRINT-W01-S05.md) Startup 與 Linker Script
+
+- 把「向量表的 Reset 欄位」和「Reset_Handler 的位址」當成同一件事
+- 以為 SRAM 就是 stack
 
 ## 解法（27）
 

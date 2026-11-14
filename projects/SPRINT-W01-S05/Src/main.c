@@ -27,9 +27,16 @@
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
 #endif
 
+// 測試用變數
+volatile uint32_t g_test_data = 0x12345678U;   // 有初值
+volatile uint32_t g_test_bss;                  // 沒有初值
 
 int main(void)
 {
+	// 開頭讀測試變數一次。為了避免沒被使用的變數被連結器整個丟掉
+	(void)g_test_data;
+	(void)g_test_bss;
+
 	// 將系統時脈切到 72 MHz
 	// 對 GPIO 的影響： 本課的 GPIO 不依賴 72 MHz，用 8 MHz 也能動。
 	// 放在最前面，是因為「開機先把時脈定好」是所有專案的慣例。

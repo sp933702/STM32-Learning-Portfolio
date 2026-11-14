@@ -99,4 +99,5 @@
 - SPRINT-W01-S02 時脈系統（暫存器）
 - SPRINT-W01-S03 GPIO（暫存器重做）
 - SPRINT-W01-S04 SysTick 與 non-blocking（暫存器）
+- SPRINT-W01-S05 Startup 與 Linker Script
 
