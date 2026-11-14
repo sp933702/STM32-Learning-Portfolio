@@ -62,7 +62,7 @@
 
 ### [SPRINT-W01-S04](notes/SPRINT-W01-S04.md) SysTick 與 non-blocking（暫存器）
 
-- 複習 0 次，下次 2026-11-14
+- 複習 0 次，已到複習日
 
 #### 完成標準：32-bit 溢位時 (now - last) 仍正確（面試版）
 
