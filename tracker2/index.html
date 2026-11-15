@@ -90,6 +90,16 @@ textarea{min-height:90px;resize:vertical}
 .dash .tile.wide{flex:2;min-width:260px}
 .pill.opt{background:var(--view);color:#fff}
 .pill.due{background:var(--warn);color:#fff}
+.today .opts{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.today .opt{flex:1;min-width:240px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.today .opt b{font-size:15px}
+.today .opt .what{font-size:14px;min-height:42px}
+.today .opt button{align-self:flex-start;margin-top:auto}
+.dots{display:inline-flex;gap:6px;align-items:center}
+.dot{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted)}
+.dot.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.dot.now{outline:2px solid var(--accent);outline-offset:1px}
+.dot.later{opacity:.45}
 .kinds{margin:8px 0}
 .kinds label{display:inline-flex;gap:5px;align-items:center;margin-right:16px;cursor:pointer}
 select.sel{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:100%}
@@ -161,6 +171,7 @@ window.addEventListener("error", function(ev){
 
 <main class="wrap">
   <div id="syncErr"></div>
+  <section id="todayBox"></section>
   <section id="activeBox"></section>
   <section id="tab-tasks">
     <div class="dash" id="dash"></div>
@@ -410,7 +421,7 @@ function render(){
     : `<span>⎇ ${esc(g.branch)}</span>` + (g.web ? `<a href="${esc(g.web)}" target="_blank">GitHub</a>` : "<span>（未設定 remote）</span>")
       + (g.dirty ? `<span title="有尚未 commit 的變更">●</span>` : "");
   $("#syncBtn").disabled = !g.remote;
-  renderSyncError(); renderDash(); renderActive(); renderQuizBox(); renderRemind(); renderTodos(); renderLater(); renderTasks(); renderReview();
+  renderSyncError(); renderDash(); renderToday(); renderActive(); renderQuizBox(); renderRemind(); renderTodos(); renderLater(); renderTasks(); renderReview();
 }
 
 // ---------- 進度儀表：不設每課次數，只依實際速度推算完成日
@@ -422,7 +433,7 @@ function renderDash(){
   $("#dash").innerHTML = `
     <div class="tile"><b>${f.tech_done} / ${f.tech_total}</b><span>技術必修</span></div>
     <div class="tile"><b>${f.career_done} / ${f.career_total}</b><span>求職線（和技術課並行）</span></div>
-    <div class="tile"><b>${f.study_days_28} 天</b><span>最近 4 週的學習日</span></div>
+    <div class="tile"><b>${S.checkin ? S.checkin.days_28 : f.study_days_28} 天</b><span>${S.checkin ? "最近 4 週簽到的天數" : "最近 4 週的學習日"}</span></div>
     <div class="tile wide">${eta}</div>`;
 }
 const studyDays = t => new Set([...(t.sessions||[]).map(s => (s.start||"").slice(0,10)), ...t.entries.map(e => e.time.slice(0,10))].filter(Boolean)).size;
@@ -478,6 +489,64 @@ function reviewHtml(t){
     </div>`;
 }
 
+// ---------- 今天要做哪一件、簽到
+// 簽到由後端依當天的筆記、翻卡、複習紀錄算出來；只按開始或繼續、沒有存任何筆記不算。
+let wasChecked = null;
+const sprintTasks = () => S.tasks.filter(t => t.plan === "SPRINT" && t.priority !== "merged").sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9));
+function mainTask(){                  // 主線現在該做的課：進行中的優先，否則是下一個還沒開始的必修
+  const list = sprintTasks();
+  return activeTask() || list.find(t => t.status === "進行中" || t.status === "卡關") || list.find(t => t.status === "未開始" && t.priority === "core");
+}
+function lastProgress(t){
+  const e = [...t.entries].reverse().find(x => x.type === "進度" || x.text.startsWith("【本次進度】"));
+  if (!e) return "";
+  const s = e.text.replace(/^【本次進度】\s*/, "").replace(/\s+/g, " ").trim();
+  return s.length > 90 ? s.slice(0, 90) + "…" : s;
+}
+function renderToday(){
+  const c = S.checkin, box = $("#todayBox");
+  if (!c){ box.innerHTML = ""; return; }
+  if (wasChecked === false && c.done) toast("✔ 今天簽到完成");
+  wasChecked = c.done;
+  const w = c.what, did = [w.notes ? `筆記 ${w.notes} 則` : "", w.cards ? `翻卡 ${w.cards} 張` : "", w.reviews ? `複習 ${w.reviews} 次` : ""].filter(Boolean).join("、");
+  const dots = `<span class="dots" title="這一週的簽到">${c.week.map(d => `<span class="dot ${d.done ? "on" : ""} ${d.today ? "now" : ""} ${d.future ? "later" : ""}" title="${esc(d.date)}${d.done ? "　已簽到" : d.future ? "" : "　沒有簽到"}">${d.wd}</span>`).join("")}</span>`;
+  const status = c.done ? `<span class="pill 已完成">今天已簽到</span><span class="muted">${esc(did)}</span>`
+    : `<span class="pill due">今天還沒簽到</span><span class="muted">${did ? `目前：${esc(did)}。` : ""}做完下面任何一件就算簽到；只按開始或繼續、沒有存筆記不算。</span>`;
+  const act_ = activeTask(), main = mainTask();
+  const dueRev = sprintTasks().filter(t => rv(t)?.due).sort((a, b) => rv(a).next.localeCompare(rv(b).next));
+  const nextRev = sprintTasks().filter(t => rv(t) && !rv(t).due).sort((a, b) => rv(a).next.localeCompare(rv(b).next))[0];
+  const cards = S.cards, dueCards = cards ? quizCount("due", quizKinds) : 0, kindsText = quizKinds.map(k => KIND_NAME[k]).join("、") || "還沒勾選類型";
+  const need = Math.max(0, c.cards_need - w.cards);
+  const otherDue = cards ? Object.keys(KIND_NAME).filter(k => !quizKinds.includes(k) && quizCount("due", [k])).map(k => `${KIND_NAME[k]} ${quizCount("due", [k])} 張`).join("、") : "";
+  const opts = `<div class="opts">
+    <div class="opt"><b>推進主線</b>
+      <div class="what">${main ? `<span class="code">${esc(main.id)}</span> ${esc(main.title)}${lastProgress(main) ? `<div class="muted">上次進度：${esc(lastProgress(main))}</div>` : ""}` : "技術主線的課題都完成了。"}</div>
+      <div class="muted">存一則筆記就算簽到</div>
+      ${main ? (act_ && act_.id === main.id ? `<button class="primary" onclick="document.querySelector('#activeBox').scrollIntoView({behavior:'smooth'})">正在進行，回到這一課</button>`
+        : `<button class="primary" onclick="startTask('${main.id}')">${main.sessions?.length ? "繼續這一課" : "開始這一課"}</button>`) : ""}</div>
+    <div class="opt"><b>翻卡片</b>
+      <div class="what">${dueCards ? `${dueCards} 張到期` : "勾選的類型目前沒有到期的卡"}<div class="muted">目前勾選：${esc(kindsText)}（在下面的「翻卡自測」可以改）${
+        !dueCards && otherDue ? `。沒勾的類型有到期的卡：${esc(otherDue)}` : ""}</div></div>
+      <div class="muted">${need ? `今天再翻 ${need} 張就算簽到` : "今天翻的張數已經夠簽到"}</div>
+      ${dueCards ? `<button class="primary" onclick="startQuiz('due')">開始翻卡</button>`
+        : otherDue ? `<button onclick="document.querySelector('#quizBox').scrollIntoView({behavior:'smooth', block:'center'})">去勾選要翻的類型</button>`
+        : `<button ${cards && quizCount("total", quizKinds) ? "" : "disabled"} onclick="startQuiz('free')">自由練習</button>`}</div>
+    <div class="opt"><b>做一課到期的複習</b>
+      <div class="what">${dueRev.length ? `<span class="code">${esc(dueRev[0].id)}</span> ${esc(dueRev[0].title)}<div class="muted">共 ${dueRev.length} 課到期，這是最早的一課</div>`
+        : nextRev ? `目前沒有到期的複習<div class="muted">下一課：${esc(nextRev.title)}（${esc(rv(nextRev).next)}）</div>` : "還沒有可以複習的課題"}</div>
+      <div class="muted">和 Claude 口頭測驗約 15 分鐘，記錄結果就算簽到</div>
+      ${dueRev.length ? `<button class="primary" onclick="showPromptFor('${dueRev[0].id}','review')">取得複習提示詞</button>` : `<button disabled>沒有到期的複習</button>`}</div>
+  </div>`;
+  const openOpts = !c.done || showTodayOpts;
+  box.innerHTML = `<div class="card today">
+    <div class="row"><div class="title">今天要做哪一件？</div><span class="sp"></span>${dots}<span class="muted">最近 4 週簽到 ${c.days_28} 天</span></div>
+    <div class="row" style="margin-top:6px">${status}<span class="sp"></span>
+      ${c.done ? `<button class="small" onclick="showTodayOpts=!showTodayOpts;renderToday()">${showTodayOpts ? "收起選項" : "還想再做一件"}</button>` : ""}</div>
+    ${openOpts ? opts : ""}
+  </div>`;
+}
+let showTodayOpts = false;
+
 // ---------- 翻卡自測：看題目先自己講，再翻答案自評。卡片由筆記與必學項目組成，排程存在 progress.json 的 cards。
 const KIND_NAME = {card:"面試卡", must:"必學項目", mistake:"踩過的錯", note:"筆記與解法"};
 const RATE_KEY = {"1":"good", "2":"ok", "3":"weak"};
@@ -487,7 +556,7 @@ try { const k = JSON.parse(localStorage.getItem("quizKinds") || "null");
 function setQuizKind(k, on){
   quizKinds = Object.keys(KIND_NAME).filter(x => x === k ? on : quizKinds.includes(x));
   try { localStorage.setItem("quizKinds", JSON.stringify(quizKinds)); } catch {}
-  renderQuizBox();
+  renderQuizBox(); renderToday();
 }
 function quizCount(what, kinds){              // what: due 或 total；依目前選的課題加總
   const c = S.cards; if (!c) return 0;
@@ -505,7 +574,7 @@ function renderQuizBox(){
     <div class="row"><b>翻卡自測</b><span class="muted">看題目先自己講一次，再翻答案自評。不用開 Claude，一次 ${batch} 張約 5 分鐘。</span></div>
     <div class="kinds">${Object.keys(KIND_NAME).map(k => `<label><input type="checkbox" ${quizKinds.includes(k) ? "checked" : ""}
         onchange="setQuizKind('${k}', this.checked)"><span>${KIND_NAME[k]}</span><span class="muted">到期 ${quizCount("due", [k])}／共 ${quizCount("total", [k])}</span></label>`).join("")}</div>
-    <div class="row"><select class="sel" onchange="quizTask=this.value;renderQuizBox()">
+    <div class="row"><select class="sel" onchange="quizTask=this.value;renderQuizBox();renderToday()">
         <option value="">全部課題</option>${c.tasks.map(t => `<option value="${esc(t.id)}" ${t.id === quizTask ? "selected" : ""}>${esc(t.id.replace("SPRINT-", ""))}　${esc(t.title)}</option>`).join("")}</select>
       <span class="muted">${!quizKinds.length ? "請至少勾選一種卡片" : !total ? "勾選的範圍還沒有卡片" : due ? "" : nexts.length ? `目前沒有到期的卡，下一張 ${esc(nexts[0])} 到期` : ""}</span><span class="sp"></span>
       <button ${total ? "" : "disabled"} title="隨機抽 ${batch} 張，不看到期日，也不改變排程。面試前想整批重翻時用" onclick="startQuiz('free')">自由練習</button>

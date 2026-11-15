@@ -449,7 +449,7 @@ def export_markdown(db):
     lines = ["# STM32 學習進度", "",
              f"- 技術必修：{fc['tech_done']} / {fc['tech_total']} 完成　求職線：{fc['career_done']} / {fc['career_total']}　"
              f"選修：{fc['optional_done']} / {fc['optional_total']}",
-             f"- 最近 4 週有 {fc['study_days_28']} 個學習日"]
+             f"- 最近 4 週簽到 {checkin_state(db)['days_28']} 天（存了筆記、翻卡 {CHECKIN_CARDS} 張以上或記錄了複習才算）"]
     if fc["eta"]:
         lines.append(f"- 預估技術主線完成日：{fc['eta']}（剩 {fc['remaining']:g} 課，依最近 {len(fc['avg_from'])} 課平均每課 {fc['avg_days']:g} 天推算，會隨實際速度變動）")
     due = [t for t in sprint if (review_info(t) or {}).get("due")]
@@ -1252,6 +1252,56 @@ def act_review(db, body):
     return [f"已記錄複習：{REVIEW_RESULTS[result]}。下次複習 {info['next']}（{when}）。"]
 
 
+# ---------------------------------------------------------------- checkin
+# 簽到：當天真的做了一件事才算。不另外存資料，每次由筆記時間、翻卡紀錄、複習紀錄算出來，
+# 所以以前的日子也有紀錄，而且只按「開始／繼續」卻沒有存任何筆記的日子不會算。
+DAY_START_HOUR = 4                   # 凌晨 4 點前算前一天，讀到跨過午夜不會被拆成兩天
+CHECKIN_CARDS = 5                    # 翻卡至少這麼多張才算簽到
+WEEKDAYS = "一二三四五六日"
+
+
+def study_day(ts=None):
+    """時間所屬的學習日（YYYY-MM-DD）。ts 是「YYYY-MM-DD HH:MM」，不給就是現在。"""
+    t = datetime.strptime(ts[:16], "%Y-%m-%d %H:%M") if ts else datetime.now()
+    return (t - timedelta(hours=DAY_START_HOUR)).strftime("%Y-%m-%d")
+
+
+def day_activity(db):
+    """每個學習日做了什麼：{日期: {"notes": 幾則筆記, "cards": 翻了幾張卡, "reviews": 記錄了幾次複習}}。"""
+    days = {}
+    slot = lambda d: days.setdefault(d, {"notes": 0, "cards": 0, "reviews": 0})
+    for t in db["tasks"]:
+        if t.get("plan") != "SPRINT":
+            continue
+        for e in t.get("entries", []):
+            if e.get("time"):
+                slot(study_day(e["time"]))["notes"] += 1
+        for r in t.get("reviews") or []:
+            if r.get("date"):
+                slot(r["date"][:10])["reviews"] += 1
+    for d, n in (db.get("card_log") or {}).items():
+        slot(d)["cards"] += n
+    return days
+
+
+def is_checkin(act):
+    return bool(act and (act["notes"] or act["reviews"] or act["cards"] >= CHECKIN_CARDS))
+
+
+def checkin_state(db, now_=None):
+    """今天有沒有簽到、這一週每天的狀況、最近 4 週簽到幾天。"""
+    today = _date(study_day(now_))
+    days = day_activity(db)
+    key = lambda d: d.strftime("%Y-%m-%d")
+    monday = today - timedelta(days=today.weekday())
+    week = [{"date": key(d), "wd": WEEKDAYS[d.weekday()], "done": is_checkin(days.get(key(d))),
+             "today": d == today, "future": d > today} for d in (monday + timedelta(days=i) for i in range(7))]
+    mine = days.get(key(today)) or {"notes": 0, "cards": 0, "reviews": 0}
+    return {"today": key(today), "done": is_checkin(mine), "what": mine, "week": week,
+            "days_28": sum(1 for i in range(28) if is_checkin(days.get(key(today - timedelta(days=i))))),
+            "cards_need": CHECKIN_CARDS}
+
+
 # ---------------------------------------------------------------- cards
 # 翻卡自測：卡片不另外存，每次由筆記與必學項目組出來；progress.json 最上層的 cards 只記每張卡的排程。
 CARD_KINDS = ("card", "must", "mistake", "note")
@@ -1442,7 +1492,7 @@ def act_card_rate(db, body):
     cards[key] = {"lv": lv, "next": (today + timedelta(days=gap)).strftime("%Y-%m-%d"), "last": day,
                   "n": st.get("n", 0) + 1, "miss": st.get("miss", 0) + (result == "weak")}
     log_ = db.setdefault("card_log", {})
-    log_[day] = log_.get(day, 0) + 1
+    log_[study_day()] = log_.get(study_day(), 0) + 1
     save(db, export=False)             # 一輪要評很多張，不必每張都重新產生所有筆記頁
     return {"messages": [], "counted": True, "card": card_info(db, card, today)}
 
@@ -1760,7 +1810,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, {"tasks": db["tasks"], "git": git_info(), "now": now(),
                                    "todos": all_todos(db), "later": all_later(db), "forecast": forecast(db),
                                    "review": {t["id"]: r for t in db["tasks"] for r in [review_info(t)] if r},
-                                   "nudges": nudges(db), "cards": card_summary(db),
+                                   "nudges": nudges(db), "cards": card_summary(db), "checkin": checkin_state(db),
                                    "sync_error": STATE.get("sync_error"),
                                    "sync_msg": STATE.pop("sync_msg", "") or ""})
         if u.path == "/api/ping":

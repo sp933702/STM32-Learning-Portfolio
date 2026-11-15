@@ -383,6 +383,27 @@ def _():
     assert [x["task"] for x in app.nudges(db) if x["kind"] == "cards"] == ["T1"], "面試卡不到 3 則的已完成課題應該提醒"
 
 
+@check("簽到：做了一件事才算")
+def _():
+    app = load_app()
+    assert app.study_day("2026-01-10 03:59") == "2026-01-09" and app.study_day("2026-01-10 04:00") == "2026-01-10", "凌晨 4 點前應該算前一天"
+    note = lambda ts: {"id": ts, "type": "筆記", "text": "【筆記】內容", "time": ts}
+    t = {"id": "T1", "plan": "SPRINT", "title": "課題", "status": "進行中", "kind": "register", "priority": "core", "order": 1,
+         "sessions": [{"start": "2026-01-05 20:00", "end": "2026-01-05 20:30"},      # 週一：只按了繼續，沒有存筆記
+                      {"start": "2026-01-06 23:00", "end": "2026-01-07 00:40"}],
+         "entries": [note("2026-01-07 00:30")],                                       # 週二晚上讀到跨過午夜才存筆記
+         "reviews": [{"date": "2026-01-08", "result": "good", "note": ""}]}
+    hal = {"id": "H1", "plan": "HAL", "title": "舊課", "status": "已完成", "sessions": [], "entries": [note("2026-01-09 20:00")]}
+    db = {"tasks": [t, hal], "card_log": {"2026-01-09": app.CHECKIN_CARDS - 1, "2026-01-10": app.CHECKIN_CARDS}}
+    st = app.checkin_state(db, "2026-01-10 21:00")
+    got = "".join("1" if d["done"] else "0" for d in st["week"])
+    assert got == "0101010", f"這一週的簽到應該是：週二（跨夜的筆記）、週四（複習）、週六（翻卡滿 {app.CHECKIN_CARDS} 張），實際 {got}"
+    assert st["today"] == "2026-01-10" and st["done"] and st["what"] == {"notes": 0, "cards": app.CHECKIN_CARDS, "reviews": 0}, st
+    assert st["days_28"] == 3 and [d["wd"] for d in st["week"]] == list("一二三四五六日") and st["week"][6]["future"]
+    early = app.checkin_state(db, "2026-01-09 21:00")
+    assert not early["done"] and early["what"]["cards"] == app.CHECKIN_CARDS - 1, "翻卡張數不夠、舊計畫的筆記都不算簽到"
+
+
 @check("TODO 會帶進提示詞")
 def _():
     app = load_app()
@@ -604,6 +625,7 @@ def _():
             # 翻卡自測：取卡、自評、同一天只算第一次、自由練習不改排程、刪除筆記後紀錄清掉
             st = call("/api/state")
             assert set(st["cards"]["total"]) == {"card", "must", "mistake", "note"}, "狀態裡沒有卡片統計"
+            assert st["checkin"]["done"] and st["checkin"]["what"]["notes"] >= 1 and len(st["checkin"]["week"]) == 7, "前面存過筆記，今天應該已經簽到"
             got = call("/api/cards?mode=due&kinds=mistake,note&limit=3")
             if got["cards"]:
                 c0 = got["cards"][0]

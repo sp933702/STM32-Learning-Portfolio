@@ -62,6 +62,7 @@
 - `learning/README.md`、`learning/QUESTIONS.md`、`learning/INTERVIEW.md`、`learning/notes/` 由 App 自動產生，不要手動改。
 - 協助寫 commit 訊息時，在開頭加上課題代碼（例如 `SPRINT-W02-S04: ...`），App 會據此把 commit 連到課題。
 - 翻卡自測的卡片不另外存，由筆記與必學項目組出來；每張卡的排程存在 `progress.json` 最上層的 `cards` 與 `card_log`。設計與後續的手機複習見 `docs/翻卡自測與手機複習計畫.md`。
+- 簽到不另外存資料，由筆記時間、翻卡紀錄與複習紀錄算出來（`checkin_state()`）；只按開始或繼續、沒有存筆記不算簽到。每晚的手機提醒是 Claude 的排程任務「STM32 學習提醒」，不在這個 repo 裡。
 - 其他注意事項（透過連結的電腦操作時不要執行 `git commit`、修改檔案的方式等）見 `docs/APP改進計畫.md` 第 6 節。
 
 ## 教學方式
