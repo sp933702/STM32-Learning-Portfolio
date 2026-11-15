@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（52）
+## 踩過的錯（53）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -75,8 +75,9 @@
 - 把「向量表的 Reset 欄位」和「Reset_Handler 的位址」當成同一件事
 - 以為 SRAM 就是 stack
 - 以為未初始化的 RAM 會是某個有意義的值
+- SystemInit 執行時，全域變數還不能用
 
-## 解法（27）
+## 解法（28）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -116,6 +117,10 @@
 - 按鍵去彈跳狀態機：button_debounce 模組
 - tick 溢位實驗：讓 tick 從溢位前 2 秒開始
 - SPRINT-W01-S04 總整理：從頭到尾每一步
+
+### [SPRINT-W01-S05](notes/SPRINT-W01-S05.md) Startup 與 Linker Script
+
+- 從 Reset_Handler 單步到 main：設 SP → SystemInit → 複製 .data → 清 .bss → main
 
 ## 待學清單（1 項還沒學）
 

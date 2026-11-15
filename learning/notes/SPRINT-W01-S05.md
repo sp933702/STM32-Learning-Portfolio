@@ -2,7 +2,7 @@
 
 - 狀態：**進行中**
 - 階段：基礎　主題：Startup
-- 進行次數：3 次（最近一次：2026-11-14）
+- 進行次數：4 次（最近一次：2026-11-15）
 - 程式碼：[projects/SPRINT-W01-S05](../../projects/SPRINT-W01-S05)
 
 ## 任務內容
@@ -224,3 +224,118 @@ Debugger 操作：Debug Configurations → Startup 分頁 → Set breakpoint at 
 
 - 有初值的全域變數有兩份：初值存在 Flash（斷電要保留），執行時的變數在 SRAM（要能改）→ 啟動時由 Reset_Handler 從 Flash 複製到 SRAM
 - 查文件：RM0008「儲存器和匯流排架構」→「儲存器映像」；容量看《STM32F103x8 Datasheet》
+
+### [筆記] 2026-11-15 22:36
+
+【筆記】little-endian：最低位的 byte 放在最低的位址
+**`0x12345678` 在記憶體裡依位址由低到高存成 `78 56 34 12`；Cortex-M3 是 little-endian**
+
+| 位址 | +0 | +1 | +2 | +3 |
+|---|---|---|---|---|
+| 內容 | `78` | `56` | `34` | `12` |
+
+- Memory 視窗用 Hex（逐 byte）顯示 → 看到 `78563412`；改用 Hex Integer → 看到 `12345678`
+- 看 Memory 視窗前先確認顯示格式，否則會以為資料被寫錯
+- 之後用 UART／SPI 傳多 byte 資料、或用邏輯分析儀看波形時，也要注意 byte 順序
+
+### [筆記] 2026-11-15 22:58
+
+【筆記】有初值的全域變數有兩個位址：Flash 存初值、RAM 放變數
+**連結器在 Flash 和 RAM 用同樣順序排 .data，所以初值位址 = `_sidata` +（變數位址 − `_sdata`）**
+
+| | 名稱 | 本專案 | 用途 |
+|---|---|---|---|
+| Flash 那份 | LMA（Load Memory Address，載入位址） | `_sidata` = `0x08000654` | 存初值，斷電保留 |
+| RAM 那份 | VMA（Virtual Memory Address，執行位址） | `_sdata` = `0x20000000` | 程式讀寫的變數 |
+
+- 公式：`初值在 Flash 的位址 = _sidata + (變數位址 − _sdata)`
+- 這個公式就是複製迴圈：`ldr r4, [r2, r3]`（Flash）→ `str r4, [r0, r3]`（RAM），r3 是偏移量，每次 +4
+- 實測：`g_test_data` 在 `0x20000000`，偏移量 0 → 初值在 `0x08000654`，Memory 視窗看到 `12345678`
+- 本專案 .data 只有 4 byte（只有 `g_test_data`），迴圈跑 1 圈；.bss 有 `0x30` = 48 byte，清 12 個 word
+
+### [問題] 2026-11-15 22:59
+
+【問題】SystemInit 執行時，全域變數還不能用
+**SystemInit 排在複製 .data、清 .bss 之前，這時所有全域變數和 static 變數都是亂碼**
+
+- 實測：停在 `bl SystemInit`（啟動檔第 61 行）時，`g_test_data` = `DEADBEEF`，不是 `0x12345678`
+- 不能用：有初值的全域變數（.data 還沒複製）、沒初值的全域變數（.bss 還沒清 0，「預設為 0」還不成立）、static 區域變數
+- 可以用：一般區域變數（在 stack 上，SP 在第 59 行已經設好）、直接讀寫暫存器
+- 為什麼排在前面：外接 SRAM 要先初始化記憶體控制器才能放 .data；先調快時脈讓複製迴圈變快
+- 面試版：「SystemInit 在 C 執行環境準備好之前執行，只能操作暫存器，不能依賴全域變數的初值」
+
+### [解法] 2026-11-15 23:00
+
+【解法】從 Reset_Handler 單步到 main：設 SP → SystemInit → 複製 .data → 清 .bss → main
+**Reset_Handler 先設好 SP，再把 .data 初值從 Flash 搬到 RAM、把 .bss 清 0，C 語言對全域變數的保證才成立，最後才能進 main**
+
+整體流程
+`硬體載入 SP、PC → 設 SP → SystemInit（本專案為 nop）→ 複製 .data → 清 .bss → __libc_init_array → main`
+
+| 步驟 | 啟動檔 | 做了什麼 | 為什麼 |
+|---|---|---|---|
+| 設 SP | 第 58–59 行 `ldr r0, =_estack`、`mov sp, r0` | SP = `0x20005000` | 從 bootloader 跳進來、或 debugger 直接設 PC 時，硬體不會讀向量表，SP 可能是別人的值 → 保險再設一次 |
+| SystemInit | 第 61 行 `bl SystemInit` | 本專案被換成 `nop.w`（weak 沒有定義） | 晶片初始化（時脈、外接記憶體）；這時全域變數還不能用 |
+| 複製 .data | 第 64–78 行 | 從 `_sidata`（Flash）複製到 `_sdata`～`_edata`（RAM） | 有初值的全域變數，初值存在 Flash，要搬到 RAM 才能讀寫 |
+| 清 .bss | 第 81–92 行 | `_sbss`～`_ebss` 寫 0 | C 語言保證沒初值的全域變數是 0，靠這裡做到 |
+| `__libc_init_array` | 第 96 行 | 呼叫 C 函式庫的初始化（C++ 建構子等） | 要用到全域變數，排在 .data／.bss 之後 |
+| main | 第 99 行 `bl main` | 進入使用者程式 | 前面全部準備好，C 環境才完整 |
+| main 回來 | 第 101–102 行 `LoopForever` | 無窮迴圈 | 裸機的 main 不該返回，返回了也不會亂跑 |
+
+複製迴圈怎麼運作
+- r0 = `_sdata`、r1 = `_edata`、r2 = `_sidata`、r3 = 偏移量（從 0 開始）
+- `ldr r4, [r2, r3]` 從 Flash 讀 → `str r4, [r0, r3]` 寫到 RAM → `adds r3, r3, #4`
+- `cmp` + `bcc`：`_sdata + r3` 還小於 `_edata` 就繼續
+
+觀察紀錄（停在 Reset_Handler 時先把兩個變數手動填成 `DEADBEEF`，模擬上電亂碼）
+| 觀察的東西 | 預期 | 實際 | 結論 |
+|---|---|---|---|
+| `bl SystemInit` 的機器碼（`.list`） | 跳到 SystemInit | `nop.w` | weak 沒定義 → 連結器換成 nop |
+| r0／r1／r2 | `_sdata`／`_edata`／`_sidata` | `0x20000000`／`0x20000004`／`0x08000654` | 和 `.map` 一致 |
+| `g_test_data`（第 81 行前） | `0x12345678` | `78563412`（逐 byte 顯示） | 已從 Flash 複製；little-endian |
+| `g_test_bss`（第 81 行前） | 還是 `DEADBEEF` | `DEADBEEF` | .bss 還沒清 |
+| `g_test_bss`（第 96 行前） | 0 | `00000000` | .bss 已清 0 |
+| Flash `0x08000654` | `12345678` | `12345678` | 初值存在 Flash 的 `_sidata` |
+| 最後 | 進 main | 停在 `(void)g_test_data;` | 流程完成 |
+
+位址（`.map`）
+| 符號 | 位址 | 說明 |
+|---|---|---|
+| `_sidata` | `0x08000654` | .data 初值在 Flash 的起點 |
+| `_sdata`／`_edata` | `0x20000000`／`0x20000004` | .data 只有 4 byte（只有 `g_test_data`） |
+| `_sbss`／`_ebss` | `0x20000004`／`0x20000034` | .bss 共 48 byte，`g_test_bss` 在 `0x20000030` |
+
+為什麼是這個順序
+- SP 一定第一個：SystemInit 是 C 函式，會用到 stack
+- SystemInit 在複製之前：可能要先初始化放 .data 的記憶體
+- .data、.bss 在 main 之前：main 一開始就可能讀全域變數
+- .data 和 .bss 兩者互不依賴，誰先都可以
+
+Debugger 操作
+- Debug Configurations → Startup → Set breakpoint at `Reset_Handler`
+- Memory 視窗點兩下值可以直接改（用來填 `DEADBEEF`）
+- 迴圈不要一直按 F5：在迴圈後一行設中斷點，按 F8（Resume）
+- F5 = Step Into（進入函式）、F6 = Step Over（跨過函式）
+
+### [筆記] 2026-11-15 23:15
+
+【筆記】區域變數的初值寫在指令裡，只要 SP 正確就能用
+**全域變數的初值存在 Flash 資料區、上電時複製一次；區域變數的初值是函式指令的一部分，每次呼叫時才寫進 stack**
+
+`Clock_Init()` 的反組譯（`.list`）
+```
+push  {r7}           ; SP -4，保存 r7
+sub   sp, #12        ; SP -12，在 stack 上挖出區域變數的空間
+add   r7, sp, #0     ; r7 = SP，當作找區域變數的基準
+movs  r3, #0         ; count 的初值 0 寫在指令裡
+str   r3, [r7, #4]   ; 寫進 stack
+```
+
+| | 全域變數 | 區域變數 |
+|---|---|---|
+| 初值存在哪 | Flash .data 初值區（`_sidata` 起） | 函式指令裡 |
+| 何時放進 RAM | 上電時 Reset_Handler 複製一次 | 每次呼叫函式時 |
+| 前提 | 複製 .data 完成 | SP 正確 |
+
+- 所以 SystemInit 裡可以用區域變數，不能依賴全域變數
+- 啟動檔只需要 `_estack`（stack 頂端），stack 的底沒有符號、CPU 也不檢查 → stack overflow 不會被發現
