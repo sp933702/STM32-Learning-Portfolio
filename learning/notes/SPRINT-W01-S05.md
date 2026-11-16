@@ -2,7 +2,7 @@
 
 - 狀態：**進行中**
 - 階段：基礎　主題：Startup
-- 進行次數：4 次（最近一次：2026-11-15）
+- 進行次數：5 次（最近一次：2026-11-16）
 - 程式碼：[projects/SPRINT-W01-S05](../../projects/SPRINT-W01-S05)
 
 ## 任務內容
@@ -339,3 +339,53 @@ str   r3, [r7, #4]   ; 寫進 stack
 
 - 所以 SystemInit 裡可以用區域變數，不能依賴全域變數
 - 啟動檔只需要 `_estack`（stack 頂端），stack 的底沒有符號、CPU 也不檢查 → stack overflow 不會被發現
+
+### [筆記] 2026-11-16 22:03
+
+【筆記】.ld 的 MEMORY 與 SECTIONS：連結器用位置計數器 . 依序排放
+**MEMORY 定義有哪些記憶體，SECTIONS 依序把各區段排進去；`.` 是目前排到的位置，`_sdata` 這些符號都是記下 `.` 的結果**
+
+MEMORY
+| 名稱 | 屬性 | 起點 | 大小 | 意義 |
+|---|---|---|---|---|
+| FLASH | `rx` | `0x08000000` | 64K | 可讀、可執行；不能用 `str` 寫 |
+| RAM | `xrw` | `0x20000000` | 20K | 可讀寫，也能執行（`.RamFunc`） |
+
+- `r` = read、`w` = write、`x` = execute（可執行程式碼），不是 r+w
+- 大小來自《STM32F103x8 Datasheet》，CubeIDE 依型號產生
+
+SECTIONS（依排放順序）
+| 區段 | 放到 | 內容 |
+|---|---|---|
+| `.isr_vector` | `>FLASH` | 向量表，`KEEP` 防止被丟掉 |
+| `.text` | `>FLASH` | 程式碼 |
+| `.rodata` | `>FLASH` | 常數、字串 |
+| `.data` | `>RAM AT> FLASH` | 有初值的全域變數：執行位址在 RAM，初值放在 Flash |
+| `.bss` | `>RAM` | 沒初值的全域變數 |
+| `._user_heap_stack` | `>RAM` | 不放東西，只推游標檢查空間 |
+
+- `>RAM` = 執行位址（VMA）；`AT> FLASH` = 載入位址（LMA）
+- `_sidata = LOADADDR(.data);` = 取 .data 的載入位址 → `0x08000654`
+- `_estack = ORIGIN(RAM) + LENGTH(RAM);` → `0x20005000`
+
+位置計數器 `.`（location counter）
+- 代表「目前排到的位址」，每放一樣東西就往後移
+- `_sdata = .;` 寫在 `*(.data)` 之前、`_edata = .;` 寫在之後 → 兩個值不同
+- 位址不是寫死的，程式一改，後面的位址全部會移動
+- `. = ALIGN(4);` = 對齊到 4 的倍數；`. = . + N;` = 往後空出 N byte
+
+`._user_heap_stack`（本專案實測）
+| 動作 | `.` 的值 |
+|---|---|
+| `.bss` 結束 | `0x20000034` |
+| `ALIGN(8)`，`_end = .`（heap 起點） | `0x20000038` |
+| `+ _Min_Heap_Size`（`0x200`） | `0x20000238` |
+| `+ _Min_Stack_Size`（`0x400`） | `0x20000638` |
+
+- 用途：檢查 .data + .bss 之後還留得下 heap 512 byte + stack 1 KB，超過 RAM 就連結失敗 `region 'RAM' overflowed`
+- 不是 stack 的實際位置：stack 在 RAM 頂端 `0x20005000` 往下長
+- `sysmem.c` 的 `_sbrk()`：heap 從 `&_end` 開始，上限 `_estack − _Min_Stack_Size`，超過時 `malloc` 回傳 `NULL`
+- 保護不到：執行時 stack 實際用超過 1 KB → 往下長進空閒空間，撞到 heap／.bss 也沒人檢查
+
+RAM 配置（低 → 高）
+`.data → .bss → heap（往上）→ 空閒 → stack（往下）`

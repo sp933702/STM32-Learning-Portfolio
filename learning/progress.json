@@ -1636,6 +1636,12 @@
           "end": "2026-11-15 23:16",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-16 21:42",
+          "end": "2026-11-16 22:03",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1753,6 +1759,13 @@
           "time": "2026-11-15 23:15",
           "type": "筆記",
           "text": "【筆記】區域變數的初值寫在指令裡，只要 SP 正確就能用\n**全域變數的初值存在 Flash 資料區、上電時複製一次；區域變數的初值是函式指令的一部分，每次呼叫時才寫進 stack**\n\n`Clock_Init()` 的反組譯（`.list`）\n```\npush  {r7}           ; SP -4，保存 r7\nsub   sp, #12        ; SP -12，在 stack 上挖出區域變數的空間\nadd   r7, sp, #0     ; r7 = SP，當作找區域變數的基準\nmovs  r3, #0         ; count 的初值 0 寫在指令裡\nstr   r3, [r7, #4]   ; 寫進 stack\n```\n\n| | 全域變數 | 區域變數 |\n|---|---|---|\n| 初值存在哪 | Flash .data 初值區（`_sidata` 起） | 函式指令裡 |\n| 何時放進 RAM | 上電時 Reset_Handler 複製一次 | 每次呼叫函式時 |\n| 前提 | 複製 .data 完成 | SP 正確 |\n\n- 所以 SystemInit 裡可以用區域變數，不能依賴全域變數\n- 啟動檔只需要 `_estack`（stack 頂端），stack 的底沒有符號、CPU 也不檢查 → stack overflow 不會被發現",
+          "resolved": null
+        },
+        {
+          "id": "bc622bbfe0",
+          "time": "2026-11-16 22:03",
+          "type": "筆記",
+          "text": "【筆記】.ld 的 MEMORY 與 SECTIONS：連結器用位置計數器 . 依序排放\n**MEMORY 定義有哪些記憶體，SECTIONS 依序把各區段排進去；`.` 是目前排到的位置，`_sdata` 這些符號都是記下 `.` 的結果**\n\nMEMORY\n| 名稱 | 屬性 | 起點 | 大小 | 意義 |\n|---|---|---|---|---|\n| FLASH | `rx` | `0x08000000` | 64K | 可讀、可執行；不能用 `str` 寫 |\n| RAM | `xrw` | `0x20000000` | 20K | 可讀寫，也能執行（`.RamFunc`） |\n\n- `r` = read、`w` = write、`x` = execute（可執行程式碼），不是 r+w\n- 大小來自《STM32F103x8 Datasheet》，CubeIDE 依型號產生\n\nSECTIONS（依排放順序）\n| 區段 | 放到 | 內容 |\n|---|---|---|\n| `.isr_vector` | `>FLASH` | 向量表，`KEEP` 防止被丟掉 |\n| `.text` | `>FLASH` | 程式碼 |\n| `.rodata` | `>FLASH` | 常數、字串 |\n| `.data` | `>RAM AT> FLASH` | 有初值的全域變數：執行位址在 RAM，初值放在 Flash |\n| `.bss` | `>RAM` | 沒初值的全域變數 |\n| `._user_heap_stack` | `>RAM` | 不放東西，只推游標檢查空間 |\n\n- `>RAM` = 執行位址（VMA）；`AT> FLASH` = 載入位址（LMA）\n- `_sidata = LOADADDR(.data);` = 取 .data 的載入位址 → `0x08000654`\n- `_estack = ORIGIN(RAM) + LENGTH(RAM);` → `0x20005000`\n\n位置計數器 `.`（location counter）\n- 代表「目前排到的位址」，每放一樣東西就往後移\n- `_sdata = .;` 寫在 `*(.data)` 之前、`_edata = .;` 寫在之後 → 兩個值不同\n- 位址不是寫死的，程式一改，後面的位址全部會移動\n- `. = ALIGN(4);` = 對齊到 4 的倍數；`. = . + N;` = 往後空出 N byte\n\n`._user_heap_stack`（本專案實測）\n| 動作 | `.` 的值 |\n|---|---|\n| `.bss` 結束 | `0x20000034` |\n| `ALIGN(8)`，`_end = .`（heap 起點） | `0x20000038` |\n| `+ _Min_Heap_Size`（`0x200`） | `0x20000238` |\n| `+ _Min_Stack_Size`（`0x400`） | `0x20000638` |\n\n- 用途：檢查 .data + .bss 之後還留得下 heap 512 byte + stack 1 KB，超過 RAM 就連結失敗 `region 'RAM' overflowed`\n- 不是 stack 的實際位置：stack 在 RAM 頂端 `0x20005000` 往下長\n- `sysmem.c` 的 `_sbrk()`：heap 從 `&_end` 開始，上限 `_estack − _Min_Stack_Size`，超過時 `malloc` 回傳 `NULL`\n- 保護不到：執行時 stack 實際用超過 1 KB → 往下長進空閒空間，撞到 heap／.bss 也沒人檢查\n\nRAM 配置（低 → 高）\n`.data → .bss → heap（往上）→ 空閒 → stack（往下）`",
           "resolved": null
         }
       ],
