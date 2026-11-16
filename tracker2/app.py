@@ -303,7 +303,10 @@ HEAD_RE = re.compile("^(" + "|".join(re.escape(tag) for tag, _ in TAG_TYPES) + "
 
 def _fence_blocks(lines):
     """找出最外層的程式碼區塊，回傳 [(語言, 內容行)]。
-    區塊裡又有帶語言的區塊（例如 ```markdown 裡的 ```c）時視為巢狀，不會提早結束。"""
+    外層用四個反引號、內層用三個時不會混淆。外層和內層都用三個反引號時只能用猜的：
+    - 內層有標語言（```c）：一定是內層的開頭。
+    - 內層沒標語言：下一行緊接著內容、而且後面還有別的結尾符號，就當成內層的開頭；
+      下一行是空行或已經到結尾，就當成最外層的結尾。"""
     blocks, i = [], 0
     while i < len(lines):
         m = FENCE_OPEN.match(lines[i])
@@ -311,19 +314,29 @@ def _fence_blocks(lines):
             i += 1
             continue
         mark, lang, body, depth, j = m.group(1), m.group(2).lower(), [], 0, i + 1
-        while j < len(lines):
+        # 這個區塊最遠到下一個同樣長度的 markdown 區塊開頭為止
+        limit = next((k for k in range(i + 1, len(lines))
+                      if (n := FENCE_OPEN.match(lines[k])) and len(n.group(1)) == len(mark) and n.group(2).lower() in ("markdown", "md")),
+                     len(lines))
+        bare_after = lambda k: any((n := FENCE_OPEN.match(lines[x])) and len(n.group(1)) >= len(mark) and not n.group(2)
+                                   for x in range(k + 1, limit))
+        while j < limit:
             c = FENCE_OPEN.match(lines[j])
             if c and len(c.group(1)) >= len(mark):
-                if c.group(2) and len(c.group(1)) == len(mark):
-                    depth += 1                    # 內層區塊開始
-                elif depth > 0 and len(c.group(1)) == len(mark):
+                same = len(c.group(1)) == len(mark)
+                if c.group(2) and same:
+                    depth += 1                    # 內層區塊開始（有標語言）
+                elif depth > 0 and same:
                     depth -= 1                    # 內層區塊結束
                 elif not c.group(2):
-                    break                         # 最外層結束
+                    opens = (same and lang in ("markdown", "md") and j + 1 < limit and lines[j + 1].strip() and bare_after(j))
+                    if not opens:
+                        break                     # 最外層結束
+                    depth += 1                    # 內層區塊開始（沒標語言）
             body.append(lines[j])
             j += 1
         blocks.append((lang, body))
-        i = j + 1
+        i = j + 1 if j < limit else limit
     return blocks
 
 

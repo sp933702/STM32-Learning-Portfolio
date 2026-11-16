@@ -169,6 +169,7 @@ def _():
             text = app.build_prompt(db, t["id"], kind, "測試：卡在某個地方")
             for bad in FORBIDDEN:
                 assert bad not in text, f"{t['id']} 的 {kind} 提示詞出現不該有的文字「{bad}」"
+            assert not re.search(r"(?<!`)`{3}markdown", text), f"{t['id']} 的 {kind} 提示詞要求用三個反引號包筆記（應該是四個，否則筆記裡的程式碼區塊會把它截斷）"
             for must in ("## 寫法規則", "## 筆記格式"):
                 assert must in text, f"{t['id']} 的 {kind} 提示詞缺少「{must}」"
             if kind in LIMITS:
@@ -467,6 +468,19 @@ def _():
     assert "不是新的一則" in items[1]["text"]
     assert app.make_entry("問題", items[2]["text"])["open"] is True, "【待解決】應該標成待解決"
     assert app.make_entry("問題", "【問題】踩過的錯")["open"] is False, "【問題】預設不是待解決"
+
+    # 外層和內層都用三個反引號、內層沒有標語言：不能在內層的開頭就被截斷
+    nested = "\n".join(["整理如下：", "", F + "markdown", "【解法】啟動流程", "**重點**", "", "流程：", F, "Reset → 複製 .data → 清 .bss → main", F, "",
+                        "- 程式碼之後的說明", F, "", "接下來是下一則：", "", F + "markdown", "【筆記】第二則", "- 內容", F, "", "說明文字裡的區塊：", "", F, "不是筆記", F])
+    items = app.split_notes(nested)
+    assert [x["title"] for x in items] == ["【解法】啟動流程", "【筆記】第二則"], [x["title"] for x in items]
+    assert "Reset → 複製 .data" in items[0]["text"] and "- 程式碼之後的說明" in items[0]["text"], "筆記在內層的程式碼區塊被截斷了"
+    assert "接下來是下一則" not in items[0]["text"] and "不是筆記" not in items[1]["text"], "區塊外的說明文字不應該存進去"
+    # 外層四個反引號（提示詞要求的寫法）：內層有沒有標語言都不會混淆
+    F4 = "`" * 4
+    four = "\n".join([F4 + "markdown", "【解法】外層四個反引號", F + "c", "int a;", F, "", F, "沒有標語言", F, "- 結尾", F4, "", F4 + "markdown", "【面試】題目？", "**答案**", F4])
+    items = app.split_notes(four)
+    assert [x["type"] for x in items] == ["解法", "面試"] and "沒有標語言" in items[0]["text"] and items[0]["text"].endswith("- 結尾"), [x["text"] for x in items]
 
     one = app.split_notes("沒有標題的一段話\n第二行", "解法")
     assert len(one) == 1 and one[0]["type"] == "解法" and one[0]["keep"]
