@@ -31,8 +31,28 @@
 volatile uint32_t g_test_data = 0x12345678U;   // 有初值
 volatile uint32_t g_test_bss;                  // 沒有初值
 
+// 驗證用 //
+const uint32_t g_test_const = 0xCAFEBABEU;      // const 全域變數
+volatile uint32_t g_test_sink;                  // 用來接結果，避免被丟掉
+
+void Test_Storage(void)
+{
+    static uint32_t s_test_count = 0xAABBCCDDU; // static 區域變數，有初值
+    static uint32_t s_test_zero;                // static 區域變數，沒初值
+    volatile uint32_t test_local = 0x55667788U; // 一般區域變數
+
+    s_test_count++;
+    s_test_zero++;
+    g_test_sink = test_local + g_test_const + s_test_count + s_test_zero;
+}
+//  //
+
 int main(void)
 {
+	// 驗證用 //
+	Test_Storage();
+	//  //
+
 	// 開頭讀測試變數一次。為了避免沒被使用的變數被連結器整個丟掉
 	(void)g_test_data;
 	(void)g_test_bss;
