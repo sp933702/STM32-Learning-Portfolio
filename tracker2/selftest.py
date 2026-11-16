@@ -133,6 +133,8 @@ const code = md("```c\nint a = 1 < 2;\n```");
 if (!code.includes("<pre><code>int a = 1 &lt; 2;</code></pre>")) { console.error("程式碼區塊錯誤：" + code); process.exit(1); }
 const list = md("- 第一點\n- **粗體**與 `碼`");
 if (!list.includes("<ul><li>第一點</li><li><b>粗體</b>與 <code>碼</code></li></ul>")) { console.error("清單錯誤：" + list); process.exit(1); }
+const gap = md("\n第一段\n\n\n第二段\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n");
+if ((gap.match(/class="gap"/g) || []).length !== 2 || gap.startsWith("<div") || gap.endsWith("</div>")) { console.error("空行沒有留出空白：" + gap); process.exit(1); }
 '''
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
         f.write("const $ = () => null;\n" + main[a:b] + test)

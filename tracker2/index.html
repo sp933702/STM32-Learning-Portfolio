@@ -60,6 +60,7 @@ textarea{min-height:90px;resize:vertical}
 .md table{border-collapse:collapse;margin:6px 0;font-size:13.5px}.md th,.md td{border:1px solid var(--line);padding:3px 8px;text-align:left}
 .entry.preview{background:var(--chip);border:1px dashed var(--line)}
 .md hr{border:none;border-top:1px solid var(--line);margin:8px 0}
+.md .gap{height:.75em}
 .entry.問題{background:var(--q)} .entry.筆記{background:var(--n)} .entry.解法{background:var(--s)}
 .entry.進度,.entry.待學{background:var(--chip)} .entry.待學{border-left:3px solid var(--view)} .entry.進度{border-left:3px solid var(--accent)}
 .entry.面試{background:var(--chip);border-left:3px solid var(--warn)}
@@ -337,7 +338,11 @@ function md(text){
       while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
       i++; html += `<pre><code>${esc(buf.join("\n"))}</code></pre>`; continue;
     }
-    if (!l.trim()){ i++; continue; }
+    if (!l.trim()){                               // 空行：段落之間留一段空白（連續多個空行只算一個）
+      while (i < lines.length && !lines[i].trim()) i++;
+      if (html && i < lines.length) html += `<div class="gap"></div>`;
+      continue;
+    }
     let m;
     if ((m = l.match(/^\s*(#{1,6})\s+(.*)$/))){
       const n = Math.min(5, Math.max(3, m[1].length + 2));
