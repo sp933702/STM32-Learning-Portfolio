@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（53）
+## 踩過的錯（59）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -76,8 +76,14 @@
 - 以為 SRAM 就是 stack
 - 以為未初始化的 RAM 會是某個有意義的值
 - SystemInit 執行時，全域變數還不能用
+- 把 0x2000xxxx 的位址判斷成 Flash
+- 以為 static 區域變數放在 stack
+- 把 .map 的 Discarded input sections 裡的 0x00000000 當成實際位址
+- 以為有初值、有人用的 const 全域變數會放在 .data
+- 以為 debugger 改不了 const 變數是因為 C 的 const
+- 以為 main() 裡宣告的變數會受 .data 影響
 
-## 解法（28）
+## 解法（29）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -121,6 +127,7 @@
 ### [SPRINT-W01-S05](notes/SPRINT-W01-S05.md) Startup 與 Linker Script
 
 - 從 Reset_Handler 單步到 main：設 SP → SystemInit → 複製 .data → 清 .bss → main
+- 各種變數放在哪裡：用 .map、debugger、size 驗證
 
 ## 待學清單（1 項還沒學）
 

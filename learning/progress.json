@@ -1648,6 +1648,12 @@
           "end": "2026-11-16 23:09",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-18 22:16",
+          "end": "2026-11-18 23:07",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1772,6 +1778,68 @@
           "time": "2026-11-16 22:03",
           "type": "筆記",
           "text": "【筆記】.ld 的 MEMORY 與 SECTIONS：連結器用位置計數器 . 依序排放\n**MEMORY 定義有哪些記憶體，SECTIONS 依序把各區段排進去；`.` 是目前排到的位置，`_sdata` 這些符號都是記下 `.` 的結果**\n\nMEMORY\n| 名稱 | 屬性 | 起點 | 大小 | 意義 |\n|---|---|---|---|---|\n| FLASH | `rx` | `0x08000000` | 64K | 可讀、可執行；不能用 `str` 寫 |\n| RAM | `xrw` | `0x20000000` | 20K | 可讀寫，也能執行（`.RamFunc`） |\n\n- `r` = read、`w` = write、`x` = execute（可執行程式碼），不是 r+w\n- 大小來自《STM32F103x8 Datasheet》，CubeIDE 依型號產生\n\nSECTIONS（依排放順序）\n| 區段 | 放到 | 內容 |\n|---|---|---|\n| `.isr_vector` | `>FLASH` | 向量表，`KEEP` 防止被丟掉 |\n| `.text` | `>FLASH` | 程式碼 |\n| `.rodata` | `>FLASH` | 常數、字串 |\n| `.data` | `>RAM AT> FLASH` | 有初值的全域變數：執行位址在 RAM，初值放在 Flash |\n| `.bss` | `>RAM` | 沒初值的全域變數 |\n| `._user_heap_stack` | `>RAM` | 不放東西，只推游標檢查空間 |\n\n- `>RAM` = 執行位址（VMA）；`AT> FLASH` = 載入位址（LMA）\n- `_sidata = LOADADDR(.data);` = 取 .data 的載入位址 → `0x08000654`\n- `_estack = ORIGIN(RAM) + LENGTH(RAM);` → `0x20005000`\n\n位置計數器 `.`（location counter）\n- 代表「目前排到的位址」，每放一樣東西就往後移\n- `_sdata = .;` 寫在 `*(.data)` 之前、`_edata = .;` 寫在之後 → 兩個值不同\n- 位址不是寫死的，程式一改，後面的位址全部會移動\n- `. = ALIGN(4);` = 對齊到 4 的倍數；`. = . + N;` = 往後空出 N byte\n\n`._user_heap_stack`（本專案實測）\n| 動作 | `.` 的值 |\n|---|---|\n| `.bss` 結束 | `0x20000034` |\n| `ALIGN(8)`，`_end = .`（heap 起點） | `0x20000038` |\n| `+ _Min_Heap_Size`（`0x200`） | `0x20000238` |\n| `+ _Min_Stack_Size`（`0x400`） | `0x20000638` |\n\n- 用途：檢查 .data + .bss 之後還留得下 heap 512 byte + stack 1 KB，超過 RAM 就連結失敗 `region 'RAM' overflowed`\n- 不是 stack 的實際位置：stack 在 RAM 頂端 `0x20005000` 往下長\n- `sysmem.c` 的 `_sbrk()`：heap 從 `&_end` 開始，上限 `_estack − _Min_Stack_Size`，超過時 `malloc` 回傳 `NULL`\n- 保護不到：執行時 stack 實際用超過 1 KB → 往下長進空閒空間，撞到 heap／.bss 也沒人檢查\n\nRAM 配置（低 → 高）\n`.data → .bss → heap（往上）→ 空閒 → stack（往下）`",
+          "resolved": null
+        },
+        {
+          "id": "e457781620",
+          "time": "2026-11-18 22:21",
+          "type": "問題",
+          "text": "【問題】把 0x2000xxxx 的位址判斷成 Flash\n**位址開頭決定記憶體種類：0x0800 是 Flash、0x2000 是 RAM**\n\n- 錯在哪：`s_test_count`（`0x20000004`）、`s_test_zero`、`g_test_sink` 都寫成 Flash\n- 正確判斷：\n| 位址開頭 | 記憶體 |\n|---|---|\n| `0x0800xxxx` | Flash（程式、常數、.data 初值） |\n| `0x2000xxxx` | SRAM（.data、.bss、heap、stack） |\n| `0x4000xxxx` | 周邊暫存器 |\n| `0xE000xxxx` | Cortex-M3 核心周邊（SysTick、NVIC） |\n- 除錯應用：指標值是 `0x0800xxxx` → 指向 Flash，寫入一定失敗",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "0e7bcc4ff9",
+          "time": "2026-11-18 22:21",
+          "type": "問題",
+          "text": "【問題】以為 static 區域變數放在 stack\n**static 讓變數壽命和程式一樣長，所以放在 .data／.bss，不在 stack；只有能見範圍限制在函式內**\n\n- 錯在哪：預測 `s_test_count`、`s_test_zero` 在 stack\n- 實際：`s_test_count`（有初值）→ `.data.s_test_count.1`，`0x20000004`；`s_test_zero`（沒初值）→ `.bss.s_test_zero.0`，`0x2000003C`\n- 原因：stack 上的東西函式結束就回收，static 要保留到下次呼叫，只能放 .data／.bss\n- `.map` 名字後的 `.0`、`.1` 是編譯器加的編號，避免不同函式的同名 static 變數撞名\n- 面試版：「static 區域變數和全域變數放在同一個地方，差別只在誰看得到它的名字」",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "226d296aeb",
+          "time": "2026-11-18 22:22",
+          "type": "問題",
+          "text": "【問題】把 .map 的 Discarded input sections 裡的 0x00000000 當成實際位址\n**`.map` 開頭的 Discarded input sections 列的是被丟掉的區段，位址一律顯示 0，不是真的位址**\n\n- 錯在哪：看到 `.rodata.g_test_const 0x00000000`，以為 `g_test_const` 放在 `0x00000000`\n- 實際：那一行在 `.map` 的 `Discarded input sections` 段落裡（第 42 行起）→ 被連結器丟掉了；debugger 看 `&g_test_const` 也顯示 Error\n- 被丟的原因：`const` 的值在編譯時已知，編譯器直接把 `0xCAFEBABE` 寫進程式碼（`.list` 的 `.word 0xcafebabe`），沒人引用變數本身 → `--gc-sections` 丟掉\n- 查 `.map` 時，先確認那一行在哪個段落底下，再看位址",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "49f3a8efef",
+          "time": "2026-11-18 22:42",
+          "type": "問題",
+          "text": "【問題】以為有初值、有人用的 const 全域變數會放在 .data\n**const 全域變數放在 .rodata，只在 Flash，不會複製到 RAM**\n\n- 錯在哪：預測 `const volatile uint32_t g_test_const = 0xCAFEBABEU;` 會在 `.data`、位址 `0x2000xxxx`\n- 實際：`.rodata`、`0x080006A4`；`text` +4，`data` 不變（沒有被複製）\n- 原因：值不會變，不需要可寫的 RAM 副本，直接從 Flash 讀\n- 應用：大的查表陣列（字型、正弦表）加 `const` → 留在 Flash，不佔 RAM\n- 補充：沒加 `volatile` 時，編譯器把值直接寫進指令，變數本身被 `--gc-sections` 丟掉",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "cf4d1d87cf",
+          "time": "2026-11-18 22:43",
+          "type": "問題",
+          "text": "【問題】以為 debugger 改不了 const 變數是因為 C 的 const\n**改不了是因為位址在 Flash（不能用一般寫入），不是因為 const 關鍵字**\n\n- 現象：Memory 視窗改 `0x080006A4` → `Edit failed: Error writing memory block`\n- 原因：debugger 不認得 C 關鍵字，只是對位址寫入；Flash 要透過 Flash 控制器解鎖、擦除才能寫\n- 對照：`s_test_count`（RAM）可以改；`const` 區域變數在 stack（RAM），debugger 也改得動\n- 除錯應用：程式寫入某指標時當機 → 先看指標值是不是 `0x0800xxxx`",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "2253624ffe",
+          "time": "2026-11-18 22:45",
+          "type": "解法",
+          "text": "【解法】各種變數放在哪裡：用 .map、debugger、size 驗證\n**有初值的全域／static → .data（Flash 存初值、RAM 放變數）；沒初值 → .bss（RAM）；const 全域 → .rodata（只在 Flash）；一般區域 → stack（RAM）**\n\n測試程式（`main.c`）\n```c\nvolatile uint32_t g_test_data = 0x12345678U;          // 有初值的全域\nvolatile uint32_t g_test_bss;                         // 沒初值的全域\nconst volatile uint32_t g_test_const = 0xCAFEBABEU;   // const 全域\nvolatile uint32_t g_test_sink;\n\nvoid Test_Storage(void)\n{\n    static uint32_t s_test_count = 0xAABBCCDDU;        // static 區域，有初值\n    static uint32_t s_test_zero;                       // static 區域，沒初值\n    volatile uint32_t test_local = 0x55667788U;        // 一般區域\n    ...\n}\n```\n\n觀察紀錄\n| 變數 | 預期 | `.map` 區段 | 實際位址 | 結論 |\n|---|---|---|---|---|\n| `g_test_data` | .data | `.data` | `0x20000000`（初值 `0x080006B0`） | 兩邊都有 |\n| `g_test_const` | .data（錯） | `.rodata` | `0x080006A4` | 只在 Flash |\n| `s_test_count` | stack（錯） | `.data.s_test_count.1` | `0x20000004`（初值 `0x080006B4`） | 和全域一樣 |\n| `s_test_zero` | stack（錯） | `.bss.s_test_zero.0` | `0x2000003C` | RAM |\n| `g_test_sink` | — | `.bss` | `0x20000038` | RAM |\n| `test_local` | stack | 找不到 | `0x20004FCC`（`sp + 4`） | stack；初值 `0x55667788` 在指令後的常數區 |\n\n總表（必學）\n| 宣告 | 區段 | Flash | RAM | 誰放進去 |\n|---|---|---|---|---|\n| 有初值的全域變數 | `.data` | 初值 | 變數 | Reset_Handler 複製 |\n| 沒初值（或 = 0）的全域變數 | `.bss` | — | 變數 | Reset_Handler 清 0 |\n| `const` 全域變數 | `.rodata` | 值 | — | 燒錄時就在 |\n| `static` 區域變數 | 同全域（`.data`／`.bss`） | 有初值才有 | 變數 | 同全域 |\n| 一般區域變數 | stack | 初值在指令裡 | 變數 | 函式執行時寫入 |\n| 程式碼 | `.text` | 有 | — | 燒錄時就在 |\n\n用量計算（`arm-none-eabi-size` 的 `text data bss`）\n| 欄位 | 內容 | 本專案 |\n|---|---|---|\n| `text` | 向量表、程式碼、`.rodata` | 1712 |\n| `data` | `.data`（兩邊都佔） | 8 |\n| `bss` | `.bss` + `._user_heap_stack` 預留 | 1592 |\n\n- Flash = `text` + `data`；RAM = `data` + `bss`；`dec` 是三欄總和，不是任何一種記憶體的用量\n- Build Analyzer 的 KB = 1024 byte：RAM 1600 byte = 1.56 KB（7.81%）、Flash 1716 byte = 1.68 KB（2.62%），和手算一致\n\n查法\n- `.map`：搜尋變數名稱（static 用片段搜尋，名字會加 `.0`、`.1`）；先確認不在 `Discarded input sections` 段落\n- debugger：Expressions 視窗輸入 `&變數名稱`；區域變數只有停在該函式裡才看得到\n- 位址開頭：`0x0800` = Flash、`0x2000` = RAM\n- 位址要等連結完成才知道，編譯前只能預測在哪一區",
+          "resolved": null
+        },
+        {
+          "id": "06625e7b8c",
+          "time": "2026-11-18 23:06",
+          "type": "問題",
+          "text": "【問題】以為 main() 裡宣告的變數會受 .data 影響\n**main() 裡的變數是一般區域變數，放在 stack，初值寫在指令裡；main 不結束也一樣是 stack**\n\n- 錯在哪：以為 `uint32_t led_period = 500U;` 這類 main() 裡的變數放在 .data，拿掉複製 .data 會讓 LED 壞掉\n- 正確：沒有 `static` 的區域變數都在 stack，不管是不是在 main()\n- S04 的模組沒有「初值非 0」的全域／static 變數 → 加測試變數前 .data 是 0 byte\n- 只有「全域或 static」且「初值不是 0」的變數才在 .data",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "e5f9e7cfa7",
+          "time": "2026-11-18 23:06",
+          "type": "筆記",
+          "text": "【筆記】冷開機錯、按 reset 就正常：懷疑 .data／.bss 初始化\n**reset 鍵不會清 RAM，殘留值可能掩蓋「從沒被正確初始化」的 bug；冷開機才會露出來**\n\n| | 上電（冷開機） | reset 鍵（熱重置） |\n|---|---|---|\n| RAM 內容 | 亂碼 | 保留上次執行的值 |\n| .data 複製壞掉時 | 錯 | 看起來正常 |\n\n- 優先檢查：Reset_Handler 的複製 .data 迴圈、`.ld` 的 `.data` 是否 `>RAM AT> FLASH`、`_sidata = LOADADDR(.data)`\n- 用 debugger 測試時也一樣：重新開始 ≠ 斷電，要先把 RAM 填成 `DEADBEEF` 才看得出差別",
           "resolved": null
         }
       ],

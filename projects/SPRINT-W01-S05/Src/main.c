@@ -32,7 +32,7 @@ volatile uint32_t g_test_data = 0x12345678U;   // 有初值
 volatile uint32_t g_test_bss;                  // 沒有初值
 
 // 驗證用 //
-const uint32_t g_test_const = 0xCAFEBABEU;      // const 全域變數
+const volatile uint32_t g_test_const = 0xCAFEBABEU;      // const 全域變數
 volatile uint32_t g_test_sink;                  // 用來接結果，避免被丟掉
 
 void Test_Storage(void)
