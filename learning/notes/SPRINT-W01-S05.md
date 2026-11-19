@@ -2,7 +2,7 @@
 
 - 狀態：**進行中**
 - 階段：基礎　主題：Startup
-- 進行次數：7 次（最近一次：2026-11-18）
+- 進行次數：8 次（最近一次：2026-11-19）
 - 程式碼：[projects/SPRINT-W01-S05](../../projects/SPRINT-W01-S05)
 
 ## 任務內容
@@ -526,3 +526,145 @@ void Test_Storage(void)
 
 - 優先檢查：Reset_Handler 的複製 .data 迴圈、`.ld` 的 `.data` 是否 `>RAM AT> FLASH`、`_sidata = LOADADDR(.data)`
 - 用 debugger 測試時也一樣：重新開始 ≠ 斷電，要先把 RAM 填成 `DEADBEEF` 才看得出差別
+
+### [解法] 2026-11-19 21:46
+
+【解法】故意弄壞：拿掉複製 .data 的迴圈
+**拿掉複製迴圈後，有初值的全域／static 變數變成 RAM 裡的亂碼；.bss 和 stack 上的變數不受影響**
+
+做法
+- `startup_stm32f103c8tx.s`：把 `ldr r0, =_sdata` 到 `bcc CopyDataInit` 用 `/* */` 包起來（第 63 行原本的註解之後才開始包，避免註解交錯）
+- 停在 `Reset_Handler`，Memory 視窗（Hex Integer）把 4 個位址填成 `DEADBEEF`，模擬上電亂碼
+- 中斷點設在 `main()` 的 `Test_Storage();`，按 F8
+
+觀察紀錄
+| 位址 | 變數 | 區段 | 預期 | 實際 | 結論 |
+|---|---|---|---|---|---|
+| `0x20000000` | `g_test_data` | .data | `DEADBEEF` | `DEADBEEF` | 沒被複製，保持亂碼 |
+| `0x20000004` | `s_test_count` | .data | `DEADBEEF` | `DEADBEEF` | static 區域變數一樣受影響 |
+| `0x20000034` | `g_test_bss` | .bss | 0 | 0 | 清 .bss 照常 |
+| `0x2000003C` | `s_test_zero` | .bss | 0 | 0 | 清 .bss 照常 |
+| — | LED／按鍵 | stack、.bss | 正常 | 正常 | S04 沒有初值非 0 的全域變數 |
+
+結論
+- 只有「全域或 static」且「初值不是 0」的變數依賴複製 .data
+- main() 裡的區域變數（`led_period = 500U` 等）在 stack，初值寫在指令裡，不受影響
+- 用 debugger 時，在 main() 裡看不到 static 區域變數的名字（顯示 Error）→ 改用 `.map` 查位址，在 Memory 視窗看
+- 實驗後要恢復啟動檔
+
+### [筆記] 2026-11-19 22:17
+
+【筆記】push {r7, lr}：函式開頭存返回位址和 frame pointer
+**會呼叫別人的函式要先把 LR（返回位址）存到 stack；-O0 時 r7 是找區域變數的基準，也要存起來**
+
+- `Stack_Eater()` 開頭：`push {r7, lr}`（8 byte）+ `sub sp, #64`（`buf[16]`）= 每層 72 byte
+- LR：`bl` 會覆蓋 LR，函式裡還要呼叫別人 → 先存自己的返回位址，否則回不去
+- r7：-O0 時用來定位區域變數（`add r7, sp, #0`）；呼叫者也在用，要還原
+- 遞迴每一層都會再吃一次 72 byte，永不返回就一直往下長
+
+### [問題] 2026-11-19 22:18
+
+【問題】以為 volatile 會影響變數放在哪個區段
+**volatile 只要求編譯器每次真的去讀寫記憶體，不影響位置；位置由 const、static、全域、初值決定**
+
+- 錯在哪：以為 `volatile uint32_t g_depth;` 會在 `.rodata`
+- 原因：上次 `const volatile` 的變數在 `.rodata`，把功勞算給 volatile
+- 正確：
+| 關鍵字 | 決定什麼 |
+|---|---|
+| `const`（全域） | 放 `.rodata`（Flash） |
+| 全域／`static` + 有初值 | `.data` |
+| 全域／`static` + 沒初值 | `.bss` |
+| `volatile` | 不准最佳化掉讀寫，跟位置無關 |
+- `g_depth` 是沒初值的全域 → `.bss.g_depth` 在 `0x2000003C`
+
+### [問題] 2026-11-19 22:18
+
+【問題】以為執行時有機制會擋住 stack overflow
+**`._user_heap_stack` 只在連結時檢查一次；執行時編譯器、連結器、CPU 都不檢查 SP，stack 會安靜地蓋掉 .bss、.data**
+
+- 錯在哪：以為「heap 和 stack 之間要留固定空間」會在執行時擋住
+- 正確：
+| 機制 | 何時 | 檢查什麼 |
+|---|---|---|
+| `._user_heap_stack` | 連結時 | .data + .bss 後面留不留得下 heap + stack 的最小值 |
+| `_sbrk()`（`sysmem.c`） | `malloc` 時 | heap 有沒有長進 stack 保留區 |
+| 執行時的 SP | — | 沒有任何檢查 |
+- `.rodata` 在 Flash，stack 寫不進去，不會被蓋掉
+- 危險：全域變數被安靜地改壞，程式行為怪異，但不會馬上當機
+
+### [筆記] 2026-11-19 22:33
+
+【筆記】volatile 讀寫的「記憶體」：變數本身所在的位址
+**volatile 要求每次回到變數的原位址讀寫，不准只用 CPU 暫存器裡的副本；位址在 RAM、Flash 或周邊暫存器都一樣**
+
+| 變數 | 位址 | 讀寫對象 |
+|---|---|---|
+| 一般全域變數 | `0x2000xxxx` | RAM |
+| `const volatile` 全域 | `0x0800xxxx` | Flash（唯讀） |
+| `GPIOC->ODR`（`__IO` = `volatile`） | `0x4001xxxx` | 周邊暫存器 |
+
+- 對比的是 CPU 暫存器（r0–r12）：沒有 volatile，編譯器可能讀一次就一直用暫存器裡的副本
+- MCU 兩大用途：周邊暫存器（硬體會改值）、中斷與主程式共用的變數
+
+### [待學] 2026-11-19 22:37
+
+【待學】HardFault 完整分析（CFSR／HFSR 各 bit、從 stack frame 找出當機那一行、寫自己的 HardFault_Handler）：學中斷與例外時再學
+
+### [待學] 2026-11-19 22:37
+
+【待學】stack overflow 的偵測方法（stack painting 填固定值檢查用量、把 stack 放到 RAM 底部讓溢位立刻 fault、CubeIDE 的 Static Stack Analyzer）：之後做專案時再學
+
+### [解法] 2026-11-19 22:43
+
+【解法】故意弄壞：無限遞迴造成 stack overflow
+**stack 往下長，安靜地蓋掉 .bss、.data；SP 掉出 RAM 後寫入保留區 → bus error → 升級成 HardFault → 停在 Default_Handler**
+
+測試程式（實驗後要拿掉 `Stack_Eater();`）
+```c
+volatile uint32_t g_depth;              // .bss，0x2000003C
+
+void Stack_Eater(void)
+{
+    volatile uint32_t buf[16];          // 每層 64 byte
+    buf[0] = g_depth;
+    g_depth++;
+    Stack_Eater();
+    buf[1] = buf[0];                    // 避免編譯器把遞迴改成迴圈
+}
+```
+
+每層大小（`.list`）
+- `push {r7, lr}`（8 byte：呼叫者的 r7、返回位址 lr）+ `sub sp, #64`（`buf`）= 72 byte
+- 預估：`(0x20004FD0 − 0x20000044) ÷ 72 ≈ 283` 層撞進 .bss
+
+觀察紀錄
+| 觀察的東西 | 預期 | 實際 | 結論 |
+|---|---|---|---|
+| 第 280 層的 `sp` | 約 `0x200000D0` | `0x200000D0` | 每層 72 byte 正確 |
+| 第 280 層的 `g_depth`、`g_test_data` | 280、`12345678` | `0x118`、`12345678` | 還沒撞到 |
+| 最後 PC | — | `Infinite_Loop`（`Default_Handler`） | 沒寫 HardFault_Handler，weak 指向 Default_Handler |
+| 最後 `sp` | — | `0x1FFFFFD8` | 已掉出 RAM（`< 0x20000000`） |
+| 最後 `g_depth` | 不可信 | `0x0800056B` | 被 push 的 lr（返回位址 + 1）蓋掉 |
+| 最後 `g_test_data` | 被蓋掉 | `12345678` | 剛好落在 buf 沒寫到的位置，幸運保住 |
+| CFSR `0xE000ED28` | — | `0x00001400` | STKERR（bit 12）+ IMPRECISERR（bit 10） |
+| HFSR `0xE000ED2C` | — | `0x40000000` | FORCED（bit 30）：其他 fault 升級成 HardFault |
+| Debugger Console | — | `Could not fetch required XPSR content. Further unwinding is impossible.` | stack 在無效位址，GDB 讀不到呼叫堆疊 |
+
+當機過程
+| 順序 | 發生什麼 |
+|---|---|
+| 1 | 遞迴每層吃 72 byte，SP 一路往下，經過空的 heap 區 |
+| 2 | 第 283 層：push 把 r7、lr 寫到 `0x20000038`（`g_test_sink`）、`0x2000003C`（`g_depth`） |
+| 3 | `buf[0]` 寫到 `0x1FFFFFF8`（保留區）→ bus error（IMPRECISERR，寫入有緩衝所以不精確） |
+| 4 | BusFault 沒開啟 → 升級成 HardFault（FORCED） |
+| 5 | 進 HardFault 時存 8 個暫存器到 `0x1FFFFFD8` 也失敗（STKERR） |
+| 6 | 向量表的 HardFault 指向 `Default_Handler` → 無窮迴圈 |
+
+結論（面試版）
+- stack overflow 時，編譯器、連結器、CPU 都不會攔；stack 先安靜地蓋掉 .bss、.data 的變數，程式行為變怪
+- 被蓋掉的是「剛好寫到的位置」，哪個變數壞掉不固定 → 很難重現
+- SP 掉出 RAM 才會 fault：bus error → HardFault，停在 Default_Handler
+- 除錯判斷：卡在 HardFault／Default_Handler 時先看 `sp`，不在 `0x20000000`～`0x20005000` 或貼近 RAM 底部，加上 CFSR 有 STKERR → 懷疑 stack overflow
+- 全域變數出現 `0x0800xxxx` 的奇數 → 很可能被 stack 上的返回位址蓋掉
+- Memory 視窗看暫存器要用 Hex Integer，逐 byte 顯示會看反

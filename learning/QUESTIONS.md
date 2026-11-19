@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（59）
+## 踩過的錯（61）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -82,8 +82,10 @@
 - 以為有初值、有人用的 const 全域變數會放在 .data
 - 以為 debugger 改不了 const 變數是因為 C 的 const
 - 以為 main() 裡宣告的變數會受 .data 影響
+- 以為 volatile 會影響變數放在哪個區段
+- 以為執行時有機制會擋住 stack overflow
 
-## 解法（29）
+## 解法（31）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -128,8 +130,12 @@
 
 - 從 Reset_Handler 單步到 main：設 SP → SystemInit → 複製 .data → 清 .bss → main
 - 各種變數放在哪裡：用 .map、debugger、size 驗證
+- 故意弄壞：拿掉複製 .data 的迴圈
+- 故意弄壞：無限遞迴造成 stack overflow
 
-## 待學清單（1 項還沒學）
+## 待學清單（3 項還沒學）
 
 - [ ] exception stack frame（進中斷時硬體自動存的 8 個暫存器）：學 HardFault 除錯時再學（SPRINT-W01-S05）
+- [ ] HardFault 完整分析（CFSR／HFSR 各 bit、從 stack frame 找出當機那一行、寫自己的 HardFault_Handler）（SPRINT-W01-S05）
+- [ ] stack overflow 的偵測方法（stack painting 填固定值檢查用量、把 stack 放到 RAM 底部讓溢位立刻 fault、Cu（SPRINT-W01-S05）
 
