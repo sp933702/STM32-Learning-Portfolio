@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（61）
+## 踩過的錯（67）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -84,6 +84,12 @@
 - 以為 main() 裡宣告的變數會受 .data 影響
 - 以為 volatile 會影響變數放在哪個區段
 - 以為執行時有機制會擋住 stack overflow
+- 把 Reset_Handler 裡的動作都當成硬體做的
+- 以為 stack overflow 難除錯是因為「寫入失敗、原值沒被覆蓋」
+- 把有初值的全域變數說成放在 .bss
+- 把 Reset_Handler 呼叫 main 說成「連接 main」
+- 以為停在 Default_Handler 就代表「寫了唯讀區」
+- 以為連結器不會檢查 RAM 剩餘空間
 
 ## 解法（31）
 

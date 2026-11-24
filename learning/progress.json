@@ -1660,6 +1660,12 @@
           "end": "2026-11-19 23:08",
           "prev_status": "進行中",
           "prev_finished": null
+        },
+        {
+          "start": "2026-11-24 13:34",
+          "end": "2026-11-24 16:41",
+          "prev_status": "進行中",
+          "prev_finished": null
         }
       ],
       "entries": [
@@ -1905,6 +1911,145 @@
           "type": "解法",
           "text": "【解法】故意弄壞：無限遞迴造成 stack overflow\n**stack 往下長，安靜地蓋掉 .bss、.data；SP 掉出 RAM 後寫入保留區 → bus error → 升級成 HardFault → 停在 Default_Handler**\n\n測試程式（實驗後要拿掉 `Stack_Eater();`）\n```c\nvolatile uint32_t g_depth;              // .bss，0x2000003C\n\nvoid Stack_Eater(void)\n{\n    volatile uint32_t buf[16];          // 每層 64 byte\n    buf[0] = g_depth;\n    g_depth++;\n    Stack_Eater();\n    buf[1] = buf[0];                    // 避免編譯器把遞迴改成迴圈\n}\n```\n\n每層大小（`.list`）\n- `push {r7, lr}`（8 byte：呼叫者的 r7、返回位址 lr）+ `sub sp, #64`（`buf`）= 72 byte\n- 預估：`(0x20004FD0 − 0x20000044) ÷ 72 ≈ 283` 層撞進 .bss\n\n觀察紀錄\n| 觀察的東西 | 預期 | 實際 | 結論 |\n|---|---|---|---|\n| 第 280 層的 `sp` | 約 `0x200000D0` | `0x200000D0` | 每層 72 byte 正確 |\n| 第 280 層的 `g_depth`、`g_test_data` | 280、`12345678` | `0x118`、`12345678` | 還沒撞到 |\n| 最後 PC | — | `Infinite_Loop`（`Default_Handler`） | 沒寫 HardFault_Handler，weak 指向 Default_Handler |\n| 最後 `sp` | — | `0x1FFFFFD8` | 已掉出 RAM（`< 0x20000000`） |\n| 最後 `g_depth` | 不可信 | `0x0800056B` | 被 push 的 lr（返回位址 + 1）蓋掉 |\n| 最後 `g_test_data` | 被蓋掉 | `12345678` | 剛好落在 buf 沒寫到的位置，幸運保住 |\n| CFSR `0xE000ED28` | — | `0x00001400` | STKERR（bit 12）+ IMPRECISERR（bit 10） |\n| HFSR `0xE000ED2C` | — | `0x40000000` | FORCED（bit 30）：其他 fault 升級成 HardFault |\n| Debugger Console | — | `Could not fetch required XPSR content. Further unwinding is impossible.` | stack 在無效位址，GDB 讀不到呼叫堆疊 |\n\n當機過程\n| 順序 | 發生什麼 |\n|---|---|\n| 1 | 遞迴每層吃 72 byte，SP 一路往下，經過空的 heap 區 |\n| 2 | 第 283 層：push 把 r7、lr 寫到 `0x20000038`（`g_test_sink`）、`0x2000003C`（`g_depth`） |\n| 3 | `buf[0]` 寫到 `0x1FFFFFF8`（保留區）→ bus error（IMPRECISERR，寫入有緩衝所以不精確） |\n| 4 | BusFault 沒開啟 → 升級成 HardFault（FORCED） |\n| 5 | 進 HardFault 時存 8 個暫存器到 `0x1FFFFFD8` 也失敗（STKERR） |\n| 6 | 向量表的 HardFault 指向 `Default_Handler` → 無窮迴圈 |\n\n結論（面試版）\n- stack overflow 時，編譯器、連結器、CPU 都不會攔；stack 先安靜地蓋掉 .bss、.data 的變數，程式行為變怪\n- 被蓋掉的是「剛好寫到的位置」，哪個變數壞掉不固定 → 很難重現\n- SP 掉出 RAM 才會 fault：bus error → HardFault，停在 Default_Handler\n- 除錯判斷：卡在 HardFault／Default_Handler 時先看 `sp`，不在 `0x20000000`～`0x20005000` 或貼近 RAM 底部，加上 CFSR 有 STKERR → 懷疑 stack overflow\n- 全域變數出現 `0x0800xxxx` 的奇數 → 很可能被 stack 上的返回位址蓋掉\n- Memory 視窗看暫存器要用 Hex Integer，逐 byte 顯示會看反",
           "resolved": null
+        },
+        {
+          "id": "e70b190a48",
+          "time": "2026-11-24 13:35",
+          "type": "問題",
+          "text": "【問題】把 Reset_Handler 裡的動作都當成硬體做的\n**硬體只做「讀向量表前兩格 → SP、PC」；之後設 SP、SystemInit、複製 .data、清 .bss、呼叫 main 都是啟動程式（startup_*.s）的指令**\n\n- 錯在哪：流程圖從 Reset_Handler 起全部標成【硬體】\n- 分辨方法：有沒有對應的指令？debugger 單步時按 F5 走得過去的，就是軟體\n| 誰做的 | 包含 |\n|---|---|\n| 硬體（無指令，重置時自動發生） | 從 `0x00000000` 讀 SP、從 `0x00000004` 讀 PC、設 T bit |\n| 啟動程式（`startup_*.s`） | 設 SP、`bl SystemInit`、複製 .data、清 .bss、`bl __libc_init_array`、`bl main` |\n| 我的程式 | `main()` 之後 |\n- 意義：啟動程式可以改（本課註解掉複製迴圈就是改它），硬體行為不能改\n- 面試：「誰把 .data 搬到 RAM？」→ 啟動程式的 Reset_Handler，不是硬體",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "7fa1e09b0c",
+          "time": "2026-11-24 13:36",
+          "type": "筆記",
+          "text": "【筆記】上電到 main() 流程圖\n**硬體只讀向量表前兩格（SP、PC）；之後由啟動程式設 SP、複製 .data、清 .bss，準備好 C 執行環境才呼叫 main()**\n\n```\n上電／reset（BOOT0 = 0 → Flash 映射到 0x00000000）\n  │\n  ├─【硬體】讀 0x00000000 的第一個 word\n  │         → MSP = 0x20005000（_estack = RAM 起點 + 20 KB）\n  │\n  ├─【硬體】讀 0x00000004 的第二個 word（0x08000589）\n  │         → bit 0 = 1 → xPSR 的 T bit（Thumb 狀態）\n  │         → 其餘 → PC = 0x08000588（Reset_Handler）\n  │\n  ├─【啟動程式】ldr r0, =_estack / mov sp, r0\n  │         → 再設一次 SP（從 bootloader 跳進來、debugger 直接設 PC 時，硬體不會讀向量表）\n  │\n  ├─【啟動程式】bl SystemInit\n  │         → 本專案是 nop.w（.weak 但沒有定義）\n  │         → 這時全域變數還是亂碼，只能寫暫存器、用區域變數\n  │\n  ├─【啟動程式】複製 .data\n  │         → 從 _sidata（Flash 0x080006B0）複製到 _sdata～_edata（RAM 0x20000000～0x20000008）\n  │\n  ├─【啟動程式】清 .bss\n  │         → _sbss～_ebss（RAM）全部寫 0\n  │\n  ├─【啟動程式】bl __libc_init_array（C 函式庫初始化）\n  │\n  ├─【啟動程式】bl main\n  │\n  └─【我的程式】main()：Clock_Init() → BSP_SysTick_Init() → BSP_GPIO_Init() → 主迴圈\n                 （main 若返回 → 啟動程式的 LoopForever 無窮迴圈）\n```\n\n為什麼是這個順序\n| 先 | 後 | 原因 |\n|---|---|---|\n| 硬體載入 SP | 任何指令 | 函式呼叫、中斷都要用 stack |\n| 設 SP | SystemInit | SystemInit 是 C 函式，用 stack |\n| SystemInit | 複製 .data | 可能要先初始化放 .data 的外接記憶體；先把時脈調快 |\n| 複製 .data、清 .bss | main | C 語言保證 main 開始時全域變數已是初值或 0 |\n\n關鍵位址（本專案實測）\n| 符號 | 位址 | 在哪 |\n|---|---|---|\n| `_estack` | `0x20005000` | RAM 頂端 |\n| `Reset_Handler` | `0x08000588`（會隨程式變動） | Flash |\n| `_sidata` | `0x080006B0`（會隨程式變動） | Flash |\n| `_sdata`／`_edata` | `0x20000000`／`0x20000008` | RAM |\n| `_sbss`／`_ebss` | `0x20000008`／`0x20000044` | RAM |",
+          "resolved": null
+        },
+        {
+          "id": "f0570fb406",
+          "time": "2026-11-24 14:35",
+          "type": "面試",
+          "text": "【面試】STM32 上電後、執行第一條指令前，CPU 做了什麼？BOOT0 扮演什麼角色？\n**硬體從 0x00000000 讀 MSP、從 0x00000004 讀 Reset_Handler 位址載入 PC；BOOT0 決定 0x00000000 映射到哪塊記憶體**\n\n重置後，硬體先從 `0x00000000` 讀第一個 word 載入 MSP，再從 `0x00000004` 讀第二個 word 當作 Reset_Handler 的位址。這個值的 bit 0 必須是 1，代表 Thumb 狀態，會放進 xPSR 的 T bit，其餘放進 PC。這兩件事沒有任何指令，是硬體自動做的。BOOT0 決定 `0x00000000` 映射到哪塊記憶體：BOOT0 = 0 時是主 Flash（`0x08000000`），跑自己的程式；BOOT0 = 1、BOOT1 = 0 時是系統記憶體，跑 ST 的 bootloader。\n\n| 項目 | 本專案實測 |\n|---|---|\n| `0x00000000` 的值 → MSP | `0x20005000`（`_estack`） |\n| `0x00000004` 的值 | `0x08000589` |\n| PC | `0x08000588`（Reset_Handler） |\n| xPSR | `0x01000000`（T bit = 1） |\n\n可能的追問：向量表的值 bit 0 如果是 0 會怎樣？（CPU 想切到 ARM 狀態，Cortex-M3 不支援 → HardFault）",
+          "resolved": null
+        },
+        {
+          "id": "3b0777bb83",
+          "time": "2026-11-24 14:36",
+          "type": "面試",
+          "text": "【面試】Reset_Handler 從開始到 main() 做了哪些事？\n**設 SP → SystemInit → 複製 .data → 清 .bss → __libc_init_array → main，目的是在 main 之前把 C 執行環境準備好**\n\nReset_Handler 先把 SP 設成 `_estack`。硬體雖然已經設過，但從 bootloader 跳進來時硬體不會讀向量表，所以保險再設一次。接著呼叫 SystemInit 做晶片初始化，這時全域變數還沒準備好，只能寫暫存器。然後把 .data 的初值從 Flash 的 `_sidata` 複製到 RAM 的 `_sdata` 到 `_edata`，再把 `_sbss` 到 `_ebss` 清成 0。因為 C 語言保證 main 開始時全域變數已經是初值或 0，所以這兩步一定要在 main 之前做完。最後呼叫 `__libc_init_array`，再進 main。這些都是 `startup_*.s` 的指令，不是硬體做的。\n\n| 動作 | 用到的符號 |\n|---|---|\n| 設 SP | `_estack` |\n| 複製 .data | `_sidata`（來源，Flash）、`_sdata`～`_edata`（目的，RAM） |\n| 清 .bss | `_sbss`～`_ebss` |\n\n- 本專案的 `bl SystemInit` 被換成 `nop.w`：`.weak SystemInit` 沒有定義，時脈改由 main 裡的 `Clock_Init()` 設定\n\n可能的追問：為什麼不需要 `_eidata`？（Flash 和 RAM 兩份長度一樣，用 `_edata − _sdata` 就算得出來）",
+          "resolved": null
+        },
+        {
+          "id": "d77268826d",
+          "time": "2026-11-24 14:36",
+          "type": "面試",
+          "text": "【面試】.text、.rodata、.data、.bss、heap、stack 各放在哪裡？\n**.text、.rodata 在 Flash；.data、.bss、heap、stack 在 RAM，其中 .data 的初值另外存在 Flash**\n\n程式碼 .text 和常數 .rodata 放在 Flash，斷電保留。RAM 由低到高依序是 .data、.bss、heap、stack。.data 比較特別：變數在 RAM，初值存在 Flash，上電時由 Reset_Handler 複製過去。heap 從 .bss 後面往上長，stack 從 RAM 頂端往下長，兩者之間是空閒空間，撞在一起就是 overflow。\n\n| 區段 | Flash | RAM | 成長方向 |\n|---|---|---|---|\n| `.text` | ✅ | | |\n| `.rodata` | ✅ | | |\n| `.data` | 初值 | 變數 | |\n| `.bss` | | ✅ | |\n| heap | | ✅ | 往上 |\n| stack | | ✅（頂端 `0x20005000`） | 往下 |\n\n可能的追問：為什麼 stack 放在 RAM 頂端？（和往上長的 heap 往中間長，空間利用最大）",
+          "resolved": null
+        },
+        {
+          "id": "af085a2ffd",
+          "time": "2026-11-24 14:37",
+          "type": "面試",
+          "text": "【面試】怎麼知道某個全域變數的位址？怎麼算 Flash 和 RAM 用了多少？\n**位址看 .map（或 debugger 的 &變數）；用量看 size 的 text、data、bss：Flash = text + data，RAM = data + bss**\n\n在 `.map` 搜尋變數名稱，先確認它不在開頭的 `Discarded input sections` 段落（那裡位址都是 0，代表被連結器丟掉了），再看它在哪個輸出區段、位址多少。`0x0800` 開頭是 Flash，`0x2000` 開頭是 RAM。static 變數名字會被加上 `.0`、`.1`，要用片段搜尋。用量看編譯完 Console 印出的 `text data bss`：Flash 等於 text 加 data，因為 .data 的初值也存在 Flash；RAM 等於 data 加 bss，bss 這一欄已經包含 heap 和 stack 的預留空間。`dec` 是三欄總和，不是任何一種記憶體的用量。\n\n| 欄位 | 本專案 | 算進 |\n|---|---|---|\n| `text` | 1712 | Flash |\n| `data` | 8 | Flash + RAM |\n| `bss` | 1592 | RAM |\n| 結果 | Flash 1720 byte、RAM 1600 byte | Build Analyzer 一致（KB = 1024 byte） |\n\n- `.ld` 的角色：`MEMORY` 定義 Flash、RAM 的起點和大小，`SECTIONS` 決定區段放哪；`.map` 是連結器照 `.ld` 排完的結果\n- 位址要連結完才知道，程式一改就會移動\n\n可能的追問：`.ld` 裡 `>RAM AT> FLASH` 是什麼意思？（執行位址在 RAM，載入位址在 Flash，只有 .data 這樣寫）",
+          "resolved": null
+        },
+        {
+          "id": "5f8a806c67",
+          "time": "2026-11-24 14:39",
+          "type": "面試",
+          "text": "【面試】有初值的全域變數、const、static 區域變數、一般區域變數分別放在哪？\n**有初值全域 → .data；const 全域 → .rodata 只在 Flash；static 區域同全域；一般區域 → stack**\n\n有初值的全域變數放在 .data，初值存在 Flash、變數在 RAM，上電時複製。const 全域變數的值不會變，不需要 RAM 副本，放在 .rodata，只在 Flash，debugger 也改不了它。static 區域變數的壽命和整個程式一樣長，所以和全域變數放在同一個地方，有初值就在 .data，沒有就在 .bss，差別只在名字只有函式內看得到。一般區域變數放在 stack，初值寫在函式的指令裡，每次呼叫才寫進去。\n\n判斷順序：\n| 問題 | 是 → |\n|---|---|\n| 沒有 static 的區域變數？ | stack |\n| 全域且有 const？ | `.rodata`（只在 Flash） |\n| 全域或 static，初值不是 0？ | `.data`（兩邊） |\n| 全域或 static，沒初值或 = 0？ | `.bss`（RAM） |\n\n| 本專案實測 | 位址 |\n|---|---|\n| `g_test_data`（有初值全域） | `0x20000000`，初值在 `0x080006B0` |\n| `g_test_const`（`const volatile`） | `0x080006A4` |\n| `s_test_count`（static 有初值） | `0x20000004` |\n| `test_local`（區域） | `0x20004FCC`（stack） |\n\n- `volatile` 不影響位置，只要求每次真的去讀寫\n\n可能的追問：const 全域沒加 volatile 時，`.map` 為什麼找不到？（編譯器直接把值寫進指令，變數沒人引用，被 `--gc-sections` 丟掉）",
+          "resolved": null
+        },
+        {
+          "id": "056349c402",
+          "time": "2026-11-24 14:42",
+          "type": "面試",
+          "text": "【面試】stack overflow 會發生什麼事？為什麼難除錯？怎麼判斷？\n**先安靜地蓋掉 .bss、.data 的變數，SP 掉出 RAM 後才 HardFault；壞掉的變數看當下寫到哪裡，所以難重現**\n\nstack 往下長，執行時沒有任何機制檢查 SP，編譯器、連結器、CPU 都不會攔。第一階段，stack 安靜地蓋掉 .bss、.data 的全域變數，程式繼續跑，只是行為變怪。第二階段，SP 掉出 RAM，寫入保留區產生 bus error，升級成 HardFault，停在 Default_Handler。難除錯是因為被蓋掉的只有「剛好寫到的位置」，哪個變數壞掉不固定，症狀還會出現在別的功能上。判斷方法：卡在 HardFault 時先看 SP，不在 RAM 範圍內或貼近底部，加上 CFSR 的 STKERR 是 1，就懷疑 stack overflow；全域變數出現 `0x0800` 開頭的奇數，通常是被 stack 上的返回位址蓋掉。\n\n| 實驗觀察 | 值 |\n|---|---|\n| 每層遞迴 | 72 byte（`push {r7, lr}` + `sub sp, #64`） |\n| 最後 `sp` | `0x1FFFFFD8`（已掉出 RAM） |\n| `g_depth` | `0x0800056B`（被返回位址蓋掉） |\n| `g_test_data` | `12345678`（剛好沒被寫到，倖存） |\n| CFSR | `0x00001400`：STKERR + IMPRECISERR |\n| HFSR | `0x40000000`：FORCED |\n\n- `._user_heap_stack` 只在連結時檢查一次，執行時不管\n\n可能的追問：怎麼預防或提早發現？（估算最大 stack 用量、stack painting、把 stack 放到 RAM 底部讓溢位立刻 fault）",
+          "resolved": null
+        },
+        {
+          "id": "628ee0dd81",
+          "time": "2026-11-24 14:43",
+          "type": "問題",
+          "text": "【問題】以為 stack overflow 難除錯是因為「寫入失敗、原值沒被覆蓋」\n**難除錯是因為 stack 寫入 RAM 時是成功的：它安靜地改壞了剛好寫到的變數，哪個壞掉不固定，症狀出現在別處**\n\n- 錯在哪：把第二階段（SP 掉出 RAM、寫入失敗）當成難除錯的原因\n- 正確：第一階段寫入都成功，沒有任何錯誤訊號；被蓋掉的是「當下 stack 剛好寫到的位置」\n- 實驗證據：`g_depth` 被返回位址蓋成 `0x0800056B`，`g_test_data` 卻剛好落在 `buf` 沒寫到的地方而倖存\n- 症狀出現在別的功能上（例如 tick 變數壞掉 → LED 閃錯），容易查錯方向",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "cd02a0e5af",
+          "time": "2026-11-24 16:19",
+          "type": "面試",
+          "text": "【面試】加了一個有初值的大陣列後 RAM 快不夠，你怎麼確認它放在哪、佔多少？size 的哪幾欄會變？\n**在 .map 找到它在 .data；size 只有 data 欄 +2048，Flash 和 RAM 各多 2048 byte；初值非 0 才會連 Flash 也一起吃**\n\n例子：`uint8_t buffer[2048] = {1};`（全域）\n\n在 `.map` 搜尋 `buffer`，先確認它不在 `Discarded input sections`，再看它在哪個輸出區段：因為有非 0 的初值，會在 `.data` 底下，位址 `0x2000` 開頭，大小 `0x800`。`size` 輸出只有 `data` 欄增加 2048，`text` 和 `bss` 不變。Flash 等於 `text + data`，多 2048；RAM 等於 `data + bss`，也多 2048。重點是：初值只有第一個是 1，其餘 2047 個都是 0，卻還是要在 Flash 存一整份 2048 byte 的初值。如果改成 `= {0}` 或不給初值，它會進 `.bss`，Flash 一個 byte 都不加，只佔 RAM。\n\n| 宣告 | 區段 | `text` | `data` | `bss` | Flash | RAM |\n|---|---|---|---|---|---|---|\n| `= {1}` | `.data` | — | +2048 | — | +2048 | +2048 |\n| `= {0}` 或不給初值 | `.bss` | — | — | +2048 | — | +2048 |\n| `const ... = {1}` | `.rodata` | +2048 | — | — | +2048 | — |\n\n可能的追問：如果這個陣列內容永遠不會改呢？（加 `const` → `.rodata`，只佔 Flash，RAM 完全不用）",
+          "resolved": null
+        },
+        {
+          "id": "8990532add",
+          "time": "2026-11-24 16:19",
+          "type": "面試",
+          "text": "【面試】自己幫新晶片寫 Reset_Handler，要放哪些步驟？清 .bss 和呼叫 main 對調會怎樣？\n**設 SP → SystemInit → 複製 .data → 清 .bss → 呼叫 __libc_init_array → 呼叫 main；對調的話 .bss 永遠不會被清，全域變數初值是亂碼**\n\n步驟依序是：設 SP（`_estack`）、呼叫 SystemInit 做晶片初始化、把 .data 從 `_sidata` 複製到 `_sdata`～`_edata`、把 `_sbss`～`_ebss` 清成 0、呼叫 `__libc_init_array`、最後呼叫 main。如果把清 .bss 放到呼叫 main 之後，因為裸機的 main 是永遠不返回的無窮迴圈，清 .bss 根本不會執行到。所有「沒有初值、C 語言保證是 0」的全域變數都會是 RAM 裡的亂碼。例如 tick 計數變數初值是亂碼，第一次算 `now - last` 就錯。更麻煩的是，這種錯只在冷開機出現，按 reset 鍵時 RAM 保留上次的值，看起來又正常。\n\n| 步驟 | 用到 | 為什麼排在這裡 |\n|---|---|---|\n| 設 SP | `_estack` | 之後的 C 函式都要用 stack |\n| SystemInit | — | 可能要先初始化放 .data 的記憶體；這時全域變數還不能用 |\n| 複製 .data | `_sidata`、`_sdata`、`_edata` | main 之前完成 |\n| 清 .bss | `_sbss`、`_ebss` | main 之前完成 |\n| `bl __libc_init_array` | — | C 函式庫初始化，要用到全域變數 |\n| `bl main` | — | C 執行環境已準備好 |\n\n可能的追問：為什麼「只有冷開機錯、按 reset 就好」？（reset 鍵不會清 RAM，殘留值掩蓋了沒初始化的 bug）",
+          "resolved": null
+        },
+        {
+          "id": "a558a7b36f",
+          "time": "2026-11-24 16:19",
+          "type": "面試",
+          "text": "【面試】這段程式裡每個變數和函式放在哪裡？\n**const 全域 → .rodata；沒初值全域 → .bss；有初值全域 → .data；static 依初值分 .data／.bss；一般區域 → stack；函式 → .text**\n\n```c\nconst uint16_t sine_table[256] = { ... };   // .rodata，只在 Flash\nuint32_t error_count;                       // .bss，只在 RAM\nuint32_t baud_rate = 115200;                // .data，初值在 Flash、變數在 RAM\n\nvoid UART_Task(void)                        // .text，Flash\n{\n    static uint8_t state = 0;               // .bss（初值 = 0 視同沒初值）\n    static uint8_t retry = 3;               // .data\n    uint8_t rx_byte = 0;                    // stack\n}\n```\n\n先看是不是沒有 static 的區域變數，是的話放 stack。不是的話，全域有 const 就放 `.rodata`，只在 Flash；初值不是 0 放 `.data`，兩邊都有；沒初值或初值是 0 放 `.bss`，只在 RAM。函式的程式碼放在 `.text`，在 Flash。`.ld` 規定 `.text` 放進 FLASH，實際位址看 `.map` 裡的 `.text.UART_Task`。\n\n| 宣告 | 區段 | Flash | RAM |\n|---|---|---|---|\n| `const` 全域 | `.rodata` | ✅ | |\n| 全域／static，初值非 0 | `.data` | 初值 | 變數 |\n| 全域／static，沒初值或 = 0 | `.bss` | | ✅ |\n| 一般區域 | stack | 初值在指令裡 | ✅ |\n| 函式 | `.text` | ✅ | |\n\n- 例外：標成 `.RamFunc` 的函式會複製到 RAM 執行（例如擦寫 Flash 時）\n\n可能的追問：`sine_table` 拿掉 const 會怎樣？（變成 `.data`，Flash 和 RAM 各多 512 byte）",
+          "resolved": null
+        },
+        {
+          "id": "052420562b",
+          "time": "2026-11-24 16:19",
+          "type": "面試",
+          "text": "【面試】設定值莫名變成 0x08001A2F，過一陣子才當機，同事說是指標寫錯，你怎麼看？\n**先懷疑 stack overflow：0x0800 開頭的奇數是 push 到 stack 的返回位址；先改壞、後當機也符合 stack overflow 的兩個階段**\n\n`0x08001A2F` 是 Flash 位址，代表程式碼的位置；它是奇數，bit 0 是 Thumb bit。RAM 裡出現「程式碼位址 + 1」，通常是 `bl` 存進 LR、再被 `push {lr}` 存到 stack 的返回位址。一般寫錯的指標很少剛好寫出這種值，所以我會先懷疑 stack 長到這個變數的位置了。「先改壞、過一陣子才當機」也符合 stack overflow：先安靜地蓋掉全域變數，SP 掉出 RAM 才 HardFault。\n\n| 順序 | 檢查什麼 | 看哪裡 |\n|---|---|---|\n| 1 | 去掉 bit 0 得 `0x08001A2E`，反查是哪個函式的返回點 | `.list` |\n| 2 | 被蓋的變數在 RAM 哪裡（通常在 .bss／.data 最高處） | `.map` |\n| 3 | 找吃 stack 的地方：遞迴、大區域陣列、深呼叫鏈、中斷巢狀 | 程式碼、`.list` 的 `sub sp` |\n| 4 | 當機時 `sp` 是否掉出 RAM、CFSR 的 STKERR | Registers、`0xE000ED28` |\n| 5 | 修正：加大 `_Min_Stack_Size`、大區域陣列改 `static`、減少呼叫深度 | `.ld`、程式碼 |\n\n可能的追問：為什麼返回位址是奇數？（Cortex-M3 只能跑 Thumb 指令，跳轉位址用 bit 0 = 1 表示 Thumb 狀態）",
+          "resolved": null
+        },
+        {
+          "id": "0927f8f11d",
+          "time": "2026-11-24 16:19",
+          "type": "問題",
+          "text": "【問題】把有初值的全域變數說成放在 .bss\n**兩邊都有的只有 .data；.bss 只在 RAM，用來放沒初值或初值為 0 的變數**\n\n- 錯在哪：重考時寫 `uint32_t baud_rate = 115200;` 放在「Flash 和 RAM 的 bss」\n- 正確：有非 0 初值 → `.data`（初值在 Flash、變數在 RAM）\n- 記法：`.bss` 不需要從 Flash 搬東西，只要清 0，所以 Flash 裡沒有它的任何資料",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "9135aaed89",
+          "time": "2026-11-24 16:20",
+          "type": "問題",
+          "text": "【問題】把 Reset_Handler 呼叫 main 說成「連接 main」\n**連接（link）是編譯時連結器做的事；Reset_Handler 在執行時做的是呼叫（bl）**\n\n- 錯在哪：步驟寫成「連接 C 函式庫 → 連接 main → 呼叫 main」\n- 正確：「呼叫 `__libc_init_array` → 呼叫 main」，`bl main` 只有一步\n| 時期 | 誰做 | 做什麼 |\n|---|---|---|\n| 編譯時 | 連結器 | 依 `.ld` 排位址、產生 `.map`、丟掉沒用到的區段 |\n| 執行時 | Reset_Handler | 用 `bl` 呼叫 SystemInit、`__libc_init_array`、main |",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "5fa97c5e50",
+          "time": "2026-11-24 16:20",
+          "type": "筆記",
+          "text": "【筆記】全域變數變成 0x0800 開頭的奇數：stack overflow 的指紋\n**0x0800 開頭 = 程式碼位址，奇數 = Thumb bit；RAM 裡出現它，幾乎一定是 stack 上 push 的返回位址（LR）**\n\n- 來源：`bl` 把返回位址（+1，Thumb bit）放進 LR → 函式開頭 `push {..., lr}` 存進 stack\n- 一般寫錯的指標很少剛好寫出「程式碼位址 + 1」；會寫進返回位址的正常只有 stack\n- 實驗證據：`g_depth` 被蓋成 `0x0800056B`\n\n排查順序\n| 順序 | 做什麼 | 看哪裡 |\n|---|---|---|\n| 1 | 值去掉 bit 0，反查是哪個函式的返回點 | `.list` 搜尋該位址 |\n| 2 | 確認被蓋的變數在 RAM 的位置（通常在 .bss／.data 最高處） | `.map` |\n| 3 | 找吃 stack 的元兇：遞迴、大區域陣列、深呼叫鏈、中斷巢狀 | 程式碼、`.list` 的 `sub sp` |\n| 4 | 當機時的證據：`sp` 是否掉出 RAM、CFSR 的 STKERR | Registers、Memory `0xE000ED28` |\n| 5 | 修正：加大 `_Min_Stack_Size`、大區域陣列改 `static`、減少呼叫深度 | `.ld`、程式碼 |\n\n面試版：「設定值被改成 0x0800 開頭的奇數，我會先懷疑 stack overflow，因為那是 push 到 stack 的返回位址；再用 .list 反查是哪個函式，用 .map 確認變數位置。」",
+          "resolved": null
+        },
+        {
+          "id": "6b84f6f162",
+          "time": "2026-11-24 16:40",
+          "type": "面試",
+          "text": "【面試】區域變數宣告 4 KB 陣列，連結成功但執行時按鍵失靈、最後當機，為什麼？怎麼修？\n**連結器只檢查 stack 的最小預留量，不知道函式執行時吃多少；陣列蓋進 .bss 造成雙向破壞；改成 static 讓連結器算進去**\n\n連結器的檢查是 `.data + .bss + heap 最小值 + stack 最小值` 有沒有超過 RAM，這個例子是 16 + 0.5 + 1 = 17.5 KB，通過。但區域變數是執行時才在 stack 上配置的，連結器不知道 `UART_Task()` 一進去就要 4 KB。stack 頂端到 .bss 只剩大約 4 KB，陣列就和 .bss 重疊，造成雙向破壞：寫 `rx_buf` 會蓋掉全域變數，所以按鍵狀態被改壞；程式寫全域變數又會蓋掉 stack 上的返回位址，函式返回時跳到錯的地方，就 HardFault。確認方法是看 `.su` 檔或 `.list` 的 `sub sp` 算 stack 用量，再和 `_estack − _ebss` 比較。修法是改成 `static`，讓它進 .bss，空間不夠時連結就會失敗，把執行時的隨機當機變成編譯時的錯誤。\n\n| 項目 | 數值 |\n|---|---|\n| 連結時檢查 | 16 + 0.5 + 1 = 17.5 KB ≤ 20 KB → 通過 |\n| 實際可用 stack | `0x20005000 − 0x20004000` ≈ 4 KB |\n| `rx_buf` | 4096 byte + 呼叫鏈其他 frame → 重疊 .bss |\n\n| 破壞方向 | 症狀 |\n|---|---|\n| 寫 `rx_buf` → 蓋 .bss 變數 | 按鍵偶爾失靈 |\n| 寫全域變數 → 蓋 stack 上的返回位址 | 返回時跳錯 → HardFault |\n\n| 修法 | 效果 |\n|---|---|\n| `static uint8_t rx_buf[4096];` | 進 .bss，連結器算進去，不夠就 `region 'RAM' overflowed` |\n| 縮小 buffer／加大 `_Min_Stack_Size` | 增加餘裕 |\n\n可能的追問：怎麼知道每個函式吃多少 stack？（`Debug/Src/*.su` 檔、Static Stack Analyzer 視窗、`.list` 的 `sub sp, #N`）",
+          "resolved": null
+        },
+        {
+          "id": "e201137fb4",
+          "time": "2026-11-24 16:41",
+          "type": "問題",
+          "text": "【問題】以為停在 Default_Handler 就代表「寫了唯讀區」\n**Default_Handler 只代表發生了沒寫處理函式的例外，原因要看 CFSR／HFSR 才知道**\n\n- 錯在哪：重考時說「停在 Default_Handler，代表可能想寫唯讀區」\n- 正確：所有沒實作的例外（HardFault、各種中斷）都 weak 指向 Default_Handler，光看停在那裡無法判斷原因\n- stack overflow 常見的兩種當機：SP 掉出 RAM 寫入保留區（STKERR）；返回位址被全域變數蓋掉，return 跳到錯的位址\n- 判斷要看：`sp`、CFSR（`0xE000ED28`）、HFSR（`0xE000ED2C`）",
+          "open": false,
+          "resolved": true
+        },
+        {
+          "id": "ff58d1e597",
+          "time": "2026-11-24 16:41",
+          "type": "問題",
+          "text": "【問題】以為連結器不會檢查 RAM 剩餘空間\n**連結器會檢查，但只檢查 .data + .bss + heap／stack 最小預留量；區域變數在執行時才配置，連結器看不到**\n\n- 錯在哪：重考時說「連結器不會幫忙檢查剩餘大小」\n- 正確：`._user_heap_stack` 會檢查，超過 RAM 會報 `region 'RAM' overflowed`；但 stack 只預留 `_Min_Stack_Size`，函式實際用多少它不知道\n- 應用：大陣列改成 `static` 或全域 → 進 .bss → 連結器算得到，不夠時編譯就失敗",
+          "open": false,
+          "resolved": true
         }
       ],
       "stage": "基礎",
@@ -1916,32 +2061,32 @@
         {
           "id": "m1",
           "text": "向量表的前兩項（初始 SP、Reset_Handler）與 BOOT 腳位的關係",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m2",
           "text": "Reset_Handler 做的事：複製 .data、清 .bss、進入 main()",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m3",
           "text": ".text、.rodata、.data、.bss、heap、stack 各放在 Flash 或 RAM 的哪裡",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m4",
           "text": "讀 .ld 的 MEMORY 與 SECTIONS；從 .map 找出變數位址與 Flash／RAM 用量",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m5",
           "text": "有初值的全域變數、const、static 區域變數、一般區域變數分別放在哪裡",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m6",
           "text": "stack overflow 會發生什麼事",
-          "done": null
+          "done": "2026-11-24"
         },
         {
           "id": "m7",
