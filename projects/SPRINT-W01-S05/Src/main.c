@@ -48,16 +48,16 @@ void Test_Storage(void)
 //  //
 
 // 無限遞迴，驗證用 //
-volatile uint32_t g_depth;              // 記錄遞迴了幾層
-
-void Stack_Eater(void)
-{
-    volatile uint32_t buf[16];          // 每層在 stack 上放 16 個 word
-    buf[0] = g_depth;
-    g_depth++;
-    Stack_Eater();                      // 呼叫自己，永不停止
-    buf[1] = buf[0];                    // 呼叫之後還有事做，避免編譯器把遞迴改成迴圈
-}
+//volatile uint32_t g_depth;              // 記錄遞迴了幾層
+//
+//void Stack_Eater(void)
+//{
+//    volatile uint32_t buf[16];          // 每層在 stack 上放 16 個 word
+//    buf[0] = g_depth;
+//    g_depth++;
+//    Stack_Eater();                      // 呼叫自己，永不停止
+//    buf[1] = buf[0];                    // 呼叫之後還有事做，避免編譯器把遞迴改成迴圈
+//}
 //  //
 
 int main(void)
@@ -67,7 +67,7 @@ int main(void)
 	//  //
 
 	// 驗證用 //
-	Stack_Eater();
+//	Stack_Eater();
 	//  //
 
 	// 開頭讀測試變數一次。為了避免沒被使用的變數被連結器整個丟掉
