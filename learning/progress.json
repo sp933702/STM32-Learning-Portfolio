@@ -2105,11 +2105,18 @@
       "content": "AFIO_EXTICR 選 PB0，設定 EXTI IMR/FTSR，NVIC 設優先權並致能；ISR 中清除 PR 旗標",
       "output": "bsp_exti.c",
       "criteria": "故意不清 PR 觀察現象並解釋；能說明搶佔優先權與子優先權；ISR 該做與不該做的事",
-      "status": "未開始",
+      "status": "進行中",
       "finished_at": null,
       "orig": "W02-S02",
       "period": "",
-      "sessions": [],
+      "sessions": [
+        {
+          "start": "2026-11-24 22:52",
+          "end": "2026-11-25 11:09",
+          "prev_status": "未開始",
+          "prev_finished": null
+        }
+      ],
       "entries": [],
       "stage": "中斷與通訊",
       "kind": "register",
