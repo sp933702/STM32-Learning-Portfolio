@@ -8,6 +8,6 @@
 #ifndef BSP_EXTI_H_
 #define BSP_EXTI_H_
 
-static void BSP_EXTI_Init(void);
+void BSP_EXTI0_Init(void);
 
 #endif /* BSP_EXTI_H_ */
