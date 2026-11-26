@@ -22,6 +22,7 @@
 #include "bsp_gpio.h"
 #include "bsp_systick.h"
 #include "button_debounce.h"
+#include "bsp_exti.h"
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -50,6 +51,8 @@ int main(void)
 	// 2. 設定 PC13 功能
 	// 3. 設定 PB0 功能
 	BSP_GPIO_Init();
+
+	BSP_EXTI0_Init();
 
 	// led_last_toggle 紀錄最後一次命令轉換的時間
 	uint32_t led_last_toggle = BSP_SysTick_GetTick();

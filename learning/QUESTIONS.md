@@ -7,7 +7,7 @@
 
 目前沒有。
 
-## 踩過的錯（67）
+## 踩過的錯（72）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -91,7 +91,15 @@
 - 以為停在 Default_Handler 就代表「寫了唯讀區」
 - 以為連結器不會檢查 RAM 剩餘空間
 
-## 解法（31）
+### [SPRINT-W02-S01](notes/SPRINT-W02-S01.md) EXTI + NVIC（暫存器）
+
+- 把 RCC_APB2RSTR 當成 RCC_APB2ENR，查到錯的 bit
+- 手冊的 AFIO_EXTICR1 寫成 AFIO->EXTICR[1]
+- 用 |= 寫多 bit 欄位，以及清除時把整個暫存器清掉
+- 在 .h 裡把要給 main 呼叫的函式宣告成 static
+- 以為 EXTI_PR 用 |= 清除只會「碰撞」，其實會誤清其他 line
+
+## 解法（32）
 
 ### [SPRINT-W01-S01](notes/SPRINT-W01-S01.md) C 語言驗收
 
@@ -138,6 +146,10 @@
 - 各種變數放在哪裡：用 .map、debugger、size 驗證
 - 故意弄壞：拿掉複製 .data 的迴圈
 - 故意弄壞：無限遞迴造成 stack overflow
+
+### [SPRINT-W02-S01](notes/SPRINT-W02-S01.md) EXTI + NVIC（暫存器）
+
+- EXTI 第一步：用 AFIO_EXTICR1 把 PB0 接到 EXTI0
 
 ## 待學清單（3 項還沒學）
 
